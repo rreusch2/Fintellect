@@ -1,0 +1,14 @@
+name: your-app-name
+region: nyc
+services:
+  - name: web
+    github:
+      repo: your-username/your-repo
+      branch: main
+    build_command: npm run build
+    run_command: npm start
+    environment_slug: node-js
+    env:
+      - key: NODE_ENV
+        value: production
+    instance_size_slug: basic-xxs 

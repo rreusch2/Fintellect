@@ -1,5 +1,5 @@
 import { Router } from "express";
-import plaidRoutes from "./plaid";
+import plaidRoutes from "./plaid.js";
 import { authenticateUser } from "../auth/middleware";
 
 export function registerRoutes(app: any) {

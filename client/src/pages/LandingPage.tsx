@@ -8,42 +8,45 @@ import {
   Bot,
   Target,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  Shield,
+  Lock
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Footer } from "@/components/layout/Footer";
 
 const features = [
   {
     icon: <Brain className="h-8 w-8" />,
-    title: "AI-Powered Insights",
-    description: "Get personalized financial advice and insights powered by advanced AI technology",
+    title: "AI-Powered Analysis",
+    description: "Real-time financial insights and personalized recommendations powered by advanced machine learning",
     color: "text-blue-500"
   },
   {
-    icon: <Bot className="h-8 w-8" />,
-    title: "Financial Assistant",
-    description: "Chat with our AI assistant for real-time guidance and answers to your financial questions",
-    color: "text-purple-500"
-  },
-  {
-    icon: <LineChart className="h-8 w-8" />,
-    title: "Budget Analysis",
-    description: "Advanced AI analysis of your spending patterns and automated budget recommendations",
+    icon: <Shield className="h-8 w-8" />,
+    title: "Bank-Grade Security",
+    description: "Secure bank connections via Plaid with end-to-end encryption and strict data protection protocols",
     color: "text-green-500"
   },
   {
+    icon: <Bot className="h-8 w-8" />,
+    title: "AI Financial Assistant",
+    description: "24/7 intelligent chat assistance for budgeting, investment guidance, and financial planning",
+    color: "text-purple-500"
+  },
+  {
     icon: <Target className="h-8 w-8" />,
-    title: "Smart Goals",
-    description: "Set and track financial goals with AI-driven strategies for achievement",
+    title: "Smart Goal Tracking",
+    description: "AI-optimized financial goals with automated progress tracking and actionable recommendations",
     color: "text-orange-500"
   },
 ];
 
 const stats = [
-  { value: "99%", label: "Accuracy in Transaction Analysis" },
+  { value: "256-bit", label: "Bank-Level Encryption" },
+  { value: "SOC2", label: "Security Compliance" },
   { value: "24/7", label: "AI Assistant Availability" },
-  { value: "50+", label: "Financial Insights Generated" },
-  { value: "<2min", label: "Average Response Time" },
+  { value: "99.9%", label: "Platform Uptime" },
 ];
 
 export default function LandingPage() {
@@ -88,31 +91,27 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="max-w-4xl mx-auto"
+            className="max-w-3xl mx-auto space-y-12"
           >
-            {/* AI Badge */}
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center justify-center mb-6 gap-2"
-            >
-              <Sparkles className="h-8 w-8 text-white animate-pulse" />
-              <span className="text-white/90 font-medium">Powered by Advanced AI</span>
-            </motion.div>
-            
-            {/* Main Headline */}
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight"
-            >
-              Transform Your Finances with 
-              <span className="block bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80">
-                AI-Powered Intelligence
-              </span>
-            </motion.h1>
+            {/* Enhanced Logo and Tagline */}
+            <div className="space-y-3">
+              <h1 className="text-7xl font-extrabold tracking-tight">
+                <span className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-blue-300 via-cyan-300 to-blue-400 animate-gradient font-display">
+                  Fintellect
+                </span>
+              </h1>
+              <div className="flex items-center justify-center gap-2 text-lg text-white/90">
+                <Sparkles className="h-5 w-5 text-blue-300" />
+                <span className="font-light tracking-wide">Powered by Advanced AI</span>
+              </div>
+            </div>
+
+            {/* Main Headline with consistent styling */}
+            <h2 className="text-4xl font-bold tracking-tight sm:text-5xl text-white">
+              Transform Your Finances with{" "}
+              <span className="text-white">AI-Powered</span>{" "}
+              Intelligence
+            </h2>
             
             {/* Subheading */}
             <motion.p 
@@ -121,8 +120,8 @@ export default function LandingPage() {
               transition={{ delay: 0.6 }}
               className="text-xl mb-8 text-white/90 max-w-2xl mx-auto leading-relaxed"
             >
-              Experience the future of financial management with our AI-driven platform.
-              Get personalized insights, smart budgeting, and intelligent investment guidance.
+              Experience intelligent financial management powered by advanced AI. Get personalized insights, 
+              smart budgeting, and secure bank integration through Plaid.
             </motion.p>
             
             {/* CTA Button */}
@@ -137,7 +136,7 @@ export default function LandingPage() {
                   variant="secondary" 
                   className="min-w-[200px] shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  Get Started Free
+                  Get Started
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
@@ -234,39 +233,50 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 text-center relative">
           <h2 className="text-3xl font-bold mb-6 text-white">Ready to Transform Your Finances?</h2>
           <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto">
-            Join thousands of users who are already managing their finances smarter with our AI-powered platform.
+            Join our community of users leveraging AI to revolutionize their financial management.
           </p>
           <Link href="/auth">
             <Button size="lg" variant="secondary" className="min-w-[200px]">
-              Start Your Free Trial
+              Start Your Journey
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
         </div>
       </section>
 
-      {/* Footer with Legal Links */}
-      <footer className="py-8 bg-muted mt-auto">
+      {/* Security and Compliance Section */}
+      <section className="py-20 bg-muted/50">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-row justify-center items-center gap-4 text-sm text-muted-foreground">
-            <Link href="/legal" className="text-center hover:text-primary transition-colors">
-              Terms of Service
-            </Link>
-            <Link href="/legal" className="text-center hover:text-primary transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/legal" className="text-center hover:text-primary transition-colors">
-              AI Disclosures
-            </Link>
-            <Link href="/legal" className="text-center hover:text-primary transition-colors">
-              Data Collection Notice
-            </Link>
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-8">Enterprise-Grade Security</h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="bg-background/50">
+                <CardContent className="p-6">
+                  <Shield className="h-8 w-8 text-primary mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Secure Bank Integration</h3>
+                  <p className="text-muted-foreground">
+                    Bank connections powered by Plaid with end-to-end encryption and 
+                    read-only access to your financial data.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="bg-background/50">
+                <CardContent className="p-6">
+                  <Lock className="h-8 w-8 text-primary mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Data Protection</h3>
+                  <p className="text-muted-foreground">
+                    SOC2 compliant with 256-bit encryption, regular security audits, 
+                    and strict data privacy controls.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            © {new Date().getFullYear()} Your Financial AI. All rights reserved.
-          </p>
         </div>
-      </footer>
+      </section>
+
+      {/* Replace the old footer with our consistent Footer component */}
+      <Footer />
     </div>
   );
 }

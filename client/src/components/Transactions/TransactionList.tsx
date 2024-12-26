@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { COLORS, getCategoryColor, getCategoryIcon, formatCategoryName } from '@/lib/categories';
 
 interface Transaction {
   id: number;
@@ -59,80 +60,33 @@ interface TransactionListProps {
   searchQuery?: string;
 }
 
-const CATEGORY_CONFIG = {
-  'FOOD_AND_DRINK': {
-    icon: Utensils,
-    color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-    label: 'Food & Drink'
-  },
-  'TRANSPORTATION': {
-    icon: Car,
-    color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    label: 'Transportation'
-  },
-  'TRANSFER': {
-    icon: ArrowLeftRight,
-    color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-    label: 'Transfer'
-  },
-  'TRANSFER_IN': {
-    icon: ArrowDownLeft,
-    color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    label: 'Transfer In'
-  },
-  'TRANSFER_OUT': {
-    icon: ArrowUpRight,
-    color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    label: 'Transfer Out'
-  },
-  'SHOPPING': {
-    icon: ShoppingBag,
-    color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
-    label: 'Shopping'
-  },
-  'ENTERTAINMENT': {
-    icon: Gamepad2,
-    color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-    label: 'Entertainment'
-  },
-  'BUSINESS': {
-    icon: Briefcase,
-    color: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-    label: 'Business'
-  },
-  'EDUCATION': {
-    icon: GraduationCap,
-    color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    label: 'Education'
-  },
-  'HEALTHCARE': {
-    icon: Stethoscope,
-    color: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
-    label: 'Healthcare'
-  },
-  'RECREATION': {
-    icon: Ticket,
-    color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
-    label: 'Recreation'
-  },
-  'UNCATEGORIZED': {
-    icon: HelpCircle,
-    color: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-    label: 'Uncategorized'
+function cleanTransactionDescription(description: string, merchantName: string | null | undefined): string {
+  if (merchantName) {
+    return merchantName;
   }
-} as const;
 
-function getCategoryConfig(category: string) {
-  const normalizedCategory = category.toUpperCase().replace(/\s+/g, '_');
-  return (
-    CATEGORY_CONFIG[normalizedCategory as keyof typeof CATEGORY_CONFIG] || 
-    CATEGORY_CONFIG.UNCATEGORIZED
-  );
+  let cleaned = description
+    .replace(/\b\d{6,}\b/g, '')
+    .replace(/\bCARD\s+\d+\b/i, '')
+    .replace(/\b\d{2}\/\d{2}\/?\d{0,4}\b/, '')
+    .replace(/^(PURCHASE[- ]|POS |DEBIT |CREDIT |WITHDRAWAL |CHECKCARD |PAYMENT |EFT |ACH )/i, '')
+    .replace(/\bTIMESTAMP\b/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  cleaned = cleaned.split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+
+  return cleaned;
 }
 
-function formatAmount(amount: number) {
-  const formatted = Math.abs(amount / 100).toFixed(2);
-  return amount < 0 ? `-$${formatted}` : `$${formatted}`;
+function formatAmount(amount: number): string {
+  const formatted = Math.abs(amount / 100).toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  });
+  return amount < 0 ? formatted : `-${formatted}`;
 }
 
 function getAmountColor(amount: number) {
@@ -140,103 +94,119 @@ function getAmountColor(amount: number) {
   return amount < 0 ? "text-red-500 dark:text-red-400" : "text-green-500 dark:text-green-400";
 }
 
-export default function TransactionList({ transactions, searchQuery }: TransactionListProps) {
-  const filteredTransactions = searchQuery
-    ? transactions.filter((t) =>
-        t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (t.merchantName && t.merchantName.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    : transactions;
+// Move getTailwindColor outside of the component
+const getTailwindColor = (category: string): string => {
+  const colorMap: Record<string, string> = {
+    '#FF9800': 'orange',  // Food and Drink
+    '#2196F3': 'blue',    // Transportation
+    '#9C27B0': 'purple',  // General Merchandise
+    '#4CAF50': 'emerald', // General Services
+    '#00BCD4': 'cyan',    // Travel
+    '#E91E63': 'pink',    // Entertainment
+    '#FFD700': 'yellow',  // Loan Payments
+    '#FF4081': 'rose',    // Personal Care
+    '#FFA726': 'amber',   // Utilities
+    '#66BB6A': 'green',   // Income
+    '#7C4DFF': 'indigo',  // Transfer
+  };
 
-  if (filteredTransactions.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        {searchQuery ? "No transactions match your search" : "No transactions found"}
-      </div>
-    );
-  }
+  const hexColor = COLORS[category as keyof typeof COLORS];
+  return colorMap[hexColor] || 'gray';
+};
+
+export default function TransactionList({ transactions, searchQuery }: TransactionListProps) {
+  const filteredTransactions = transactions.filter(transaction => 
+    transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    transaction.merchantName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent Transactions</CardTitle>
-        <CardDescription>{filteredTransactions.length} transactions found</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Description</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Account</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTransactions.map((transaction) => {
-              const config = getCategoryConfig(transaction.category);
-              const Icon = config.icon;
+    <div className="divide-y divide-gray-800">
+      {/* Table Header */}
+      <div className="grid grid-cols-[2fr,1fr,auto] gap-8 p-4 bg-gray-900/30">
+        <div className="text-sm font-medium text-muted-foreground">Transaction</div>
+        <div className="text-sm font-medium text-muted-foreground">Category</div>
+        <div className="text-sm font-medium text-muted-foreground text-right">Amount</div>
+      </div>
 
-              return (
-                <TableRow key={transaction.id} className="group">
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="font-medium">{transaction.description}</div>
-                      {transaction.merchantName && (
-                        <div className="text-sm text-muted-foreground">
-                          {transaction.merchantName}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="secondary"
-                      className={cn(
-                        "transition-colors",
-                        config.color
-                      )}
-                    >
-                      <Icon className="w-3 h-3 mr-1" />
-                      {config.label}
-                    </Badge>
-                    {transaction.subcategory && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {transaction.subcategory}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="font-medium">{transaction.accountName}</div>
-                      <div className="text-xs text-muted-foreground capitalize">
-                        {transaction.accountType}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="font-medium">
-                        {formatDistanceToNow(new Date(transaction.date), { addSuffix: true })}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(transaction.date).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className={cn(
-                    "text-right font-medium tabular-nums",
-                    getAmountColor(transaction.displayAmount)
-                  )}>
-                    {formatAmount(transaction.displayAmount)}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+      {/* Transactions */}
+      {filteredTransactions.map((transaction) => (
+        <div 
+          key={transaction.id}
+          className="grid grid-cols-[2fr,1fr,auto] gap-8 p-4 hover:bg-gray-900/40 transition-colors group items-center"
+        >
+          {/* Transaction Info */}
+          <div className="flex items-center gap-3">
+            <div 
+              className="p-2 rounded-lg group-hover:scale-110 transition-transform"
+              style={{ backgroundColor: `${COLORS[transaction.category as keyof typeof COLORS]}10` }}
+            >
+              {getTransactionIcon(transaction.category)}
+            </div>
+            <div>
+              <p className="font-medium">
+                {transaction.merchantName || transaction.description}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {formatDistanceToNow(new Date(transaction.date))} ago
+              </p>
+            </div>
+          </div>
+
+          {/* Enhanced Category Display - Fixed Width Container */}
+          <div className="flex items-center">
+            <div 
+              className="px-3 py-1.5 rounded-full transition-colors w-full max-w-[200px]"
+              style={{ 
+                backgroundColor: `${COLORS[transaction.category as keyof typeof COLORS]}10`,
+                borderColor: `${COLORS[transaction.category as keyof typeof COLORS]}20`,
+                borderWidth: '1px'
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: COLORS[transaction.category as keyof typeof COLORS] }}
+                />
+                <span 
+                  className="text-sm truncate"
+                  style={{ color: COLORS[transaction.category as keyof typeof COLORS] }}
+                >
+                  {formatCategoryName(transaction.category)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Amount */}
+          <span className={`font-medium justify-self-end whitespace-nowrap ${
+            transaction.amount > 0 ? 'text-red-400' : 'text-emerald-400'
+          }`}>
+            {transaction.amount > 0 ? '-' : '+'}${Math.abs(transaction.amount/100).toFixed(2)}
+          </span>
+        </div>
+      ))}
+    </div>
   );
+}
+
+function getTransactionIcon(category: string) {
+  // Use the exact colors from COLORS for the icons
+  const color = COLORS[category as keyof typeof COLORS];
+  
+  const iconMap: Record<string, React.ReactNode> = {
+    FOOD_AND_DRINK: <Utensils className="h-4 w-4" style={{ color }} />,
+    TRANSPORTATION: <Car className="h-4 w-4" style={{ color }} />,
+    GENERAL_MERCHANDISE: <ShoppingBag className="h-4 w-4" style={{ color }} />,
+    GENERAL_SERVICES: <Briefcase className="h-4 w-4" style={{ color }} />,
+    TRAVEL: <Plane className="h-4 w-4" style={{ color }} />,
+    ENTERTAINMENT: <Gamepad2 className="h-4 w-4" style={{ color }} />,
+    LOAN_PAYMENTS: <Building2 className="h-4 w-4" style={{ color }} />,
+    PERSONAL_CARE: <Heart className="h-4 w-4" style={{ color }} />,
+    UTILITIES: <Zap className="h-4 w-4" style={{ color }} />,
+    INCOME: <ArrowUpRight className="h-4 w-4" style={{ color }} />,
+    TRANSFER: <ArrowLeftRight className="h-4 w-4" style={{ color }} />,
+  };
+
+  return iconMap[category] || <CreditCard className="h-4 w-4" style={{ color }} />;
 }

@@ -21,6 +21,7 @@ import AddGoalDialog from "@/components/Goals/AddGoalDialog";
 import UpdateGoalDialog from "@/components/Goals/UpdateGoalDialog";
 import { Footer } from "@/components/layout/Footer";
 import { BetaFeedback } from "@/components/feedback/BetaFeedback";
+import { Navigation } from "@/components/layout/Navigation";
 
 interface Goal {
   id: number;
@@ -61,37 +62,7 @@ export default function GoalsPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden dark flex flex-col">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Financial Goals</h1>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" asChild>
-                <Link href="/dashboard" className="flex items-center gap-2">
-                  <LayoutDashboard className="h-5 w-5" />
-                  Dashboard
-                </Link>
-              </Button>
-              <Button variant="ghost" asChild>
-                <Link href="/goals" className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Goals
-                </Link>
-              </Button>
-              <Button variant="ghost" asChild>
-                <Link href="/ai/hub" className="flex items-center gap-2">
-                  <Bot className="h-5 w-5" />
-                  AI Hub
-                </Link>
-              </Button>
-            </div>
-            <span className="text-sm">Welcome, {user?.username}</span>
-            <Button variant="outline" onClick={handleLogout}>
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Navigation />
 
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="flex justify-between items-center mb-6">

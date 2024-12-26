@@ -174,12 +174,12 @@ export const budgets = pgTable("budgets", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
-  period: text("period").notNull().default("monthly"), // monthly, yearly
+  period: text("period").notNull().default("monthly"),
   startDate: timestamp("start_date").notNull(),
   category: text("category").notNull(),
-  limit: integer("limit").notNull(), // In cents
+  spendingLimit: integer("spending_limit").notNull(),
   spent: integer("spent").default(0).notNull(),
-  alertThreshold: integer("alert_threshold").default(80).notNull(), // Percentage
+  alertThreshold: integer("alert_threshold").default(80).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

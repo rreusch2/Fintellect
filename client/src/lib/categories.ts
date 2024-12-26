@@ -1,119 +1,86 @@
-import { IconType } from "lucide-react";
-import { 
-  ShoppingBag,
-  Utensils,
-  Car,
-  Plane,
-  Coffee,
-  CreditCard,
-  DollarSign,
-  Building,
-  Music,
-  Smartphone,
-  ShoppingCart,
-  HelpCircle
-} from "lucide-react";
+import {
+  Utensils, // Food & Drink
+  ShoppingBag, // Shopping
+  Car, // Transportation
+  Plane, // Travel
+  Gamepad, // Entertainment
+  Heart, // Personal Care
+  Zap, // Bills & Utilities
+  CreditCard, // Loan Payments
+  ArrowLeftRight, // Transfer
+  DollarSign, // Income
+  Building2, // Tax
+  HelpCircle, // Uncategorized
+  Briefcase, // Business
+  GraduationCap, // Education
+  Stethoscope, // Healthcare
+  Home, // Housing
+  Gift, // General Merchandise
+  WrenchIcon, // General Services
+  CalendarClock, // Subscription
+} from 'lucide-react';
 
-// Category mapping
-export const CategoryMap = {
-  // Food & Dining
-  'FOOD_AND_DRINK': 'Food & Dining',
-  'FOOD_DINING': 'Food & Dining',
-  'FOODDINING': 'Food & Dining',
-  'RESTAURANTS': 'Food & Dining',
-  'COFFEE_SHOPS': 'Coffee & Cafes',
-  'COFFEESHOPS': 'Coffee & Cafes',
-  'FAST_FOOD': 'Food & Dining',
-  'FASTFOOD': 'Food & Dining',
-
-  // Transportation
-  'TRANSPORTATION': 'Transportation',
-  'RIDE_SHARE': 'Transportation',
-  'RIDESHARE': 'Transportation',
-  'TAXI': 'Transportation',
-  'AUTO': 'Transportation',
-  'PARKING': 'Transportation',
-  'AIRLINES': 'Travel',
-
-  // Shopping
-  'SHOPPING': 'Shopping',
-  'RETAIL': 'Shopping',
-  'MERCHANDISE': 'Shopping',
-  'SPARKFUN': 'Shopping',
-  'FUN': 'Shopping',
-
-  // Other
-  'OTHER': 'Other',
-  'UNCATEGORIZED': 'Other',
-  'LOAN_PAYMENTS': 'Loan Payment',
-  'TRANSFER': 'Transfer',
-  'PAYMENT': 'Payment'
-} as const;
-
-// Icon mapping
-export const CategoryIcons: Record<string, IconType> = {
-  'Food & Dining': Utensils,
-  'Coffee & Cafes': Coffee,
-  'Transportation': Car,
-  'Travel': Plane,
-  'Shopping': ShoppingBag,
-  'Bills & Utilities': Building,
-  'Entertainment': Music,
-  'Loan Payment': CreditCard,
-  'Transfer': DollarSign,
-  'Payment': DollarSign,
-  'Other': HelpCircle,
-};
-
-// Color mapping
-export const CategoryColors: Record<string, string> = {
-  'Food & Dining': 'text-orange-500 border-orange-200 bg-orange-100',
-  'Coffee & Cafes': 'text-brown-500 border-brown-200 bg-brown-100',
-  'Transportation': 'text-blue-500 border-blue-200 bg-blue-100',
-  'Travel': 'text-purple-500 border-purple-200 bg-purple-100',
-  'Shopping': 'text-green-500 border-green-200 bg-green-100',
-  'Bills & Utilities': 'text-gray-500 border-gray-200 bg-gray-100',
-  'Entertainment': 'text-pink-500 border-pink-200 bg-pink-100',
-  'Loan Payment': 'text-red-500 border-red-200 bg-red-100',
-  'Transfer': 'text-blue-500 border-blue-200 bg-blue-100',
-  'Payment': 'text-blue-500 border-blue-200 bg-blue-100',
-  'Other': 'text-gray-500 border-gray-200 bg-gray-100',
-};
-
-export function normalizeCategory(category: string): string {
-  const cleanCategory = category.replace(/_/g, '').toUpperCase();
-  return CategoryMap[cleanCategory] || 
-         CategoryMap[cleanCategory.replace(/\s+/g, '')] || 
-         category.replace(/_/g, ' ');
-}
-
-export function getCategoryIcon(category: string): IconType {
-  const normalizedCategory = normalizeCategory(category);
-  return CategoryIcons[normalizedCategory] || HelpCircle;
-}
-
-export function getCategoryColor(category: string): string {
-  const normalizedCategory = normalizeCategory(category);
-  return CategoryColors[normalizedCategory] || CategoryColors['Other'];
-}
-
-// Add this new function for display formatting
-export function formatCategoryForDisplay(category: string): string {
-  // First normalize the category
-  const normalizedCategory = normalizeCategory(category);
-  // Return the normalized category which is already in display format
-  return normalizedCategory;
-}
-
+// Enhanced color palette with distinct, visually appealing colors
 export const COLORS = {
-  'TRANSPORTATION': '#3B82F6',
-  'FOOD AND DRINK': '#10B981',
-  'SHOPPING': '#F59E0B',
-  'ENTERTAINMENT': '#8B5CF6',
-  'UTILITIES': '#EC4899',
-  'HEALTH': '#06B6D4',
-  'TRANSFER': '#4B5563',
-  'OTHER': '#6B7280'
-} as const;
+  'FOOD_AND_DRINK': '#FF9F1C', // Warm orange - appetizing food color
+  'GENERAL_MERCHANDISE': '#4EA8DE', // Clear blue
+  'GENERAL_SERVICES': '#9333EA', // Deep purple
+  'TRANSPORTATION': '#10B981', // Emerald green
+  'TRAVEL': '#E879F9', // Bright pink - changed from amber to be distinct
+  'ENTERTAINMENT': '#EC4899', // Deep pink
+  'PERSONAL_CARE': '#06B6D4', // Cyan
+  'BILLS_AND_UTILITIES': '#6366F1', // Indigo
+  'LOAN_PAYMENTS': '#2563EB', // Royal blue
+  'TRANSFER': '#94A3B8', // Slate
+  'TAX': '#64748B', // Cool gray
+  'UNCATEGORIZED': '#CBD5E1', // Light gray
+  'BUSINESS': '#3B82F6', // Bright blue
+  'EDUCATION': '#F97316', // Bright orange
+  'HEALTHCARE': '#14B8A6', // Teal
+  'HOUSING': '#8B5CF6', // Violet
+  'SUBSCRIPTION': '#D946EF', // Fuchsia
+  'OTHER': '#94A3B8', // Slate gray
+};
 
-export type CategoryColor = keyof typeof COLORS;
+// Map categories to their respective icons
+export const CATEGORY_ICONS = {
+  'FOOD_AND_DRINK': Utensils,
+  'SHOPPING': ShoppingBag,
+  'TRANSPORTATION': Car,
+  'TRAVEL': Plane,
+  'ENTERTAINMENT': Gamepad,
+  'PERSONAL_CARE': Heart,
+  'BILLS_AND_UTILITIES': Zap,
+  'LOAN_PAYMENTS': CreditCard,
+  'TRANSFER': ArrowLeftRight,
+  'INCOME': DollarSign,
+  'TAX': Building2,
+  'UNCATEGORIZED': HelpCircle,
+  'BUSINESS': Briefcase,
+  'EDUCATION': GraduationCap,
+  'HEALTHCARE': Stethoscope,
+  'HOUSING': Home,
+  'GENERAL_MERCHANDISE': Gift,
+  'GENERAL_SERVICES': WrenchIcon,
+  'SUBSCRIPTION': CalendarClock,
+};
+
+// Helper function to normalize category names
+export function formatCategoryName(category: string): string {
+  return category
+    .split('_')
+    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+// Helper to get category color with fallback
+export function getCategoryColor(category: string): string {
+  const normalizedCategory = category.toUpperCase().replace(/\s+/g, '_');
+  return COLORS[normalizedCategory as keyof typeof COLORS] || COLORS.OTHER;
+}
+
+// Helper to get category icon with fallback
+export function getCategoryIcon(category: string) {
+  const normalizedCategory = category.toUpperCase().replace(/\s+/g, '_');
+  return CATEGORY_ICONS[normalizedCategory as keyof typeof CATEGORY_ICONS] || HelpCircle;
+}

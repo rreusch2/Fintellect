@@ -1,9 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowUpRight, ArrowDownRight, DollarSign, AlertCircle } from "lucide-react";
+import { 
+  Wallet, 
+  CreditCard, 
+  TrendingDown, 
+  AlertCircle,
+  LineChart,
+  ArrowUpRight, 
+  ArrowDownRight 
+} from "lucide-react";
 import { useTransactions } from "@/hooks/use-transactions";
 import { LoadingState } from "@/components/ui/loading/LoadingState";
 import PlaidLink from "@/components/Plaid/PlaidLink";
 import { useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 
 export default function FinanceOverview() {
   const { data: summary, isLoading } = useTransactions();
@@ -25,7 +34,7 @@ export default function FinanceOverview() {
 
   if (!summary?.hasPlaidConnection) {
     return (
-      <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800">
+      <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors">
         <CardHeader>
           <CardTitle>Financial Overview</CardTitle>
         </CardHeader>
@@ -73,29 +82,52 @@ export default function FinanceOverview() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Financial Overview</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-2">
-          <StatCard
-            title="Available Balance"
-            value={formatCurrency(summary.totalBalance)}
-            trend={summary.monthOverMonthChange >= 0 ? "up" : "down"}
-            change={`${summary.monthOverMonthChange?.toFixed(1) || "0"}%`}
-            description="Balance available for spending"
-          />
-          <StatCard
-            title="Monthly Spending"
-            value={formatCurrency(summary.monthlySpending)}
-            trend="down"
-            change={`${summary.monthOverMonthChange?.toFixed(1) || "0"}%`}
-            description="Total spending this month"
-          />
-        </div>
-      </CardContent>
-    </Card>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors">
+        <CardHeader className="border-b border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/20">
+              <Wallet className="h-5 w-5 text-blue-400" />
+            </div>
+            <div>
+              <CardTitle>Financial Overview</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Your current financial snapshot
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <StatCard
+              title="Available Balance"
+              value={formatCurrency(summary.totalBalance)}
+              trend={summary.monthOverMonthChange >= 0 ? "up" : "down"}
+              description="Balance available for spending"
+              icon={<CreditCard className="h-4 w-4" />}
+              gradient="from-emerald-500/20 to-teal-500/20"
+              iconColor="text-emerald-400"
+              borderColor="border-emerald-500/20"
+            />
+            <StatCard
+              title="Monthly Spending"
+              value={formatCurrency(summary.monthlySpending)}
+              trend="down"
+              change={`${summary.monthOverMonthChange?.toFixed(1) || "0"}%`}
+              description="Total spending this month"
+              icon={<LineChart className="h-4 w-4" />}
+              gradient="from-purple-500/20 to-pink-500/20"
+              iconColor="text-purple-400"
+              borderColor="border-purple-500/20"
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 
@@ -105,26 +137,49 @@ function StatCard({
   trend,
   change,
   description,
+  icon,
+  gradient,
+  iconColor,
+  borderColor,
 }: {
   title: string;
   value: string;
   trend: "up" | "down";
-  change: string;
+  change?: string;
   description?: string;
+  icon?: React.ReactNode;
+  gradient?: string;
+  iconColor?: string;
+  borderColor?: string;
 }) {
   return (
-    <div className="flex items-center justify-between p-4 border rounded-lg">
-      <div>
-        <p className="text-sm text-muted-foreground">{title}</p>
-        <p className="text-2xl font-bold">{value}</p>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+    <div className="group flex flex-col p-6 border border-gray-800 rounded-lg bg-gray-900/50 backdrop-blur-sm hover:bg-gray-900/60 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/5">
+      <div className="flex items-center gap-2 mb-3">
+        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} border ${borderColor} group-hover:scale-110 transition-transform duration-300`}>
+          <div className={iconColor}>{icon}</div>
+        </div>
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+      </div>
+      <div className="flex items-baseline gap-2">
+        <p className="text-2xl font-bold tracking-tight">{value}</p>
+        {change && (
+          <div className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+            trend === "up" 
+              ? "text-emerald-400 bg-emerald-500/10" 
+              : "text-rose-400 bg-rose-500/10"
+          }`}>
+            {trend === "up" ? (
+              <ArrowUpRight className="h-3 w-3 mr-1" />
+            ) : (
+              <ArrowDownRight className="h-3 w-3 mr-1" />
+            )}
+            {change}
+          </div>
         )}
       </div>
-      <div className={`flex items-center ${trend === "up" ? "text-green-500" : "text-red-500"}`}>
-        {trend === "up" ? <ArrowUpRight /> : <ArrowDownRight />}
-        <span className="ml-1">{change}</span>
-      </div>
+      {description && (
+        <p className="text-xs text-muted-foreground mt-2">{description}</p>
+      )}
     </div>
   );
 }

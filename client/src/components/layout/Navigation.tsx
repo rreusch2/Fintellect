@@ -1,13 +1,14 @@
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { LayoutDashboard, Receipt, Target, Sparkles, LogOut, User } from "lucide-react";
+import { LayoutDashboard, Target, Sparkles, LogOut, UserCircle, WalletCards } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
+import { useMemo } from "react";
 
 export function Navigation() {
-  const { user, logout } = useUser();
   const [location] = useLocation();
+  const { user } = useUser();
 
   const handleLogout = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -16,10 +17,12 @@ export function Navigation() {
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/transactions", label: "Transactions", icon: Receipt },
+    { href: "/transactions", label: "Transactions", icon: WalletCards },
     { href: "/goals", label: "Goals", icon: Target },
     { href: "/ai/hub", label: "AI Hub", icon: Sparkles },
   ];
+
+  const navigationItems = useMemo(() => navItems, []);
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/10 backdrop-blur-md bg-background/70">
@@ -27,12 +30,19 @@ export function Navigation() {
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-8">
             <Link href="/dashboard">
-              <a className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 animate-gradient">
-                Finflow
+              <a className="flex items-center gap-2.5">
+                <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 animate-gradient">
+                  Fintellect
+                </span>
+                <div className="flex items-center px-1.5 py-[2px] rounded-full bg-primary/5 border border-primary/20 translate-y-[1px]">
+                  <span className="text-[10px] font-semibold tracking-wide text-primary">
+                    BETA
+                  </span>
+                </div>
               </a>
             </Link>
             <div className="flex items-center gap-2">
-              {navItems.map(({ href, label, icon: Icon }) => (
+              {navigationItems.map(({ href, label, icon: Icon }) => (
                 <Button
                   key={href}
                   variant={location === href ? "secondary" : "ghost"}
@@ -52,17 +62,11 @@ export function Navigation() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-muted-foreground">Welcome, {user?.username}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-2"
-              asChild
-            >
-              <Link href="/profile">
-                <User className="h-4 w-4" />
-                Profile
-              </Link>
-            </Button>
+            <Link href="/profile">
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <UserCircle className="h-6 w-6" />
+              </Button>
+            </Link>
             <Button variant="outline" onClick={handleLogout} className="gap-2">
               <LogOut className="h-4 w-4" />
               Logout

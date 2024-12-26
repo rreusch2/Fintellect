@@ -20,15 +20,12 @@
       "dest": "/server/index.ts"
     },
     {
-      "src": "^/assets/(.*)",
+      "src": "/assets/(.*)",
       "dest": "/dist/public/assets/$1"
     },
     {
-      "src": "/(.*)\\.(.+)$",
-      "dest": "/dist/public/$1.$2"
-    },
-    {
-      "handle": "filesystem"
+      "src": "/(.+\\.[a-z]+)$",
+      "dest": "/dist/public/$1"
     },
     {
       "src": "/(.*)",

@@ -4,8 +4,9 @@ import { dirname, join } from "path";
 import { registerRoutes } from "./routes.js";
 import cors from "cors";
 import session from "express-session";
-import { setupAuth } from "./auth";
+import { setupAuth } from "./auth.js";
 import passport from "passport";
+import { db } from "../../db/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

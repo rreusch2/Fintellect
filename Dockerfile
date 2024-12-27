@@ -5,15 +5,18 @@ COPY package*.json ./
 COPY client/package*.json client/
 COPY server/package*.json server/
 RUN npm install
+RUN cd client && npm install
 COPY . .
-RUN cd client && npm run build
+RUN npm run build
 
 # Production stage
 FROM node:18-alpine
 WORKDIR /app
-COPY --from=builder /app/server/package*.json ./
-COPY --from=builder /app/server/dist ./dist
+COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/client/dist ./public
+COPY package*.json ./
+COPY client/package*.json client/
 RUN npm install --production
-EXPOSE 3000
-CMD ["npm", "start"] 
+EXPOSE 10000
+ENV PORT=10000
+CMD ["node", "dist/index.js"] 

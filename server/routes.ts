@@ -4,18 +4,18 @@ import { db } from "@db";
 import { users, goals, budgets, plaidTransactions } from "@db/schema";
 import { eq, desc, and, gte } from "drizzle-orm";
 import { insertUserSchema, plaidAccounts, plaidItems, type SelectGoal } from "@db/schema";
-import { generateFinancialInsights, chatWithAI } from "./services/ai/index.js";
-import { setupAuth } from "./auth.js";
-import { financialAdvisor } from "./services/ai/agents/FinancialAdvisorAgent.js";
-import { investmentAdvisor } from "./services/ai/agents/InvestmentStrategyAgent.js";
-import { budgetAnalyst } from "./services/ai/agents/BudgetAnalysisAgent.js";
+import { generateFinancialInsights, chatWithAI } from "./services/ai";
+import { setupAuth } from "./auth";
+import { financialAdvisor } from "./services/ai/agents/FinancialAdvisorAgent";
+import { investmentAdvisor } from "./services/ai/agents/InvestmentStrategyAgent";
+import { budgetAnalyst } from "./services/ai/agents/BudgetAnalysisAgent";
 import passport from "passport";
 import { IVerifyOptions } from "passport-local";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { PlaidService } from "./services/plaid/index.js";
-import plaidRouter from "./routes/plaid.js";
-import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent.js";
+import { PlaidService } from "./services/plaid";
+import plaidRouter from "./routes/plaid";
+import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent";
 
 
 const scryptAsync = promisify(scrypt);

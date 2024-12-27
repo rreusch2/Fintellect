@@ -14,7 +14,7 @@ RUN npm run build
 FROM node:18-alpine
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/client/dist ./public
+COPY --from=builder /app/dist/public ./public
 COPY package*.json ./
 COPY client/package*.json client/
 RUN npm install --production

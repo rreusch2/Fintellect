@@ -215,11 +215,29 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
+    // Destroy the session
+    req.session.destroy((err) => {
       if (err) {
-        return res.status(500).send("Logout failed");
+        console.error("Logout error:", err);
+        return res.status(500).json({ 
+          ok: false, 
+          message: "Failed to logout" 
+        });
       }
-      res.json({ message: "Logout successful" });
+
+      // Clear the session cookie
+      res.clearCookie('connect.sid', {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: 'lax',
+        domain: process.env.NODE_ENV === "production" ? 'fintellectai.co' : undefined
+      });
+
+      res.json({ 
+        ok: true, 
+        message: "Logged out successfully" 
+      });
     });
   });
 

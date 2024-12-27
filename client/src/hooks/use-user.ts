@@ -100,10 +100,23 @@ export function useUser() {
     },
   });
 
-  const logoutMutation = useMutation<RequestResult, Error>({
-    mutationFn: () => handleRequest('/api/logout', 'POST'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        return { ok: false, message };
+      }
+
+      // Clear any stored user data
+      queryClient.setQueryData(['user'], null);
+      queryClient.clear();
+
+      return { ok: true };
     },
   });
 

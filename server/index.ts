@@ -5,6 +5,8 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { sql } from "drizzle-orm";
 import { setupStatic, log } from "./static";
+import { requireHTTPS, setSecurityHeaders } from "./middleware/secure";
+import cors from "cors";
 
 console.log('Environment Check:');
 console.log('- NODE_ENV:', process.env.NODE_ENV);
@@ -15,6 +17,26 @@ const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add security middleware in production
+if (process.env.NODE_ENV === "production") {
+  app.use(requireHTTPS);
+  app.use(setSecurityHeaders);
+}
+
+const allowedOrigins = [
+  'https://fintellectai.co',
+  'https://www.fintellectai.co'
+];
+
+if (process.env.NODE_ENV === 'development') {
+  allowedOrigins.push('http://localhost:5173');
+}
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 
 // Initialize the server with database connection and authentication
 async function startServer() {

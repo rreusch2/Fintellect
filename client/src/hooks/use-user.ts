@@ -103,7 +103,24 @@ export function useUser() {
   });
 
   const registerMutation = useMutation<RequestResult, Error, InsertUser>({
-    mutationFn: (userData) => handleRequest('/api/register', 'POST', userData),
+    mutationFn: async (userData) => {
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status >= 500) {
+          return { ok: false, message: response.statusText };
+        }
+        return { ok: false, message: await response.text() };
+      }
+
+      const data = await response.json();
+      return { ok: true, user: data.user };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },

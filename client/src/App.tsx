@@ -43,10 +43,22 @@ function App() {
   // Protected routes that require authentication
   const protectedRoutes = (
     <Switch>
-      <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/onboarding">
+        {!user?.hasCompletedOnboarding ? (
+          <OnboardingPage />
+        ) : (
+          <DashboardPage />
+        )}
+      </Route>
+      <Route path="/dashboard">
+        {user?.hasCompletedOnboarding ? (
+          <DashboardPage />
+        ) : (
+          <OnboardingPage />
+        )}
+      </Route>
       <Route path="/transactions" component={TransactionsPage} />
       <Route path="/goals" component={GoalsPage} />
-      <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/ai/hub" component={AIHubPage} />
       <Route path="/ai/assistant" component={AIAssistantPage} />
       <Route path="/ai/budget" component={AIBudgetPage} />
@@ -54,7 +66,11 @@ function App() {
       <Route path="/terms" component={TermsPage} />
       <Route path="/profile" component={ProfileSettingsPage} />
       <Route>
-        <DashboardPage />
+        {user?.hasCompletedOnboarding ? (
+          <DashboardPage />
+        ) : (
+          <OnboardingPage />
+        )}
       </Route>
     </Switch>
   );

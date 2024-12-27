@@ -35,7 +35,7 @@ type AuthForm = z.infer<typeof authSchema>;
 
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const { login, register } = useUser();
+  const { login, register, refetch } = useUser();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -52,17 +52,28 @@ export default function AuthPage() {
     try {
       const { rememberMe, ...authData } = values;
       const result = await (isLogin ? login({ ...authData, rememberMe }) : register(authData));
+      
+      // Check if registration/login was successful
       if (!result.ok) {
         throw new Error(result.message);
       }
+
       toast({
         title: "Success!",
         description: isLogin ? "Welcome back!" : "Account created successfully",
       });
+
+      // Force a refetch of user data
+      await refetch();
       
-      // Redirect based on user onboarding status
-      const user = result.user;
-      if (user?.hasCompletedOnboarding && user?.hasPlaidSetup) {
+      // Always redirect to onboarding for new registrations
+      if (!isLogin) {
+        setLocation("/onboarding");
+        return;
+      }
+      
+      // For login, check user status
+      if (result.user?.hasCompletedOnboarding) {
         setLocation("/dashboard");
       } else {
         setLocation("/onboarding");

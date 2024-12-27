@@ -3,31 +3,10 @@
   "builds": [
     {
       "src": "server/index.ts",
-      "use": "@vercel/node",
+      "use": "@vercel/node@3",
       "config": {
-        "nodeVersion": "18.x"
+        "runtime": "nodejs22.x"
       }
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist/public",
-        "buildCommand": "npm run build:client"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server/index.ts"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/public/index.html"
     }
   ]
 } 

@@ -4,7 +4,7 @@ import { dirname, join } from "path";
 import { registerRoutes } from "./routes.js";
 import cors from "cors";
 import session from "express-session";
-import { setupAuth } from "./auth.js";
+import { setupAuth } from "./auth";
 import passport from "passport";
 
 const __filename = fileURLToPath(import.meta.url);

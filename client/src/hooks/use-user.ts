@@ -19,12 +19,9 @@ async function handleRequest(
   body?: InsertUser
 ): Promise<RequestResult> {
   try {
-    const response = await fetch(`${API_BASE}${url}`, {
+    const response = await fetch(url, {
       method,
-      headers: {
-        ...(body ? { "Content-Type": "application/json" } : {}),
-        "Accept": "application/json"
-      },
+      headers: body ? { "Content-Type": "application/json" } : undefined,
       body: body ? JSON.stringify(body) : undefined,
       credentials: "include",
     });
@@ -38,27 +35,31 @@ async function handleRequest(
       return { ok: false, message };
     }
 
-    const data = await response.json();
-    return { ok: true, user: data };
+    return { ok: true };
   } catch (e: any) {
     return { ok: false, message: e.toString() };
   }
 }
 
-const API_BASE = process.env.NODE_ENV === 'production' 
-  ? 'https://www.fintellectai.co'
-  : '';
+async function fetchUser(): Promise<SelectUser | null> {
+  const response = await fetch('/api/user', {
+    credentials: 'include'
+  });
 
-const fetchUser = async () => {
-  const result = await handleRequest('/api/user', 'GET');
-  if (!result.ok) {
-    if (result.message.includes('401')) {
+  if (!response.ok) {
+    if (response.status === 401) {
       return null;
     }
-    throw new Error(result.message);
+
+    if (response.status >= 500) {
+      throw new Error(`${response.status}: ${response.statusText}`);
+    }
+
+    throw new Error(`${response.status}: ${await response.text()}`);
   }
-  return result.user;
-};
+
+  return response.json();
+}
 
 export function useUser() {
   const queryClient = useQueryClient();
@@ -71,7 +72,24 @@ export function useUser() {
   });
 
   const loginMutation = useMutation<RequestResult, Error, LoginData>({
-    mutationFn: (userData) => handleRequest('/api/login', 'POST', userData),
+    mutationFn: async (userData) => {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status >= 500) {
+          return { ok: false, message: response.statusText };
+        }
+        return { ok: false, message: await response.text() };
+      }
+
+      const data = await response.json();
+      return { ok: true, user: data.user };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },

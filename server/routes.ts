@@ -4,18 +4,18 @@ import { db } from "@db";
 import { users, goals, budgets, plaidTransactions } from "@db/schema";
 import { eq, desc, and, gte } from "drizzle-orm";
 import { insertUserSchema, plaidAccounts, plaidItems, type SelectGoal } from "@db/schema";
-import { generateFinancialInsights, chatWithAI } from "./services/ai.js";
-import { setupAuth } from "./auth.js";
-import { financialAdvisor } from "./services/ai/agents/FinancialAdvisorAgent.js";
-import { investmentAdvisor } from "./services/ai/agents/InvestmentStrategyAgent.js";
-import { budgetAnalyst } from "./services/ai/agents/BudgetAnalysisAgent.js";
+import { generateFinancialInsights, chatWithAI } from "./services/ai";
+import { setupAuth } from "./auth";
+import { financialAdvisor } from "./services/ai/agents/FinancialAdvisorAgent";
+import { investmentAdvisor } from "./services/ai/agents/InvestmentStrategyAgent";
+import { budgetAnalyst } from "./services/ai/agents/BudgetAnalysisAgent";
 import passport from "passport";
 import { IVerifyOptions } from "passport-local";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { PlaidService } from "./services/plaid.js";
-import plaidRouter from "./routes/plaid.js";
-import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent.js";
+import { PlaidService } from "./services/plaid";
+import plaidRouter from "./routes/plaid";
+import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent";
 
 
 const scryptAsync = promisify(scrypt);
@@ -26,17 +26,6 @@ const crypto = {
     return `${buf.toString("hex")}.${salt}`;
   },
 };
-
-// Add User type interface
-interface User {
-  id: number;
-  username: string;
-  hasCompletedOnboarding: boolean;
-  hasPlaidSetup: boolean;
-  monthlyIncome?: number;
-  onboardingStep?: number;
-  consentVersion?: string;
-}
 
 export function registerRoutes(app: Express): Server {
   // Setup authentication middleware and routes
@@ -51,7 +40,7 @@ export function registerRoutes(app: Express): Server {
       if (!result.success) {
         return res
           .status(400)
-          .send("Invalid input: " + result.error.issues.map((i: { message: string }) => i.message).join(", "));
+          .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
       }
 
       // Check if user already exists
@@ -247,11 +236,11 @@ export function registerRoutes(app: Express): Server {
           onboardingStep: updatedUser.onboardingStep
         }
       });
-    } catch (error: unknown) {
+    } catch (error) {
       console.error("Error completing onboarding:", error);
       res.status(500).json({
         error: "Failed to complete onboarding",
-        details: process.env.NODE_ENV === "development" ? (error as Error).message : undefined
+        details: process.env.NODE_ENV === "development" ? error.message : undefined
       });
     }
   });

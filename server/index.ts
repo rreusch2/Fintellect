@@ -1,78 +1,118 @@
-import express from "express";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import 'dotenv/config';
+import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
-import cors from "cors";
-import session from "express-session";
-import { setupAuth } from "./auth.js";
-import passport from "passport";
-import { db } from "../db/index.js";
+import { setupVite, serveStatic, log } from "./vite";
+import { setupAuth } from "./auth";
+import { db } from "@db";
+import { sql } from "drizzle-orm";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+console.log('Environment Check:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- Database URL exists:', !!process.env.DATABASE_URL);
+console.log('- Database URL prefix:', process.env.DATABASE_URL?.substring(0, 20) + '...');
 
 const app = express();
 
-// Enable CORS
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://www.fintellectai.co'
-    : 'http://localhost:5173',
-  credentials: true
-}));
-
-// Parse JSON bodies
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-// Session middleware
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+// Initialize the server with database connection and authentication
+async function startServer() {
+  try {
+    // Test database connection with retry logic
+    let connected = false;
+    let retries = 3;
+    
+    while (!connected && retries > 0) {
+      try {
+        await db.execute(sql`SELECT NOW()`);
+        connected = true;
+        log('Database connection established successfully');
+        log('Setting up server configuration...');
+      } catch (dbError) {
+        retries--;
+        if (retries === 0) {
+          console.error('Database connection error:', dbError);
+          throw new Error('Failed to connect to database after multiple attempts');
+        }
+        log(`Database connection failed, retrying... (${retries} attempts remaining)`);
+        // Wait for 1 second before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    // Setup authentication
+    setupAuth(app);
+    log('Authentication setup complete');
+
+    return true;
+  } catch (error) {
+    console.error("Error starting server:", error);
+    return false;
   }
-}));
-
-// Initialize Passport and restore authentication state from session
-app.use(passport.initialize());
-app.use(passport.session());
+}
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`, {
-    authenticated: req.isAuthenticated(),
-    user: req.user,
-    session: req.session
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+
+      log(logLine);
+    }
   });
+
   next();
 });
 
-// Setup authentication
-setupAuth(app);
+(async () => {
+  const server = registerRoutes(app);
 
-// API routes should be registered before static files
-registerRoutes(app);
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
 
-// In development, don't serve static files - let Vite handle it
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(join(__dirname, "../public")));
-  
-  // Handle client-side routing - should be after API routes
-  app.get("*", (req, res) => {
-    // Don't serve index.html for API routes
-    if (req.path.startsWith("/api")) {
-      console.log(`API 404: ${req.path}`);
-      return res.status(404).send("API endpoint not found");
-    }
-    res.sendFile(join(__dirname, "../public/index.html"));
+    res.status(status).json({ message });
+    throw err;
   });
-}
 
-const port = process.env.PORT || 5001;
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
-});
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+
+  // ALWAYS serve the app on port 5001
+  // this serves both the API and the client
+  const PORT = 5001;
+  const serverStarted = await startServer();
+  if (serverStarted) {
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`Server running on port ${PORT}`);
+    });
+  } else {
+    log('Failed to start server');
+    process.exit(1);
+  }
+})();

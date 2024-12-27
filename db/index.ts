@@ -3,6 +3,12 @@ import { Pool } from '@neondatabase/serverless';
 import * as schema from "./schema";
 import 'dotenv/config';
 import ws from 'ws';
+import { neonConfig } from '@neondatabase/serverless';
+
+// Configure Neon with WebSocket
+neonConfig.webSocketConstructor = ws;
+neonConfig.useSecureWebSocket = true;
+neonConfig.pipelineConnect = "password";
 
 // Load environment variables
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -32,7 +38,7 @@ export async function testDatabaseConnection() {
     return true;
   } catch (error) {
     console.error('Database connection test failed:', error);
-    return false;
+    throw error; // Propagate the error for better debugging
   }
 }
 
@@ -41,3 +47,24 @@ process.on('SIGTERM', async () => {
   console.log('Closing database connection...');
   await pool.end();
 });
+
+// Add this function after the imports
+async function connectWithRetry(maxRetries = 5, delay = 5000) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await testDatabaseConnection();
+      console.log('Successfully connected to database');
+      return true;
+    } catch (error) {
+      console.error(`Connection attempt ${i + 1} failed:`, error);
+      if (i < maxRetries - 1) {
+        console.log(`Retrying in ${delay/1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw new Error(`Failed to connect after ${maxRetries} attempts`);
+}
+
+// Export the retry function
+export { connectWithRetry };

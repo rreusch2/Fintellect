@@ -19,9 +19,18 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist/public ./public
 COPY package*.json ./
 COPY client/package*.json client/
-# Install only production dependencies including ws
+
+# Install production dependencies and ensure ws is available
 RUN npm install --omit=dev && \
-    npm install ws@8.18.0
+    npm install ws@8.18.0 && \
+    # Install additional required packages
+    npm install @neondatabase/serverless
+
+# Set environment variables for Neon
+ENV NEON_POOL_CONNECTIONS=20
+ENV NEON_POOL_IDLE_TIMEOUT=30000
+ENV NEON_PIPELINE_CONNECT=password
+
 EXPOSE 10000
 ENV PORT=10000
 CMD ["node", "dist/index.js"] 

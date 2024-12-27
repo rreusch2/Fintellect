@@ -199,14 +199,14 @@ export function setupAuth(app: Express) {
         if (err) {
           return next(err);
         }
+        // Return user data with the response
         return res.json({
-          message: "Registration successful",
-          user: { 
-            id: newUser.id, 
+          user: {
+            id: newUser.id,
             username: newUser.username,
             hasCompletedOnboarding: newUser.hasCompletedOnboarding,
             hasPlaidSetup: newUser.hasPlaidSetup
-          },
+          }
         });
       });
     } catch (error) {

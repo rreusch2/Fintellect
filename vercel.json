@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "server/index.ts",
+      "src": "dist/index.js",
       "use": "@vercel/node@3",
       "config": {
         "runtime": "nodejs22.x"
@@ -18,19 +18,29 @@
   ],
   "routes": [
     {
-      "src": "/assets/(.*)",
-      "dest": "/dist/public/assets/$1"
+      "src": "^/assets/(.*)",
+      "dest": "/dist/public/assets/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
-      "src": "/api/(.*)",
-      "dest": "/server/index.ts"
+      "src": "^/api/(.*)",
+      "dest": "/dist/index.js"
+    },
+    {
+      "src": "^/favicon.ico",
+      "dest": "/dist/public/favicon.ico"
     },
     {
       "handle": "filesystem"
     },
     {
-      "src": "/(.*)",
-      "dest": "/dist/public/index.html"
+      "src": "^/.*",
+      "dest": "/dist/public/index.html",
+      "headers": {
+        "cache-control": "public, max-age=0, must-revalidate"
+      }
     }
   ]
 } 

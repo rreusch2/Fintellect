@@ -19,7 +19,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist/public ./public
 COPY package*.json ./
 COPY client/package*.json client/
-RUN npm install --omit=dev
+# Install only production dependencies including ws
+RUN npm install --omit=dev && \
+    npm install ws@8.18.0
 EXPOSE 10000
 ENV PORT=10000
 CMD ["node", "dist/index.js"] 

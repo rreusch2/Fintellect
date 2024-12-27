@@ -19,9 +19,12 @@ async function handleRequest(
   body?: InsertUser
 ): Promise<RequestResult> {
   try {
-    const response = await fetch(url, {
+    const response = await fetch(`${API_BASE}${url}`, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: {
+        ...(body ? { "Content-Type": "application/json" } : {}),
+        "Accept": "application/json"
+      },
       body: body ? JSON.stringify(body) : undefined,
       credentials: "include",
     });
@@ -35,23 +38,26 @@ async function handleRequest(
       return { ok: false, message };
     }
 
-    return { ok: true };
+    const data = await response.json();
+    return { ok: true, user: data };
   } catch (e: any) {
     return { ok: false, message: e.toString() };
   }
 }
 
+const API_BASE = process.env.NODE_ENV === 'production' 
+  ? 'https://www.fintellectai.co'
+  : '';
+
 const fetchUser = async () => {
-  const response = await fetch('/api/user', {
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json'
+  const result = await handleRequest('/api/user', 'GET');
+  if (!result.ok) {
+    if (result.message.includes('401')) {
+      return null;
     }
-  });
-  if (!response.ok) {
-    throw new Error('Failed to fetch user');
+    throw new Error(result.message);
   }
-  return response.json();
+  return result.user;
 };
 
 export function useUser() {
@@ -65,24 +71,7 @@ export function useUser() {
   });
 
   const loginMutation = useMutation<RequestResult, Error, LoginData>({
-    mutationFn: async (userData) => {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        if (response.status >= 500) {
-          return { ok: false, message: response.statusText };
-        }
-        return { ok: false, message: await response.text() };
-      }
-
-      const data = await response.json();
-      return { ok: true, user: data.user };
-    },
+    mutationFn: (userData) => handleRequest('/api/login', 'POST', userData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },

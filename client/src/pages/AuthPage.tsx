@@ -53,7 +53,6 @@ export default function AuthPage() {
       const { rememberMe, ...authData } = values;
       const result = await (isLogin ? login({ ...authData, rememberMe }) : register(authData));
       
-      // Check if registration/login was successful
       if (!result.ok) {
         throw new Error(result.message);
       }
@@ -66,9 +65,9 @@ export default function AuthPage() {
       // Force a refetch of user data
       await refetch();
       
-      // Always redirect to onboarding for new registrations
+      // For new registrations, explicitly navigate to onboarding
       if (!isLogin) {
-        setLocation("/onboarding");
+        window.location.href = '/onboarding';  // Use window.location instead of setLocation
         return;
       }
       
@@ -76,7 +75,7 @@ export default function AuthPage() {
       if (result.user?.hasCompletedOnboarding) {
         setLocation("/dashboard");
       } else {
-        setLocation("/onboarding");
+        window.location.href = '/onboarding';  // Use window.location for consistency
       }
     } catch (error: any) {
       toast({

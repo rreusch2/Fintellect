@@ -1,6 +1,7 @@
 # Build stage
 FROM node:18-alpine AS builder
 WORKDIR /app
+RUN mkdir client server
 COPY package*.json ./
 COPY client/package*.json client/
 COPY server/package*.json server/

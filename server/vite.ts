@@ -18,9 +18,9 @@ export function log(message: string, source = "express") {
 
 export async function setupVite(app: Express, server: Server) {
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('Vite should not be used in production');
+    return serveStatic(app);
   }
-  
+
   const { createServer: createViteServer, createLogger } = await import('vite');
   const viteConfig = await import('../vite.config');
   const viteLogger = createLogger();
@@ -28,23 +28,7 @@ export async function setupVite(app: Express, server: Server) {
   const vite = await createViteServer({
     ...viteConfig.default,
     configFile: false,
-    customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        if (msg.includes("[TypeScript] Found 0 errors. Watching for file changes")) {
-          log("no errors found", "tsc");
-          return;
-        }
-        if (msg.includes("[TypeScript] ")) {
-          const [errors, summary] = msg.split("[TypeScript] ", 2);
-          log(`${summary} ${errors}\u001b[0m`, "tsc");
-          return;
-        } else {
-          viteLogger.error(msg, options);
-          process.exit(1);
-        }
-      },
-    },
+    customLogger: viteLogger,
     server: {
       middlewareMode: true,
       hmr: { server },
@@ -61,19 +45,20 @@ export async function setupVite(app: Express, server: Server) {
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
       next(e);
     }
   });
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "public");
-  if (!fs.existsSync(distPath)) {
-    throw new Error(`Could not find the build directory: ${distPath}, make sure to build the client first`);
+  const publicPath = path.resolve(__dirname, "public");
+  if (!fs.existsSync(publicPath)) {
+    log(`Public directory not found at ${publicPath}`);
+    return;
   }
-  app.use(express.static(distPath));
+  
+  app.use(express.static(publicPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    res.sendFile(path.resolve(publicPath, "index.html"));
   });
 }

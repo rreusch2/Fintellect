@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, log } from "./vite";
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { sql } from "drizzle-orm";
@@ -19,7 +19,6 @@ app.use(express.urlencoded({ extended: false }));
 // Initialize the server with database connection and authentication
 async function startServer() {
   try {
-    // Test database connection with retry logic
     let connected = false;
     let retries = 3;
     
@@ -89,17 +88,13 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  if (process.env.NODE_ENV === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+  await setupVite(app, server);
 
   const PORT = process.env.PORT || 5001;
   const serverStarted = await startServer();
   if (serverStarted) {
     server.listen(PORT, "0.0.0.0", () => {
-      log(`Server running on port ${PORT}`);
+      log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
     });
   } else {
     log('Failed to start server');

@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
-import { setupVite, log } from "./vite";
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { sql } from "drizzle-orm";
+import { setupStatic, log } from "./static";
 
 console.log('Environment Check:');
 console.log('- NODE_ENV:', process.env.NODE_ENV);
@@ -88,7 +88,12 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  await setupVite(app, server);
+  if (process.env.NODE_ENV === "development") {
+    const { setupVite } = await import("./vite.js");
+    await setupVite(app, server);
+  } else {
+    setupStatic(app);
+  }
 
   const PORT = process.env.PORT || 5001;
   const serverStarted = await startServer();

@@ -3,32 +3,13 @@ import fs from "fs";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import { type Server } from "http";
+import { createServer as createViteServer } from "vite";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-  console.log(`${formattedTime} [${source}] ${message}`);
-}
-
 export async function setupVite(app: Express, server: Server) {
-  if (process.env.NODE_ENV === 'production') {
-    return serveStatic(app);
-  }
-
-  const { createServer: createViteServer, createLogger } = await import('vite');
-  const viteConfig = await import('../vite.config');
-  const viteLogger = createLogger();
-
   const vite = await createViteServer({
-    ...viteConfig.default,
-    configFile: false,
-    customLogger: viteLogger,
     server: {
       middlewareMode: true,
       hmr: { server },

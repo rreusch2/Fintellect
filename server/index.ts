@@ -2,19 +2,47 @@ import express from "express";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { registerRoutes } from "./routes.js";
+import cors from "cors";
+import session from "express-session";
+import { setupAuth } from "./auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
 
+// Enable CORS
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://www.fintellectai.co'
+    : 'http://localhost:5001',
+  credentials: true
+}));
+
+// Parse JSON bodies
+app.use(express.json());
+
+// Session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+  }
+}));
+
+// Setup authentication
+setupAuth(app);
+
+// API routes should be registered before static files
+registerRoutes(app);
+
 // Serve static files from the dist/public directory
 app.use(express.static(join(__dirname, "../public")));
 
-// Register API routes
-registerRoutes(app);
-
-// Handle client-side routing
+// Handle client-side routing - should be after API routes
 app.get("*", (req, res) => {
   // Don't serve index.html for API routes
   if (req.path.startsWith("/api")) {

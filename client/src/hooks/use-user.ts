@@ -41,25 +41,18 @@ async function handleRequest(
   }
 }
 
-async function fetchUser(): Promise<SelectUser | null> {
+const fetchUser = async () => {
   const response = await fetch('/api/user', {
-    credentials: 'include'
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json'
+    }
   });
-
   if (!response.ok) {
-    if (response.status === 401) {
-      return null;
-    }
-
-    if (response.status >= 500) {
-      throw new Error(`${response.status}: ${response.statusText}`);
-    }
-
-    throw new Error(`${response.status}: ${await response.text()}`);
+    throw new Error('Failed to fetch user');
   }
-
   return response.json();
-}
+};
 
 export function useUser() {
   const queryClient = useQueryClient();

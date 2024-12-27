@@ -48,15 +48,15 @@ export function setupAuth(app: Express) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'strict',
-      domain: process.env.NODE_ENV === "production" ? '.fintellectai.co' : undefined
+      sameSite: 'lax',
+      domain: process.env.NODE_ENV === "production" ? 'fintellectai.co' : undefined
     },
     store: new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
     }),
   };
 
-  if (app.get("env") === "production") {
+  if (process.env.NODE_ENV === "production") {
     app.set("trust proxy", 1);
     sessionSettings.cookie = {
       secure: true,

@@ -13,6 +13,13 @@ interface LoginData extends Omit<InsertUser, 'id'> {
   rememberMe?: boolean;
 }
 
+const defaultFetchOptions = {
+  credentials: 'include' as const,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+};
+
 async function handleRequest(
   url: string,
   method: string,
@@ -42,9 +49,7 @@ async function handleRequest(
 }
 
 async function fetchUser(): Promise<SelectUser | null> {
-  const response = await fetch('/api/user', {
-    credentials: 'include'
-  });
+  const response = await fetch('/api/user', defaultFetchOptions);
 
   if (!response.ok) {
     if (response.status === 401) {
@@ -105,10 +110,9 @@ export function useUser() {
   const registerMutation = useMutation<RequestResult, Error, InsertUser>({
     mutationFn: async (userData) => {
       const response = await fetch('/api/register', {
+        ...defaultFetchOptions,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
-        credentials: 'include',
       });
 
       if (!response.ok) {

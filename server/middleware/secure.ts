@@ -1,11 +1,16 @@
 import { type Request, type Response, type NextFunction } from "express";
 
 export function requireHTTPS(req: Request, res: Response, next: NextFunction) {
-  // The 'x-forwarded-proto' check is for Render
-  if (!req.secure && req.get('x-forwarded-proto') !== 'https' && process.env.NODE_ENV === "production") {
-    return res.redirect('https://' + req.get('host') + req.url);
+  // Skip HTTPS requirement for local development
+  if (process.env.NODE_ENV !== 'production') {
+    return next();
   }
-  next();
+
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    next();
+  } else {
+    res.redirect(`https://${req.headers.host}${req.url}`);
+  }
 }
 
 export function setSecurityHeaders(req: Request, res: Response, next: NextFunction) {

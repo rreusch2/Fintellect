@@ -1,8 +1,8 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { db } from "../../db/index.js";
+import { db } from "../db/index.js";
 import type { Express } from "express";
-import type { SelectUser } from "../../db/schema.js";
+import type { SelectUser } from "../db/schema.js";
 
 declare global {
   namespace Express {

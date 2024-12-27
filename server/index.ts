@@ -6,7 +6,7 @@ import cors from "cors";
 import session from "express-session";
 import { setupAuth } from "./auth.js";
 import passport from "passport";
-import { db } from "../../db/index.js";
+import { db } from "../db/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

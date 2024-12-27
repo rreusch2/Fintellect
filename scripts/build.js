@@ -14,5 +14,6 @@ await build({
   external: ['express', 'passport', '@neondatabase/serverless'],
   alias: {
     '@db': resolve(projectRoot, 'db')
-  }
+  },
+  outExtension: { '.js': '.js' }
 }); 

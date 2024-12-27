@@ -7,8 +7,10 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
+    "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
+      "@/*": ["client/src/*"],
       "@db": ["./db/index.ts"],
       "@db/*": ["./db/*"]
     }

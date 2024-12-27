@@ -17,7 +17,7 @@ const app = express();
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? 'https://www.fintellectai.co'
-    : 'http://localhost:5001',
+    : 'http://localhost:5173',
   credentials: true
 }));
 
@@ -56,20 +56,22 @@ setupAuth(app);
 // API routes should be registered before static files
 registerRoutes(app);
 
-// Serve static files from the dist/public directory
-app.use(express.static(join(__dirname, "../public")));
+// In development, don't serve static files - let Vite handle it
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(join(__dirname, "../public")));
+  
+  // Handle client-side routing - should be after API routes
+  app.get("*", (req, res) => {
+    // Don't serve index.html for API routes
+    if (req.path.startsWith("/api")) {
+      console.log(`API 404: ${req.path}`);
+      return res.status(404).send("API endpoint not found");
+    }
+    res.sendFile(join(__dirname, "../public/index.html"));
+  });
+}
 
-// Handle client-side routing - should be after API routes
-app.get("*", (req, res) => {
-  // Don't serve index.html for API routes
-  if (req.path.startsWith("/api")) {
-    console.log(`API 404: ${req.path}`);
-    return res.status(404).send("API endpoint not found");
-  }
-  res.sendFile(join(__dirname, "../public/index.html"));
-});
-
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 5001;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);

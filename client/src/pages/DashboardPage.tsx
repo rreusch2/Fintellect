@@ -219,27 +219,33 @@ export default function DashboardPage() {
                   You're currently exploring with sample data. Ready to see your actual finances? Connect your bank account to unlock personalized insights and real-time tracking.
                 </p>
                 <PlaidLink
-                  onSuccess={(public_token) => {
-                    setDemoMode(false);
-                    // Handle Plaid success
-                    fetch('/api/plaid/exchange_token', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ public_token }),
-                      credentials: 'include'
-                    })
-                    .then(response => {
-                      if (!response.ok) throw new Error('Failed to exchange token');
+                  onSuccess={async (public_token) => {
+                    try {
+                      // First disable demo mode
+                      setDemoMode(false);
+                      
+                      // Exchange the token
+                      const response = await fetch('/api/plaid/exchange_token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ public_token }),
+                        credentials: 'include'
+                      });
+
+                      if (!response.ok) {
+                        throw new Error('Failed to exchange token');
+                      }
+
+                      // Reload to show real transactions
                       window.location.reload();
-                    })
-                    .catch(error => {
+                    } catch (error) {
                       console.error('Plaid error:', error);
                       toast({
                         variant: "destructive",
                         title: "Error",
                         description: "Failed to connect bank account. Please try again."
                       });
-                    });
+                    }
                   }}
                   variant="default"
                   className="bg-blue-500 hover:bg-blue-600 inline-flex"
@@ -463,9 +469,30 @@ export default function DashboardPage() {
                 variant="default"
                 size="sm"
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                onSuccess={() => {
-                  setDemoMode(false);
-                  window.location.reload();
+                onSuccess={async (public_token) => {
+                  try {
+                    setDemoMode(false);
+                    
+                    const response = await fetch('/api/plaid/exchange_token', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ public_token }),
+                      credentials: 'include'
+                    });
+
+                    if (!response.ok) {
+                      throw new Error('Failed to exchange token');
+                    }
+
+                    window.location.reload();
+                  } catch (error) {
+                    console.error('Plaid error:', error);
+                    toast({
+                      variant: "destructive",
+                      title: "Error",
+                      description: "Failed to connect bank account. Please try again."
+                    });
+                  }
                 }}
               >
                 <ArrowUpRight className="h-4 w-4 mr-1" />

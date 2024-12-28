@@ -116,6 +116,11 @@ export default function PlaidLink({
         token: linkToken,
         onSuccess: async (public_token: string, metadata: any) => {
           try {
+            // If we're in demo mode, disable it first
+            if (isDemoMode()) {
+              setDemoMode(false);
+            }
+
             const response = await fetch("/api/plaid/set-access-token", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -141,7 +146,11 @@ export default function PlaidLink({
               description: "Bank account connected successfully",
             });
 
+            // Call the onSuccess prop if provided
             onSuccess?.();
+
+            // Reload the page to show real transactions
+            window.location.reload();
           } catch (error: any) {
             console.error("Error setting access token:", error);
             toast({

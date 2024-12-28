@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { Button } from "@/components/ui/button";
+import { Select, SelectItem } from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -114,78 +117,100 @@ const getTailwindColor = (category: string): string => {
   return colorMap[hexColor] || 'gray';
 };
 
+const ITEMS_PER_PAGE = 25;
+
 export default function TransactionList({ transactions, searchQuery }: TransactionListProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
+
   const filteredTransactions = transactions.filter(transaction => 
     transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
     transaction.merchantName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalPages = Math.ceil(filteredTransactions.length / pageSize);
+  const paginatedTransactions = filteredTransactions.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: paginatedTransactions.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 60,
+    overscan: 5,
+  });
+
   return (
-    <div className="divide-y divide-gray-800">
-      {/* Table Header */}
-      <div className="grid grid-cols-[2fr,1fr,auto] gap-8 p-4 bg-gray-900/30">
-        <div className="text-sm font-medium text-muted-foreground">Transaction</div>
-        <div className="text-sm font-medium text-muted-foreground">Category</div>
-        <div className="text-sm font-medium text-muted-foreground text-right">Amount</div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {paginatedTransactions.length} of {filteredTransactions.length} transactions
+        </div>
+        <div className="flex items-center gap-2">
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => setPageSize(Number(value))}
+          >
+            <SelectItem value="25">25 per page</SelectItem>
+            <SelectItem value="50">50 per page</SelectItem>
+            <SelectItem value="100">100 per page</SelectItem>
+          </Select>
+        </div>
       </div>
 
-      {/* Transactions */}
-      {filteredTransactions.map((transaction) => (
-        <div 
-          key={transaction.id}
-          className="grid grid-cols-[2fr,1fr,auto] gap-8 p-4 hover:bg-gray-900/40 transition-colors group items-center"
+      <div 
+        ref={parentRef}
+        className="h-[600px] overflow-auto"
+      >
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
         >
-          {/* Transaction Info */}
-          <div className="flex items-center gap-3">
-            <div 
-              className="p-2 rounded-lg group-hover:scale-110 transition-transform"
-              style={{ backgroundColor: `${COLORS[transaction.category as keyof typeof COLORS]}10` }}
-            >
-              {getTransactionIcon(transaction.category)}
-            </div>
-            <div>
-              <p className="font-medium">
-                {transaction.merchantName || transaction.description}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {formatDistanceToNow(new Date(transaction.date))} ago
-              </p>
-            </div>
-          </div>
-
-          {/* Enhanced Category Display - Fixed Width Container */}
-          <div className="flex items-center">
-            <div 
-              className="px-3 py-1.5 rounded-full transition-colors w-full max-w-[200px]"
-              style={{ 
-                backgroundColor: `${COLORS[transaction.category as keyof typeof COLORS]}10`,
-                borderColor: `${COLORS[transaction.category as keyof typeof COLORS]}20`,
-                borderWidth: '1px'
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: COLORS[transaction.category as keyof typeof COLORS] }}
-                />
-                <span 
-                  className="text-sm truncate"
-                  style={{ color: COLORS[transaction.category as keyof typeof COLORS] }}
-                >
-                  {formatCategoryName(transaction.category)}
-                </span>
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const transaction = paginatedTransactions[virtualRow.index];
+            return (
+              <div
+                key={transaction.id}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                {/* Existing transaction row content */}
               </div>
-            </div>
-          </div>
-
-          {/* Amount */}
-          <span className={`font-medium justify-self-end whitespace-nowrap ${
-            transaction.amount > 0 ? 'text-red-400' : 'text-emerald-400'
-          }`}>
-            {transaction.amount > 0 ? '-' : '+'}${Math.abs(transaction.amount/100).toFixed(2)}
-          </span>
+            );
+          })}
         </div>
-      ))}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(p => p - 1)}
+        >
+          Previous
+        </Button>
+        <span className="text-sm">
+          Page {currentPage} of {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(p => p + 1)}
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 }

@@ -27,6 +27,7 @@ import { AIDisclaimer } from "@/components/legal/AIDisclaimer";
 import { COLORS, formatCategoryName } from '@/lib/categories';
 import { LoadingState } from "@/components/ui/loading/LoadingState";
 import { motion } from "framer-motion";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 // Add this helper function at the top of the file, outside the component
 const getCategoryColor = (category: string): string => {
@@ -89,6 +90,8 @@ export default function TransactionsPage() {
     Object.keys(spendingData).filter(category => 
       !['TRANSFER_IN', 'TRANSFER_OUT', 'OTHER', 'UNCATEGORIZED'].includes(category)
     ), [spendingData]);
+
+  usePageTitle('Transactions');
 
   if (isLoading) {
     return (

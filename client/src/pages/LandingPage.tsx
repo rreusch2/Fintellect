@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Footer } from "@/components/layout/Footer";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const features = [
   {
@@ -50,6 +51,8 @@ const stats = [
 ];
 
 export default function LandingPage() {
+  usePageTitle('AI-Powered Financial Management');
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Hero Section */}

@@ -23,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/layout/Footer";
 import { FeatureRequestModal } from "@/components/ai/FeatureRequestModal";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const aiServices = [
   {
@@ -100,6 +101,8 @@ export default function AIHubPage() {
   const handleFeatureRequest = () => {
     setShowFeatureRequest(true);
   };
+
+  usePageTitle('AI Hub');
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden dark flex flex-col">

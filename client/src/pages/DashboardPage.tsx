@@ -26,6 +26,7 @@ import { useTransactions } from "@/hooks/use-transactions";
 import { isDemoMode, setDemoMode } from "@/lib/demo";
 import PlaidLink from "@/components/Plaid/PlaidLink";
 import { motion } from "framer-motion";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 // Expanded quick prompts with more relevant options
 const quickPrompts = [
@@ -192,6 +193,8 @@ export default function DashboardPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  usePageTitle('Dashboard');
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden dark flex flex-col">

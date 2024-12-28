@@ -22,6 +22,7 @@ import UpdateGoalDialog from "@/components/Goals/UpdateGoalDialog";
 import { Footer } from "@/components/layout/Footer";
 import { BetaFeedback } from "@/components/feedback/BetaFeedback";
 import { Navigation } from "@/components/layout/Navigation";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 interface Goal {
   id: number;
@@ -59,6 +60,8 @@ export default function GoalsPage() {
     await logout();
     setLocation("/");
   };
+
+  usePageTitle('Financial Goals');
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden dark flex flex-col">

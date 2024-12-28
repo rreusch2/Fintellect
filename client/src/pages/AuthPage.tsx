@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const authSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -87,6 +88,8 @@ export default function AuthPage() {
       setIsLoading(false);
     }
   };
+
+  usePageTitle('Sign In');
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden flex items-center justify-center p-4">

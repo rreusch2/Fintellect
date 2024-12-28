@@ -17,6 +17,7 @@ import { useMutation } from "@tanstack/react-query";
 import { TermsModal } from "@/components/legal/TermsModal";
 import { getLatestVersion } from "@/lib/legal/versions";
 import { isDemoMode, setDemoMode } from "@/lib/demo";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 function stepDescription(step: number): string {
   switch (step) {
@@ -156,6 +157,8 @@ export default function OnboardingPage() {
     setActiveTab(tab);
     setShowTerms(true);
   };
+
+  usePageTitle('Get Started');
 
   if (!user) {
     return (

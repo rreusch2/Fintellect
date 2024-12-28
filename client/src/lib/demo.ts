@@ -1,21 +1,20 @@
 import { useTransactions } from "@/hooks/use-transactions";
 
 export function isDemoMode(): boolean {
-  // Add debug logging
-  const demoMode = localStorage.getItem('demoMode');
+  // Check both localStorage and URL params
+  const demoMode = localStorage.getItem('demoMode') === 'true';
   const urlParams = new URLSearchParams(window.location.search);
   const isDemo = urlParams.get('demo') === 'true';
   
-  console.log('Demo Mode Check:', {
-    localStorage: demoMode,
-    urlParam: isDemo
-  });
+  // If either condition is true, ensure localStorage is set
+  if (isDemo && !demoMode) {
+    localStorage.setItem('demoMode', 'true');
+  }
 
-  return demoMode === 'true' || isDemo;
+  return demoMode || isDemo;
 }
 
 export function setDemoMode(enabled: boolean) {
-  console.log('Setting Demo Mode:', enabled);
   if (enabled) {
     localStorage.setItem('demoMode', 'true');
   } else {

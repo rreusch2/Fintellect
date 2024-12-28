@@ -71,10 +71,7 @@ export default function DashboardPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Update the demo detection logic
-  const isDemo = useMemo(() => {
-    // Only check localStorage for demo mode
-    return localStorage.getItem('demoMode') === 'true';
-  }, []);
+  const isDemo = isDemoMode();
 
   // Remove the demo mode activation effect
   useEffect(() => {

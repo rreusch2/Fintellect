@@ -16,6 +16,7 @@ import { useUser } from "@/hooks/use-user";
 import { useMutation } from "@tanstack/react-query";
 import { TermsModal } from "@/components/legal/TermsModal";
 import { getLatestVersion } from "@/lib/legal/versions";
+import { isDemoMode, setDemoMode } from "@/lib/demo";
 
 function stepDescription(step: number): string {
   switch (step) {
@@ -127,28 +128,24 @@ export default function OnboardingPage() {
   };
 
   const handleDemoMode = async () => {
+    setIsDemoLoading(true);
     try {
-      setIsDemoLoading(true);
-      const response = await fetch("/api/plaid/demo", {
-        method: "POST",
-        credentials: "include",
+      const response = await fetch('/api/plaid/demo', {
+        method: 'POST',
+        credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error("Failed to activate demo mode");
+        throw new Error('Failed to enable demo mode');
       }
 
-      await refetch();
-      toast({
-        title: "Demo Mode Activated",
-        description: "You can now explore the app with demo data. Connect your bank account anytime to see your real data.",
-      });
-      setLocation("/dashboard");
+      setDemoMode(true);
+      window.location.href = '/dashboard';
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to activate demo mode. Please try again.",
+        description: "Failed to enable demo mode"
       });
     } finally {
       setIsDemoLoading(false);

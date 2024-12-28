@@ -1,83 +1,111 @@
-import { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+import { useUser } from "@/hooks/use-user";
 
 export function BetaFeedback() {
-  const [open, setOpen] = useState(false);
-  const [feedback, setFeedback] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const [location] = useLocation();
+  const { user } = useUser();
 
-  const handleSubmit = async () => {
+  // Replace with your new Google Apps Script URL
+  const FEEDBACK_URL = "https://script.google.com/macros/s/AKfycbzqjMFx_uR24-lFIV_ZSFdUIPFcT4PkmBP6jEP9EQoK2BellLuBN2njgKMTltgtSxIv/exec";
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!feedback.trim()) return;
     
-    setIsSubmitting(true);
+    setLoading(true);
     try {
-      const response = await fetch('/api/feedback', {
+      await fetch(FEEDBACK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedback })
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify({
+          feedback,
+          page: location,
+          userId: user?.id
+        })
       });
-
-      if (!response.ok) throw new Error('Failed to submit feedback');
 
       toast({
-        title: "Thank you for your feedback!",
-        description: "We appreciate your help in improving our platform.",
-        type: "success"
+        title: "Feedback Submitted",
+        description: "Thank you for helping us improve Fintellect!",
+        variant: "default",
       });
 
-      setFeedback('');
-      setOpen(false);
+      setFeedback("");
+      setIsOpen(false);
     } catch (error) {
+      console.error("Feedback submission error:", error);
       toast({
-        title: "Failed to submit feedback",
-        description: "Please try again later.",
-        type: "error"
+        title: "Error",
+        description: "Failed to submit feedback. Please try again.",
+        variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20"
-      >
-        <MessageSquarePlus className="h-4 w-4 mr-2" />
-        Beta Feedback
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Share Your Feedback</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+    <div className="fixed bottom-4 right-4 z-50">
+      {isOpen ? (
+        <form 
+          onSubmit={handleSubmit}
+          className="bg-card border rounded-lg p-4 shadow-lg w-80 space-y-4"
+        >
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Share Your Feedback
+            </label>
             <Textarea
-              placeholder="Tell us what you think..."
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
-              className="min-h-[100px]"
+              placeholder="Tell us what you think..."
+              className="h-24"
+              required
             />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmit}>
-                Submit Feedback
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+          <div className="flex justify-end gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Sending..." : "Submit"}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <Button
+          onClick={() => setIsOpen(true)}
+          className="group flex items-center gap-2 pr-3 pl-4 py-2 h-auto rounded-full shadow-lg hover:shadow-xl transition-all"
+          variant="default"
+        >
+          <span className="text-sm font-medium">Share Feedback</span>
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10">
+            <MessageSquarePlus className="h-4 w-4" />
+          </div>
+          <span className="absolute -top-1 -right-1 flex h-4 w-4">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/30 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-4 w-4 bg-primary/20 text-[10px] font-medium text-primary items-center justify-center">
+              β
+            </span>
+          </span>
+        </Button>
+      )}
+    </div>
   );
 } 

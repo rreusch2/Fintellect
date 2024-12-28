@@ -214,7 +214,7 @@ export default function DashboardPage() {
                 <Lightbulb className="h-6 w-6 text-blue-400" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-2">Welcome to Demo Mode! ����</h3>
+                <h3 className="text-lg font-semibold mb-2">Welcome to Demo Mode!</h3>
                 <p className="text-muted-foreground mb-4">
                   You're currently exploring with sample data. Ready to see your actual finances? Connect your bank account to unlock personalized insights and real-time tracking.
                 </p>

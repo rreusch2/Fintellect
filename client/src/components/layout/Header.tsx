@@ -12,20 +12,31 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
-      const result = await logout();
-      if (result.ok) {
-        toast({
-          title: "Success",
-          description: "Logged out successfully"
-        });
-        // Clear any stored demo mode
-        localStorage.removeItem('demoMode');
-        // Force reload to clear all state
-        window.location.href = '/';
-      } else {
-        throw new Error(result.message);
+      const response = await fetch('/api/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to logout');
       }
+
+      // Clear any stored demo mode
+      localStorage.removeItem('demoMode');
+      
+      // Clear any stored user data
+      localStorage.removeItem('user');
+      
+      // Show success message
+      toast({
+        title: "Success",
+        description: "Logged out successfully"
+      });
+
+      // Force a full page reload to clear all state
+      window.location.href = '/';
     } catch (error) {
+      console.error('Logout error:', error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -45,11 +56,6 @@ export function Header() {
             </span>
             <span className="text-xs bg-blue-500/10 text-blue-500 rounded-md px-1.5 py-0.5">BETA</span>
           </Link>
-
-          {/* Navigation Links */}
-          <nav className="flex items-center space-x-6">
-            {/* Add your navigation links here */}
-          </nav>
 
           {/* User Actions */}
           <div className="flex items-center space-x-2">

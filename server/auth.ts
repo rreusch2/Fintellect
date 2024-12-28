@@ -215,8 +215,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req, res) => {
-    // Destroy the session
-    req.session.destroy((err) => {
+    req.logout((err) => {
       if (err) {
         console.error("Logout error:", err);
         return res.status(500).json({ 
@@ -225,18 +224,29 @@ export function setupAuth(app: Express) {
         });
       }
 
-      // Clear the session cookie
-      res.clearCookie('connect.sid', {
-        path: '/',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: 'lax',
-        domain: process.env.NODE_ENV === "production" ? 'fintellectai.co' : undefined
-      });
+      // Destroy the session
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destruction error:", err);
+          return res.status(500).json({ 
+            ok: false, 
+            message: "Failed to clear session" 
+          });
+        }
 
-      res.json({ 
-        ok: true, 
-        message: "Logged out successfully" 
+        // Clear the session cookie
+        res.clearCookie('connect.sid', {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: 'lax',
+          domain: process.env.NODE_ENV === "production" ? 'fintellectai.co' : undefined
+        });
+
+        res.json({ 
+          ok: true, 
+          message: "Logged out successfully" 
+        });
       });
     });
   });

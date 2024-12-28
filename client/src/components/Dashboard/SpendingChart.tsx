@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from "recharts";
+import { PieChartIcon } from "@/components/icons/pie-chart";
 
 interface SpendingChartProps {
   spendingByCategory?: {
@@ -95,68 +96,93 @@ export default function SpendingChart({ spendingByCategory = [] }: SpendingChart
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Spending Distribution</CardTitle>
+    <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors">
+      <CardHeader className="border-b border-gray-800">
+        <CardTitle className="flex items-center gap-2">
+          <PieChartIcon className="h-5 w-5 text-primary" />
+          Spending Distribution
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[450px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={2}
+                innerRadius={80}
+                outerRadius={120}
+                paddingAngle={3}
                 dataKey="value"
+                label={({ name, percent }) => {
+                  const percentage = (percent * 100).toFixed(1);
+                  return percent > 0.05 ? `${formatCategoryName(name)} (${percentage}%)` : '';
+                }}
+                labelLine={{ stroke: 'rgba(255, 255, 255, 0.2)', strokeWidth: 1 }}
               >
                 {data.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`}
                     fill={getCategoryColor(entry.name)}
-                    className="stroke-background dark:stroke-background"
+                    className="stroke-background dark:stroke-background hover:opacity-80 transition-opacity cursor-pointer"
                     strokeWidth={2}
+                    style={{
+                      filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))'
+                    }}
                   />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip 
+                content={<CustomTooltip />}
+                wrapperStyle={{
+                  zIndex: 100,
+                  filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))'
+                }}
+              />
               <Legend 
                 layout="vertical" 
                 align="right"
                 verticalAlign="middle"
                 formatter={(value: string) => (
-                  <span className="text-sm">
+                  <span className="text-sm font-medium">
                     {formatCategoryName(value)}
                   </span>
                 )}
+                iconType="circle"
+                iconSize={10}
+                wrapperStyle={{
+                  paddingLeft: '40px',
+                  fontSize: '14px'
+                }}
               />
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="mt-4 space-y-2">
+        <div className="mt-6 space-y-2 max-h-[200px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-800">
           {data.map((item) => {
             const formattedCategory = formatCategoryName(item.name);
             const categoryColor = getCategoryColor(item.name);
             
             return (
-              <div key={item.name} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-2">
+              <div 
+                key={item.name} 
+                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-800/50 transition-all duration-200 cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
                   <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ 
-                      backgroundColor: categoryColor,
-                      opacity: 0.8 
-                    }}
+                    className="w-3 h-3 rounded-full transition-transform group-hover:scale-125" 
+                    style={{ backgroundColor: categoryColor }}
                   />
-                  <span className="text-sm font-medium">{formattedCategory}</span>
+                  <span className="text-sm font-medium group-hover:text-primary transition-colors">
+                    {formattedCategory}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span className="text-sm font-medium">
                     {formatAmount(item.value)}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground group-hover:text-primary/70 transition-colors">
                     ({formatPercentage(item.percentage)})
                   </span>
                 </div>

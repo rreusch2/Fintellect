@@ -209,7 +209,7 @@ export default function DashboardPage() {
         {isDemo && (
           <div className="mb-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20 p-6 backdrop-blur-sm relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 animate-pulse"></div>
-            <div className="relative flex items-start gap-4">
+            <div className="relative flex flex-col sm:flex-row items-start gap-4">
               <div className="p-3 rounded-lg bg-blue-500/10">
                 <Lightbulb className="h-6 w-6 text-blue-400" />
               </div>
@@ -219,9 +219,27 @@ export default function DashboardPage() {
                   You're currently exploring with sample data. Ready to see your actual finances? Connect your bank account to unlock personalized insights and real-time tracking.
                 </p>
                 <PlaidLink
-                  onSuccess={() => {
+                  onSuccess={(public_token) => {
                     setDemoMode(false);
-                    window.location.reload();
+                    // Handle Plaid success
+                    fetch('/api/plaid/exchange_token', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ public_token }),
+                      credentials: 'include'
+                    })
+                    .then(response => {
+                      if (!response.ok) throw new Error('Failed to exchange token');
+                      window.location.reload();
+                    })
+                    .catch(error => {
+                      console.error('Plaid error:', error);
+                      toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description: "Failed to connect bank account. Please try again."
+                      });
+                    });
                   }}
                   variant="default"
                   className="bg-blue-500 hover:bg-blue-600 inline-flex"
@@ -434,7 +452,7 @@ export default function DashboardPage() {
 
       {/* Update Demo Mode Floating Indicator styling */}
       {isDemo && (
-        <div className="fixed bottom-6 left-6 z-40">
+        <div className="fixed bottom-20 sm:bottom-6 left-6 z-40">
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-[1px] rounded-lg shadow-lg">
             <div className="bg-background/95 backdrop-blur-sm rounded-lg p-4 flex items-center gap-4">
               <div className="flex flex-col">
@@ -458,8 +476,11 @@ export default function DashboardPage() {
         </div>
       )}
 
+      <div className="fixed bottom-6 right-6 z-40">
+        <BetaFeedback />
+      </div>
+
       <Footer />
-      <BetaFeedback />
       <FeatureTour />
     </div>
   );

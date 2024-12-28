@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { usePlaidLink } from "@/hooks/use-plaid-link";
+import { cn } from "@/lib/utils";
 
 interface PlaidLinkProps {
   onSuccess?: () => void;
@@ -24,6 +26,7 @@ export default function PlaidLink({
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const { toast } = useToast();
+  const { handlePlaidSuccess } = usePlaidLink();
 
   // Load Plaid script
   useEffect(() => {
@@ -187,6 +190,7 @@ export default function PlaidLink({
       disabled={!linkToken || !scriptLoaded || isLoading}
       variant={variant}
       className={`relative inline-flex items-center justify-center ${className}`}
+      onSuccess={handlePlaidSuccess}
     >
       {isLoading ? (
         <>

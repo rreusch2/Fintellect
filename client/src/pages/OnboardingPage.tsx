@@ -131,14 +131,22 @@ export default function OnboardingPage() {
   const handleDemoMode = async () => {
     setIsDemoLoading(true);
     try {
+      const response = await fetch('/api/plaid/demo', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to enable demo mode');
+      }
+
       setDemoMode(true);
       window.location.href = '/dashboard';
     } catch (error) {
-      console.error('Error setting demo mode:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to enable demo mode. Please try again."
+        description: "Failed to enable demo mode"
       });
     } finally {
       setIsDemoLoading(false);

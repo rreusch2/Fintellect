@@ -178,7 +178,7 @@ export default function TransactionsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="grid gap-4 md:grid-cols-3 mb-6"
+          className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mb-6"
         >
           {/* Total Spending Card */}
           <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors">
@@ -191,7 +191,7 @@ export default function TransactionsPage() {
                   Total Spending
                 </CardTitle>
               </div>
-              <div className="text-2xl font-bold">
+              <div className="text-xl md:text-2xl font-bold">
                 ${(totalSpending / 100).toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
@@ -248,7 +248,50 @@ export default function TransactionsPage() {
         </motion.div>
 
         {/* Main Content Grid */}
-        <div className="grid gap-6 md:grid-cols-[2fr,1fr] mb-6">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[2fr,1fr] mb-6">
+          {/* Search and Filter Controls - Mobile Optimized */}
+          <div className="lg:hidden mb-4 space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 bg-gray-900/50 backdrop-blur-sm rounded-lg p-2 border border-gray-800">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search transactions..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="border-0 bg-transparent focus-visible:ring-0"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedCategory || undefined}
+                  onValueChange={(value) => setSelectedCategory(value)}
+                >
+                  <SelectTrigger className="bg-gray-900/50 backdrop-blur-sm border-gray-800 w-[140px]">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {formatCategoryName(category)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="bg-gray-900/50 backdrop-blur-sm border-gray-800"
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
           {/* Left Column: Transaction List */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -264,7 +307,7 @@ export default function TransactionsPage() {
                     </div>
                     <CardTitle>Recent Transactions</CardTitle>
                   </div>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-xs md:text-sm text-muted-foreground">
                     {summary?.transactions?.length || 0} transactions found
                   </span>
                 </div>
@@ -285,7 +328,7 @@ export default function TransactionsPage() {
             transition={{ delay: 0.4 }}
             className="space-y-6"
           >
-            {/* Spending Distribution - Using existing legend */}
+            {/* Spending Distribution */}
             <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors">
               <CardHeader className="border-b border-gray-800">
                 <div className="flex items-center gap-2">
@@ -296,8 +339,10 @@ export default function TransactionsPage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
-                <SpendingDistributionChart data={spendingData} showLegend={false} />
-                <div className="mt-6 space-y-4">
+                <div className="h-[200px] md:h-[300px]">
+                  <SpendingDistributionChart data={spendingData} showLegend={false} />
+                </div>
+                <div className="mt-6 space-y-2 max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800">
                   {Object.entries(spendingData)
                     .sort(([,a], [,b]) => b - a)
                     .map(([category, amount]) => {
@@ -307,16 +352,16 @@ export default function TransactionsPage() {
                           key={category} 
                           className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-900/40 transition-all cursor-pointer group"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <div 
-                              className="w-3 h-3 rounded-full transition-transform group-hover:scale-110" 
+                              className="w-3 h-3 rounded-full transition-transform group-hover:scale-110 shrink-0" 
                               style={{ backgroundColor: COLORS[category as keyof typeof COLORS] }}
                             />
-                            <span className="text-sm group-hover:text-blue-400 transition-colors">
+                            <span className="text-sm group-hover:text-blue-400 transition-colors truncate">
                               {formatCategoryName(category)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 shrink-0">
                             <span className="text-sm font-medium">
                               ${(amount/100).toFixed(2)}
                             </span>

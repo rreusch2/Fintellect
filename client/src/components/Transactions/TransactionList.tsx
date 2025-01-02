@@ -123,9 +123,9 @@ export default function TransactionList({ transactions, searchQuery }: Transacti
   return (
     <div className="divide-y divide-gray-800">
       {/* Table Header */}
-      <div className="grid grid-cols-[2fr,1fr,auto] gap-8 p-4 bg-gray-900/30">
+      <div className="grid grid-cols-[1.5fr,1fr,auto] md:grid-cols-[2fr,1fr,auto] gap-4 md:gap-8 p-4 bg-gray-900/30">
         <div className="text-sm font-medium text-muted-foreground">Transaction</div>
-        <div className="text-sm font-medium text-muted-foreground">Category</div>
+        <div className="text-sm font-medium text-muted-foreground hidden md:block">Category</div>
         <div className="text-sm font-medium text-muted-foreground text-right">Amount</div>
       </div>
 
@@ -133,28 +133,28 @@ export default function TransactionList({ transactions, searchQuery }: Transacti
       {filteredTransactions.map((transaction) => (
         <div 
           key={transaction.id}
-          className="grid grid-cols-[2fr,1fr,auto] gap-8 p-4 hover:bg-gray-900/40 transition-colors group items-center"
+          className="grid grid-cols-[1.5fr,1fr,auto] md:grid-cols-[2fr,1fr,auto] gap-4 md:gap-8 p-4 hover:bg-gray-900/40 transition-colors group items-center"
         >
           {/* Transaction Info */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <div 
-              className="p-2 rounded-lg group-hover:scale-110 transition-transform"
+              className="p-1.5 md:p-2 rounded-lg group-hover:scale-110 transition-transform shrink-0"
               style={{ backgroundColor: `${COLORS[transaction.category as keyof typeof COLORS]}10` }}
             >
               {getTransactionIcon(transaction.category)}
             </div>
-            <div>
-              <p className="font-medium">
+            <div className="min-w-0">
+              <p className="font-medium truncate text-sm md:text-base">
                 {transaction.merchantName || transaction.description}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs md:text-sm text-muted-foreground">
                 {formatDistanceToNow(new Date(transaction.date))} ago
               </p>
             </div>
           </div>
 
           {/* Enhanced Category Display - Fixed Width Container */}
-          <div className="flex items-center">
+          <div className="hidden md:flex items-center">
             <div 
               className="px-3 py-1.5 rounded-full transition-colors w-full max-w-[200px]"
               style={{ 
@@ -179,7 +179,7 @@ export default function TransactionList({ transactions, searchQuery }: Transacti
           </div>
 
           {/* Amount */}
-          <span className={`font-medium justify-self-end whitespace-nowrap ${
+          <span className={`font-medium justify-self-end whitespace-nowrap text-sm md:text-base ${
             transaction.amount > 0 ? 'text-red-400' : 'text-emerald-400'
           }`}>
             {transaction.amount > 0 ? '-' : '+'}${Math.abs(transaction.amount/100).toFixed(2)}

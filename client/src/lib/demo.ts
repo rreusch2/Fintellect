@@ -1,17 +1,8 @@
 import { useTransactions } from "@/hooks/use-transactions";
 
 export function isDemoMode(): boolean {
-  // Check both localStorage and URL params
-  const demoMode = localStorage.getItem('demoMode') === 'true';
-  const urlParams = new URLSearchParams(window.location.search);
-  const isDemo = urlParams.get('demo') === 'true';
-  
-  // If either condition is true, ensure localStorage is set
-  if (isDemo && !demoMode) {
-    localStorage.setItem('demoMode', 'true');
-  }
-
-  return demoMode || isDemo;
+  // Only check localStorage, remove URL params check to be consistent
+  return localStorage.getItem('demoMode') === 'true';
 }
 
 export function setDemoMode(enabled: boolean) {
@@ -20,4 +11,9 @@ export function setDemoMode(enabled: boolean) {
   } else {
     localStorage.removeItem('demoMode');
   }
+  
+  // Force clear any URL params that might be causing issues
+  const url = new URL(window.location.href);
+  url.searchParams.delete('demo');
+  window.history.replaceState({}, '', url.toString());
 } 

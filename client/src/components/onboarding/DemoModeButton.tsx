@@ -1,6 +1,9 @@
 const handleActivateDemo = async () => {
     try {
-      // Set demo mode first
+      // Clear any existing demo state first
+      localStorage.removeItem('demoMode');
+      
+      // Set demo mode
       setDemoMode(true);
       
       const response = await fetch("/api/plaid/demo", {
@@ -9,13 +12,16 @@ const handleActivateDemo = async () => {
       });
   
       if (!response.ok) {
-        // If the API call fails, revert demo mode
+        // If the API call fails, ensure demo mode is cleared
         setDemoMode(false);
+        localStorage.removeItem('demoMode');
         throw new Error("Failed to activate demo mode");
       }
   
-      // Force a page reload to ensure all demo data is loaded
-      window.location.reload();
+      // Force a clean reload without any URL parameters
+      const url = new URL(window.location.href);
+      url.searchParams.delete('demo');
+      window.location.href = url.toString();
     } catch (error) {
       console.error("Error activating demo mode:", error);
       toast({
@@ -24,4 +30,4 @@ const handleActivateDemo = async () => {
         description: "Failed to activate demo mode. Please try again.",
       });
     }
-  }; 
+}; 

@@ -96,7 +96,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
-                className="text-8xl sm:text-9xl font-extrabold tracking-tighter"
+                className="text-6xl sm:text-8xl md:text-9xl font-extrabold tracking-tighter"
               >
                 <span className="relative inline-block">
                   {/* Enhanced glow effect */}
@@ -114,10 +114,10 @@ export default function LandingPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="flex items-center justify-center gap-4"
+                className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4"
               >
-                <div className="flex items-center gap-2 text-xl text-white/95">
-                  <Sparkles className="h-6 w-6 text-blue-100 animate-pulse" />
+                <div className="flex items-center gap-2 text-base sm:text-xl text-white/95">
+                  <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-blue-100 animate-pulse" />
                   <span className="font-light tracking-wide">Powered by Advanced AI</span>
                 </div>
                 
@@ -136,7 +136,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white leading-tight"
+                className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-white leading-tight"
               >
                 Transform Your Finances with{" "}
                 <span className="relative inline-block">
@@ -153,7 +153,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6 }}
-                className="text-xl md:text-2xl text-blue-100/90 max-w-2xl mx-auto leading-relaxed font-light"
+                className="text-lg sm:text-xl md:text-2xl text-blue-100/90 max-w-2xl mx-auto leading-relaxed font-light px-4"
               >
                 Experience intelligent financial management powered by advanced AI. 
                 Get personalized insights, smart budgeting, and secure bank integration 

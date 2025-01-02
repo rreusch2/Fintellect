@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { useAIChat } from "@/hooks/use-ai-chat";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 const quickActions = [
   { 
@@ -238,6 +240,7 @@ export default function AIAssistant() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -268,41 +271,60 @@ export default function AIAssistant() {
   };
 
   return (
-    <Card className="bg-gray-900/50 backdrop-blur-sm rounded-lg border border-gray-800 flex flex-col h-[85rem] hover:bg-gray-900/60 transition-colors">
-      <div className="p-6 border-b border-gray-800 bg-gray-900/30">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-500/10 rounded-lg">
-            <Bot className="h-5 w-5 text-blue-500" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold">AI Assistant</h2>
-            <p className="text-sm text-muted-foreground">
-              Get personalized financial guidance through natural conversation
-            </p>
+    <Card className={cn(
+      "relative overflow-hidden bg-background/60 backdrop-blur-xl",
+      isMobile ? "h-[500px]" : "h-[600px]"
+    )}>
+      <div className="flex flex-col h-full">
+        <div className="p-6 border-b border-gray-800 bg-gray-900/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <Bot className="h-5 w-5 text-blue-500" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">AI Assistant</h2>
+              <p className="text-sm text-muted-foreground">
+                Get personalized financial guidance through natural conversation
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div className="flex flex-col flex-1 min-h-0">
-        <div className="p-6 pb-2 bg-gradient-to-b from-gray-900/30 to-transparent">
-          <div className="flex gap-2 flex-wrap">
-            {quickActions.map((action) => (
-              <Button
-                key={action.label}
-                variant="outline"
-                size="sm"
-                onClick={() => handleSendMessage(action.message)}
-                disabled={isLoading}
-                className={`${action.bgColor} border-${action.color}/20 hover:bg-${action.color}/20 transition-colors flex items-center gap-2 shadow-sm`}
-              >
-                <action.icon className={`h-4 w-4 ${action.color}`} />
-                {action.label}
-              </Button>
-            ))}
-          </div>
+        
+        <div className={cn(
+          "grid gap-4",
+          isMobile ? "grid-cols-1 p-3" : "grid-cols-2 p-4"
+        )}>
+          {quickActions.map((action) => (
+            <div
+              key={action.label}
+              onClick={() => handleSendMessage(action.message)}
+              className={cn(
+                "flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all",
+                isMobile ? "flex-row justify-between" : "flex-col"
+              )}
+            >
+              <div className={`p-3 rounded-xl ${action.bgColor} ring-1 ring-${action.color}/20 group-hover:ring-${action.color}/40 transition-all`}>
+                <action.icon className={`h-6 w-6 ${action.color}`} />
+              </div>
+              <div className="flex flex-col items-start text-left">
+                <div className="font-medium text-gray-200 group-hover:text-white transition-colors">
+                  {action.label}
+                </div>
+                <div className="text-sm text-gray-500 group-hover:text-gray-400 transition-colors">
+                  {action.label === "Analyze Spending" && "Get insights on your spending patterns"}
+                  {action.label === "Budget Help" && "Create a personalized budget plan"}
+                  {action.label === "Savings Tips" && "Discover ways to save money"}
+                  {action.label === "Recurring Charges" && "Review your subscriptions"}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div className="flex-1 overflow-hidden px-6 pb-6 min-h-0">
+        <div className={cn(
+          "flex-1 overflow-hidden px-4 pb-4",
+          isMobile ? "min-h-[300px]" : "min-h-0"
+        )}>
           <div className="h-full overflow-y-auto rounded-lg bg-background/5 border border-gray-800/50 shadow-xl">
             <div className="p-4 space-y-4">
               {messages.length === 0 ? (
@@ -416,7 +438,10 @@ export default function AIAssistant() {
           </div>
         </div>
 
-        <div className="p-4 border-t border-gray-800 bg-gray-900/30 backdrop-blur-sm">
+        <div className={cn(
+          "p-4 border-t border-gray-800",
+          isMobile ? "sticky bottom-0 bg-background/95 backdrop-blur-lg" : ""
+        )}>
           <div className="flex gap-2">
             <Input
               ref={inputRef}

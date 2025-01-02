@@ -79,3 +79,27 @@
     @apply hover:border-blue-500 transition-colors;
   }
 }
+
+@media (max-width: 768px) {
+  html {
+    font-size: 14px; /* Slightly smaller base font size on mobile */
+  }
+
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Improve touch targets */
+  button, 
+  [role="button"],
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve spacing */
+  .space-y-mobile > * + * {
+    margin-top: 1rem;
+  }
+}

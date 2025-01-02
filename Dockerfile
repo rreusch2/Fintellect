@@ -8,6 +8,8 @@ COPY server/package*.json server/
 RUN npm install
 RUN cd client && npm install --legacy-peer-deps
 COPY . .
+# Copy static assets
+COPY client/public ./client/public
 ENV NODE_ENV=production
 RUN npm run build
 
@@ -17,13 +19,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist/public ./public
+COPY --from=builder /app/client/public ./public
 COPY package*.json ./
 COPY client/package*.json client/
 
 # Install production dependencies and ensure ws is available
 RUN npm install --omit=dev && \
     npm install ws@8.18.0 && \
-    # Install additional required packages
     npm install @neondatabase/serverless
 
 # Set environment variables for Neon

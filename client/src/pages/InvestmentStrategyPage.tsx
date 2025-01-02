@@ -21,7 +21,7 @@ import { AIDisclaimer } from "@/components/legal/AIDisclaimer";
 import { Footer } from "@/components/layout/Footer";
 import { BetaFeedback } from "@/components/feedback/BetaFeedback";
 import { Navigation } from "@/components/layout/Navigation";
-import InvestmentProfileForm from "@/components/investment/InvestmentProfileForm";
+// import InvestmentProfileForm from "@/components/investment/InvestmentProfileForm";
 import { motion } from "framer-motion";
 
 interface InvestmentAdvice {
@@ -136,7 +136,7 @@ export default function InvestmentStrategyPage() {
         <div className="grid gap-6 md:grid-cols-[400px,1fr] opacity-50 pointer-events-none">
           {/* Investment Profile Form */}
           <div>
-            <InvestmentProfileForm />
+            {/* InvestmentProfileForm */}
           </div>
 
           {/* AI Investment Advice */}

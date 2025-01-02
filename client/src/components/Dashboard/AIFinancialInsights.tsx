@@ -15,16 +15,42 @@ const formatCurrency = (amount: number) => {
 
 export default function AIFinancialInsights() {
   const { data: summary } = useTransactions();
-  const totalMonthlySpending = Object.values(summary?.categoryTotals || {}).reduce((a, b) => a + b, 0);
-
-  // Calculate month-over-month changes
-  const foodAndDrinkSpending = summary?.categoryTotals?.["FOOD_AND_DRINK"] || 0;
-  const foodAndDrinkPercentage = (foodAndDrinkSpending / totalMonthlySpending) * 100;
   
+  // Calculate total spending excluding transfers
+  const totalSpending = Object.entries(summary?.categoryTotals || {})
+    .filter(([category]) => !category.includes('TRANSFER'))
+    .reduce((sum, [_, amount]) => sum + (amount > 0 ? amount : 0), 0);
+
+  // Get sorted spending categories
+  const sortedCategories = Object.entries(summary?.categoryTotals || {})
+    .filter(([category, amount]) => 
+      !category.includes('TRANSFER') && amount > 0
+    )
+    .sort(([_, a], [__, b]) => b - a)
+    .map(([category, amount]) => ({
+      category,
+      amount,
+      percentage: (amount / totalSpending * 100).toFixed(1)
+    }));
+
+  // Calculate food and drink specific metrics
+  const foodAndDrink = summary?.categoryTotals?.['FOOD_AND_DRINK'] || 0;
+  const foodPercentage = ((foodAndDrink / totalSpending) * 100).toFixed(1);
+  const suggestedFoodBudget = Math.round(foodAndDrink * 0.8);
+  const potentialSavings = foodAndDrink - suggestedFoodBudget;
+
+  // Calculate essential vs discretionary spending
+  const essentialCategories = ['RENT', 'UTILITIES', 'FOOD_AND_DRINK', 'TRANSPORTATION', 'HEALTHCARE'];
+  const essentialSpending = Object.entries(summary?.categoryTotals || {})
+    .filter(([category]) => essentialCategories.some(c => category.includes(c)))
+    .reduce((sum, [_, amount]) => sum + (amount > 0 ? amount : 0), 0);
+  
+  const discretionarySpending = totalSpending - essentialSpending;
+
   const insights = [
     {
       title: "High Food & Drink Spending",
-      description: `Your food and dining expenses are ${formatCurrency(foodAndDrinkSpending)} (${foodAndDrinkPercentage.toFixed(1)}% of total spending). Consider setting a monthly budget of ${formatCurrency(foodAndDrinkSpending * 0.8)} to save ${formatCurrency(foodAndDrinkSpending * 0.2)} per month.`,
+      description: `Your food and dining expenses are ${formatCurrency(foodAndDrink)} (${foodPercentage}% of total spending). Consider setting a monthly budget of ${formatCurrency(suggestedFoodBudget)} to save ${formatCurrency(potentialSavings)} per month.`,
       priority: "HIGH",
       badge: "ACTION NEEDED",
       icon: Wallet,
@@ -33,7 +59,11 @@ export default function AIFinancialInsights() {
     },
     {
       title: "Top Spending Categories",
-      description: `Your highest spending areas are:\n1. Food & Drink: ${formatCurrency(123259)} (34.3%)\n2. General Merchandise: ${formatCurrency(91961)} (25.6%)\n3. General Services: ${formatCurrency(78147)} (21.8%)`,
+      description: `Your highest spending areas are:\n${sortedCategories.slice(0, 3)
+        .map(({ category, amount, percentage }) => 
+          `${category.replace(/_/g, ' ')}: ${formatCurrency(amount)} (${percentage}%)`
+        )
+        .join('\n')}`,
       priority: "MEDIUM",
       badge: "ANALYSIS",
       icon: PieChart,
@@ -42,7 +72,7 @@ export default function AIFinancialInsights() {
     },
     {
       title: "Monthly Budget Optimization",
-      description: `Based on your spending patterns, here's a recommended monthly budget:\n• Essential spending: ${formatCurrency(293367)} (81.7%)\n• Discretionary spending: ${formatCurrency(65779)} (18.3%)\nPotential monthly savings: ${formatCurrency(53800)} by optimizing essential expenses.`,
+      description: `Based on your spending patterns, here's a recommended monthly budget:\n• Essential spending: ${formatCurrency(essentialSpending)} (${((essentialSpending/totalSpending)*100).toFixed(1)}%)\n• Discretionary spending: ${formatCurrency(discretionarySpending)} (${((discretionarySpending/totalSpending)*100).toFixed(1)}%)\nPotential monthly savings: ${formatCurrency(totalSpending * 0.15)} by optimizing essential expenses.`,
       priority: "HIGH",
       badge: "OPPORTUNITY",
       icon: Target,

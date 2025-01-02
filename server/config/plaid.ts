@@ -1,8 +1,8 @@
 export const plaidConfig = {
   clientId: process.env.PLAID_CLIENT_ID,
   secret: process.env.PLAID_SECRET,
-  env: 'sandbox', // Use sandbox environment
-  clientName: 'Finance Dashboard',
+  env: 'production', // Changed from 'sandbox' to 'production'
+  clientName: 'Fintellect', // Updated to match your app name
   products: ['transactions'],
   countryCodes: ['US'],
   language: 'en',

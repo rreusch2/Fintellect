@@ -6,7 +6,7 @@ COPY package*.json ./
 COPY client/package*.json client/
 COPY server/package*.json server/
 RUN npm install
-RUN cd client && npm install
+RUN cd client && npm install --legacy-peer-deps
 COPY . .
 ENV NODE_ENV=production
 RUN npm run build

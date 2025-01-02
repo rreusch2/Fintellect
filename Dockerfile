@@ -8,8 +8,6 @@ COPY server/package*.json server/
 RUN npm install
 RUN cd client && npm install --legacy-peer-deps
 COPY . .
-# Copy static assets
-COPY client/public ./client/public
 ENV NODE_ENV=production
 RUN npm run build
 
@@ -23,15 +21,17 @@ COPY --from=builder /app/client/public ./public
 COPY package*.json ./
 COPY client/package*.json client/
 
-# Install production dependencies and ensure ws is available
+# Install production dependencies
 RUN npm install --omit=dev && \
     npm install ws@8.18.0 && \
     npm install @neondatabase/serverless
 
-# Set environment variables for Neon
-ENV NEON_POOL_CONNECTIONS=20
-ENV NEON_POOL_IDLE_TIMEOUT=30000
-ENV NEON_PIPELINE_CONNECT=password
+# Add Neon database configuration
+ENV NEON_CONNECTION_TYPE=pooled
+ENV NEON_POOL_SIZE=20
+ENV NEON_POOL_IDLE_TIMEOUT=120000
+ENV NEON_MAX_RETRIES=5
+ENV NEON_CONNECTION_TIMEOUT=10000
 
 EXPOSE 10000
 ENV PORT=10000

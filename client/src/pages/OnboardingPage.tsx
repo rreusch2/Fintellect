@@ -118,7 +118,7 @@ export default function OnboardingPage() {
         title: "Success",
         description: "Bank account connected successfully",
       });
-      setLocation("/dashboard");
+      window.location.href = "/dashboard";
     } catch (error) {
       toast({
         variant: "destructive",

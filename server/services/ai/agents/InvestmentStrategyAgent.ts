@@ -42,9 +42,32 @@ export interface InvestmentAdvice {
   };
 }
 
+interface InvestmentProfile {
+  riskTolerance: number;
+  investmentGoal: string;
+  monthlyInvestment: number;
+  investmentTimeframe: string;
+  existingInvestments: string[];
+  preferredSectors: string[];
+  emergencyFund: boolean;
+  retirementPlan: boolean;
+}
+
 export class InvestmentStrategyAgent {
-  private static formatUserProfile(context: UserContext): string {
+  private static formatUserProfile(context: UserContext, profile?: InvestmentProfile): string {
     try {
+      // Get investment profile data
+      const investmentProfile = profile || {
+        riskTolerance: 5, // Default to moderate
+        investmentGoal: "",
+        monthlyInvestment: 0,
+        investmentTimeframe: "",
+        existingInvestments: [],
+        preferredSectors: [],
+        emergencyFund: false,
+        retirementPlan: false
+      };
+
       // Calculate monthly income and spending
       const monthlyIncome = context.userProfile?.monthlyIncome || 0;
       const recentTransactions = context.recentTransactions || [];
@@ -63,97 +86,55 @@ export class InvestmentStrategyAgent {
       // Calculate savings rate based on actual cash flow
       const monthlySavings = income - expenses;
       const savingsRate = income > 0 ? (monthlySavings / income) : 0;
-      
-      // Analyze investment-related transactions
-      const investmentTransactions = recentTransactions.filter(t => 
-        t.category?.toLowerCase().includes('invest') || 
-        t.category?.toLowerCase().includes('stock') ||
-        t.category?.toLowerCase().includes('crypto') ||
-        t.description?.toLowerCase().includes('investment')
-      );
 
       // Get investment and retirement goals
       const investmentGoals = (context.activeGoals || []).filter(g => 
         g.category === 'investment' || g.category === 'retirement'
       );
-      
-      // Detailed spending analysis
-      const spendingByCategory = recentTransactions.reduce((acc, t) => {
-        if (t.category && t.amount > 0) { // Only count expenses
-          const category = t.category.toLowerCase();
-          acc[category] = (acc[category] || 0) + t.amount;
-        }
-        return acc;
-      }, {} as Record<string, number>);
-
-      // Calculate risk metrics
-      const riskMetrics = {
-        hasSteadyIncome: income > expenses * 1.2, // 20% buffer
-        hasEmergencyFund: spendingByCategory['savings']?.toFixed(2) || 0,
-        hasInvestmentHistory: investmentTransactions.length > 0,
-        hasActiveInvestmentGoals: investmentGoals.length > 0
-      };
-
-      // Format spending analysis with percentage of income
-      const formattedSpending = Object.entries(spendingByCategory)
-        .map(([category, amount]) => {
-          const percentage = (amount / expenses * 100).toFixed(1);
-          return `- ${category}: $${(amount/100).toFixed(2)} (${percentage}% of expenses)`;
-        })
-        .join('\n');
-
-      // Format investment history
-      const investmentHistory = investmentTransactions.length > 0 
-        ? investmentTransactions.map(t => 
-            `- ${t.merchantName}: $${(Math.abs(t.amount)/100).toFixed(2)} (${t.category})`
-          ).join('\n')
-        : 'No recent investment activity';
 
       // Create comprehensive profile summary
       const profileSummary = [
-        'User Financial Profile:',
+        'Investment Profile:',
+        `- Risk Tolerance: ${investmentProfile.riskTolerance}/10`,
+        `- Investment Goal: ${investmentProfile.investmentGoal || 'Not specified'}`,
+        `- Monthly Investment: $${(investmentProfile.monthlyInvestment/100).toFixed(2)}`,
+        `- Investment Timeframe: ${investmentProfile.timeframe || 'Not specified'}`,
+        `- Preferred Sectors: ${investmentProfile.preferredSectors.join(', ') || 'None specified'}`,
+        `- Has Emergency Fund: ${investmentProfile.emergencyFund ? 'Yes' : 'No'}`,
+        `- Has Retirement Plan: ${investmentProfile.retirementPlan ? 'Yes' : 'No'}`,
+        '',
+        'Financial Profile:',
         `- Monthly Income: $${(monthlyIncome/100).toFixed(2)}`,
         `- Monthly Expenses: $${(expenses/100).toFixed(2)}`,
         `- Monthly Savings: $${(monthlySavings/100).toFixed(2)}`,
         `- Savings Rate: ${(savingsRate * 100).toFixed(1)}%`,
         '',
-        'Investment Profile:',
-        `- Investment Goals: ${investmentGoals.map(g => 
-          `${g.name} ($${((g.targetAmount || 0)/100).toFixed(2)} target)`).join(', ') || 'None set'}`,
-        `- Risk Assessment:`,
-        `  • Steady Income: ${riskMetrics.hasSteadyIncome ? 'Yes' : 'No'}`,
-        `  • Emergency Fund: ${riskMetrics.hasEmergencyFund ? 'Yes' : 'Limited'}`,
-        `  • Investment Experience: ${riskMetrics.hasInvestmentHistory ? 'Yes' : 'No'}`,
-        '',
-        'Recent Investment Activity:',
-        investmentHistory,
-        '',
-        'Overall Financial Goals:',
-        `${(context.activeGoals || []).map(g => 
+        'Investment Goals:',
+        `${investmentGoals.map(g => 
           `- ${g.name}: $${((g.currentAmount || 0)/100).toFixed(2)}/$${((g.targetAmount || 0)/100).toFixed(2)}`
-        ).join('\n') || '- No active financial goals'}`,
-        '',
-        'Spending Pattern Analysis:',
-        formattedSpending,
+        ).join('\n') || '- No active investment goals'}`,
         '',
         'Previous AI Insights:',
-        `${(context.previousInsights || []).map(i => 
-          `- ${i.description?.split('.')[0] || ''}`).filter(Boolean).join('\n') || '- No previous insights'}`
+        `${(context.previousInsights || [])
+          .filter(i => i.category === 'investment')
+          .map(i => `- ${i.description?.split('.')[0] || ''}`)
+          .filter(Boolean)
+          .join('\n') || '- No previous investment insights'}`
       ].join('\n');
 
       return profileSummary.trim();
     } catch (error) {
-      console.error('Error formatting user profile:', error);
-      return 'Error formatting user profile. Using default risk assessment.';
+      console.error('Error formatting investment profile:', error);
+      return 'Error formatting investment profile. Using default risk assessment.';
     }
   }
 
-  public async getInvestmentAdvice(userId: number): Promise<InvestmentAdvice> {
+  public async getInvestmentAdvice(userId: number, profile?: InvestmentProfile): Promise<InvestmentAdvice> {
     try {
       const userContext = await knowledgeStore.getUserContext(userId);
-      const profileStr = InvestmentStrategyAgent.formatUserProfile(userContext);
+      const profileStr = InvestmentStrategyAgent.formatUserProfile(userContext, profile);
 
-      const prompt = `You are an expert AI Investment Advisor. Analyze this financial profile and provide sophisticated, personalized investment recommendations. Consider the user's spending patterns, savings rate, and financial goals to determine risk tolerance and optimal investment strategies.
+      const prompt = `You are an expert AI Investment Advisor. Analyze this financial and investment profile to provide sophisticated, personalized investment recommendations. Consider the user's risk tolerance, investment goals, timeframe, and preferred sectors to determine optimal investment strategies.
 
 ${profileStr}
 
@@ -162,7 +143,7 @@ Consider current market conditions and provide actionable insights. Include both
 Respond with detailed investment advice in this JSON format:
 {
   "riskProfile": {
-    "score": number between 1-10,
+    "score": number between 1-10 (matching user's risk tolerance),
     "label": "Conservative/Moderate/Aggressive",
     "description": "Detailed explanation of risk profile and reasoning"
   },
@@ -190,7 +171,7 @@ Respond with detailed investment advice in this JSON format:
   }
 }
 
-Ensure recommendations are data-driven and tailored to the user's specific financial situation.`;
+Ensure recommendations are data-driven and tailored to the user's specific investment profile and goals.`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response.text();
@@ -198,7 +179,15 @@ Ensure recommendations are data-driven and tailored to the user's specific finan
       
       // Update knowledge store with this interaction
       await knowledgeStore.updateUserContext(userId, {
-        lastInteraction: new Date()
+        lastInteraction: new Date(),
+        previousInsights: [
+          ...(userContext.previousInsights || []),
+          {
+            category: 'investment',
+            description: parsedResponse.riskProfile.description,
+            timestamp: new Date()
+          }
+        ]
       });
 
       // Validate and transform the response to match our interface

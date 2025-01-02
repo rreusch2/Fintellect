@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Shield, FileText, ExternalLink } from "lucide-react";
+import { APP_CONFIG } from "@/lib/constants";
 
 export function LegalFooter() {
   return (
@@ -30,7 +31,7 @@ export function LegalFooter() {
             </a>
           </div>
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Your Company. All rights reserved.
+            {APP_CONFIG.COPYRIGHT_TEXT}
           </p>
         </div>
       </div>

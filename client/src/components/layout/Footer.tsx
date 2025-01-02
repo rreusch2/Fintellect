@@ -3,6 +3,7 @@ import { AIDisclaimer } from "@/components/legal/AIDisclaimer";
 import { useState } from "react";
 import { TermsModal } from "@/components/legal/TermsModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { APP_CONFIG } from "@/lib/constants";
 
 export function Footer() {
   const [showTerms, setShowTerms] = useState(false);
@@ -67,7 +68,7 @@ export function Footer() {
             </div>
             <div className="flex items-center gap-4">
               <p className="text-sm text-muted-foreground">
-                © {new Date().getFullYear()} Your Company. All rights reserved.
+                {APP_CONFIG.COPYRIGHT_TEXT}
               </p>
               <div className="border-l border-border/10 pl-4">
                 <AIDisclaimer variant="minimal" className="text-xs text-muted-foreground" />

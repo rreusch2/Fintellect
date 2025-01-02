@@ -27,6 +27,7 @@ import { isDemoMode, setDemoMode } from "@/lib/demo";
 import PlaidLink from "@/components/Plaid/PlaidLink";
 import { motion } from "framer-motion";
 import { usePageTitle } from "@/hooks/use-page-title";
+import AIAssistant from "@/components/Dashboard/AIAssistant";
 
 // Expanded quick prompts with more relevant options
 const quickPrompts = [
@@ -344,117 +345,7 @@ export default function DashboardPage() {
             transition={{ delay: 0.3 }}
             className="h-full"
           >
-            <div className="bg-gray-900/50 backdrop-blur-sm rounded-lg border border-gray-800 flex flex-col h-[calc(1166px+theme(space.8))] hover:bg-gray-900/60 transition-colors">
-              <div className="p-6 border-b border-gray-800">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Bot className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold">AI Assistant</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Get personalized financial guidance through natural conversation
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex flex-col flex-1 overflow-hidden">
-                <div className="p-6 pb-2">
-                  <div className="flex gap-2 flex-wrap">
-                    {quickActions.map((action) => (
-                      <Button
-                        key={action.label}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setMessages(prev => [...prev, { role: "user", content: action.message }]);
-                          sendMessage.mutate(action.message);
-                        }}
-                        className="bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20 transition-colors"
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-hidden px-6 pb-6">
-                  <div className="h-full overflow-y-auto rounded-lg bg-background/5 border border-gray-800/50">
-                    <div className="p-4 space-y-4">
-                      {messages.length <= 1 ? (
-                        // Enhanced Empty State
-                        <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-                          <div className="p-4 rounded-full bg-blue-500/10 animate-pulse duration-1000">
-                            <Bot className="h-10 w-10 text-blue-500" />
-                          </div>
-                          <div className="space-y-4 max-w-sm">
-                            <h3 className="font-medium text-lg">Start a Conversation</h3>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              Choose a quick action above to get personalized financial insights and advice tailored to your spending patterns.
-                            </p>
-                            <div className="pt-2 flex flex-col items-center gap-3">
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Bot className="h-4 w-4 text-blue-500" />
-                                <span>Analyze spending patterns</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Target className="h-4 w-4 text-blue-500" />
-                                <span>Set and track financial goals</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Wallet className="h-4 w-4 text-blue-500" />
-                                <span>Get personalized savings tips</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        // Regular Messages Display
-                        <>
-                          {messages.map((message, i) => (
-                            <div
-                              key={i}
-                              className={`flex ${
-                                message.role === "user" ? "justify-end" : "justify-start"
-                              } animate-in slide-in-from-bottom-2 duration-300`}
-                            >
-                              <div className="flex items-start gap-2 max-w-[80%]">
-                                {message.role === "assistant" && (
-                                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                                    <Bot className="h-5 w-5 text-blue-500" />
-                                  </div>
-                                )}
-                                <div
-                                  className={`rounded-lg px-4 py-2 ${
-                                    message.role === "user"
-                                      ? "bg-blue-600 text-white"
-                                      : "bg-gray-800"
-                                  }`}
-                                >
-                                  <pre className="whitespace-pre-wrap font-sans">
-                                    {message.content}
-                                  </pre>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          {sendMessage.isPending && (
-                            <div className="flex justify-start animate-in fade-in duration-200">
-                              <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2">
-                                <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                                <span className="text-sm">Thinking...</span>
-                              </div>
-                            </div>
-                          )}
-                          <div ref={messagesEndRef} />
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AIAssistant />
           </motion.div>
         </div>
       </main>

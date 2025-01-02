@@ -1,60 +1,60 @@
 import { Router } from "express";
-import { generateFinancialInsights, chatWithAI, generateSavingsTips } from "../services/ai";
-import { db } from "@db";
-import { plaidTransactions } from "@db/schema";
-import { eq, desc } from "drizzle-orm";
-import type { AuthenticatedRequest } from "../auth";
+import { ChatbotAgent } from "../services/ai/agents/ChatbotAgent.js";
+import { DashboardInsightsAgent } from "../services/ai/agents/DashboardInsightsAgent.js";
+import { knowledgeStore } from "../services/ai/store/KnowledgeStore.js";
+import { genAI } from "../services/ai/config/gemini.js";
+import type { Request } from "express";
+
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: number;
+    [key: string]: any;
+  };
+}
 
 const router = Router();
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const dashboardAgent = new DashboardInsightsAgent();
+const chatbotAgent = new ChatbotAgent(model, knowledgeStore, dashboardAgent);
 
-router.post("/chat", async (req: AuthenticatedRequest, res) => {
-  if (!req.user?.id) {
-    return res.status(401).send("Not authenticated");
-  }
-
-  try {
-    const { message } = req.body;
-    const response = await chatWithAI(message, req.user.id);
-    res.json(response);
-  } catch (error) {
-    console.error("Error in AI chat:", error);
-    res.status(500).json({ error: "Failed to get AI response" });
-  }
-});
-
+// Get AI insights for dashboard
 router.get("/insights", async (req: AuthenticatedRequest, res) => {
-  if (!req.user?.id) {
-    return res.status(401).send("Not authenticated");
-  }
-
   try {
-    const transactions = await db
-      .select()
-      .from(plaidTransactions)
-      .where(eq(plaidTransactions.userId, req.user.id))
-      .orderBy(desc(plaidTransactions.date))
-      .limit(30);
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
-    const insights = await generateFinancialInsights(transactions);
+    const insights = await dashboardAgent.getInsights(userId);
     res.json(insights);
   } catch (error) {
-    console.error("Error generating insights:", error);
-    res.status(500).json({ error: "Failed to generate insights" });
+    console.error("Error getting AI insights:", error);
+    res.status(500).json({ error: "Failed to get AI insights" });
   }
 });
 
-router.get("/savings-tips", async (req: AuthenticatedRequest, res) => {
-  if (!req.user?.id) {
-    return res.status(401).send("Not authenticated");
-  }
-
+// Chat with AI assistant
+router.post("/chat", async (req: AuthenticatedRequest, res) => {
   try {
-    const tips = await generateSavingsTips(req.user.id);
-    res.json(tips);
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { message } = req.body;
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    console.log(`Processing chat message for user ${userId}:`, message);
+    const response = await chatbotAgent.chat(userId, message);
+    console.log(`AI response:`, response);
+    
+    res.json({ message: response });
   } catch (error) {
-    console.error("Error generating savings tips:", error);
+    console.error("Error in AI chat:", error);
     res.status(500).json({ 
-      error: "Failed to generate savings tips",
+      error: "Failed to process chat message",
       details: process.env.NODE_ENV === "development" ? error : undefined
     });
   }

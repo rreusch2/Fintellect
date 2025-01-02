@@ -216,6 +216,33 @@ Response format:
   }
 }
 
+const formatCategory = (category: string): string => {
+  // Special case mappings for common categories
+  const specialCases: Record<string, string> = {
+    'FOOD_AND_DRINK': 'Food & Drink',
+    'GENERAL_MERCHANDISE': 'General Merchandise',
+    'GENERAL_SERVICES': 'General Services',
+    'TRANSPORTATION': 'Transportation',
+    'TRAVEL': 'Travel',
+    'HOME_IMPROVEMENT': 'Home Improvement',
+    'PERSONAL_CARE': 'Personal Care',
+    'ENTERTAINMENT': 'Entertainment',
+    'HEALTH_FITNESS': 'Health & Fitness',
+    'BILLS_UTILITIES': 'Bills & Utilities'
+  };
+
+  // Check if we have a special case mapping
+  if (specialCases[category]) {
+    return specialCases[category];
+  }
+
+  // Default formatting for other categories
+  return category
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 export async function chatWithAI(message: string, userId: number) {
   try {
     // Check cache first
@@ -225,14 +252,14 @@ export async function chatWithAI(message: string, userId: number) {
       return cached;
     }
 
-    // Get user data
+    // Get user data with more transactions for better analysis
     const [transactions, userInsights] = await Promise.all([
       db
         .select()
         .from(plaidTransactions)
         .where(eq(plaidTransactions.userId, userId))
         .orderBy(desc(plaidTransactions.date))
-        .limit(10),
+        .limit(100),  // Increased to get better monthly data
       db
         .select({
           id: insights.id,
@@ -247,48 +274,257 @@ export async function chatWithAI(message: string, userId: number) {
         .limit(3)
     ]);
 
-    // Safely process transaction data
-    const stats = transactions.reduce((acc, t) => {
-      const amount = typeof t.amount === 'number' ? t.amount : parseInt(String(t.amount));
-      if (!isNaN(amount)) {
-        acc.total += amount;
-        const category = t.category || 'Other';
-        acc.categories[category] = (acc.categories[category] || 0) + amount;
-      }
-      return acc;
-    }, { total: 0, categories: {} as Record<string, number> });
+    // Calculate monthly and recent spending
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const contextPrompt = `As a friendly AI financial assistant, help with: "${message}"
+    // Process transactions by period
+    const monthlyTransactions = transactions.filter(t => new Date(t.date) >= startOfMonth);
+    const recentTransactions = transactions.filter(t => new Date(t.date) >= sevenDaysAgo);
 
-Financial Summary:
-- Recent Spending: $${(stats.total / 100).toFixed(2)}
-- Top Categories: ${Object.entries(stats.categories)
-  .sort(([,a], [,b]) => b - a)
-  .slice(0, 2)
-  .map(([cat, amount]) => `${cat}: $${(amount / 100).toFixed(2)}`)
-  .join(', ')}
+    // Enhanced spending calculation with proper handling of transaction types
+    const calculateSpending = (txs: typeof transactions) => {
+      return txs.reduce((acc, t) => {
+        const amount = typeof t.amount === 'number' ? t.amount : parseInt(String(t.amount));
+        if (!isNaN(amount) && amount > 0) {  // Only count positive amounts (expenses)
+          const category = t.category || 'Other';
+          // Skip transfer categories
+          if (!category.includes('TRANSFER') && category !== 'PAYMENT') {
+            acc.total += amount;
+            acc.categories[category] = (acc.categories[category] || 0) + amount;
+          }
+        }
+        return acc;
+      }, { total: 0, categories: {} as Record<string, number> });
+    };
 
-${userInsights.length > 0 ? `Recent Insight: ${userInsights[0].title}` : ''}
+    const monthlyStats = calculateSpending(monthlyTransactions);
+    const recentStats = calculateSpending(recentTransactions);
 
-Respond conversationally as JSON:
+    // Format category breakdowns with enhanced accuracy
+    const formatCategoryBreakdown = (stats: typeof monthlyStats) => {
+      return Object.entries(stats.categories)
+        .sort(([, a], [, b]) => b - a)
+        .map(([category, amount]) => ({
+          category: formatCategory(category),
+          amount,
+          percentage: ((amount / stats.total) * 100).toFixed(1),
+          formattedAmount: `$${(amount / 100).toFixed(2)}`
+        }));
+    };
+
+    const monthlyBreakdown = formatCategoryBreakdown(monthlyStats);
+    const recentBreakdown = formatCategoryBreakdown(recentStats);
+
+    // Calculate spending trends
+    const calculateTrends = (breakdown: ReturnType<typeof formatCategoryBreakdown>) => {
+      return breakdown.map(category => ({
+        ...category,
+        isHighSpending: parseFloat(category.percentage) > 30,
+        suggestedReduction: parseFloat(category.percentage) > 30 ? 10 : 5,
+        potentialSavings: (category.amount * (parseFloat(category.percentage) > 30 ? 0.1 : 0.05) / 100).toFixed(2)
+      }));
+    };
+
+    const monthlyTrends = calculateTrends(monthlyBreakdown);
+    const recentTrends = calculateTrends(recentBreakdown);
+
+    const getPromptTemplate = (message: string, stats: any) => {
+      // Base context with spending data
+      const baseContext = `
+Monthly Spending (${stats.startDate} - ${stats.endDate}):
+Total Monthly Spending: $${(stats.monthlyStats.total / 100).toFixed(2)}
+Monthly Breakdown:
+${stats.monthlyBreakdown.map(c => 
+  `${c.category}: ${c.formattedAmount} (${c.percentage}%)`
+).join('\n')}
+
+Recent 7-Day Spending:
+Total Recent Spending: $${(stats.recentStats.total / 100).toFixed(2)}
+Recent Breakdown:
+${stats.recentBreakdown.map(c => 
+  `${c.category}: ${c.formattedAmount} (${c.percentage}%)`
+).join('\n')}
+
+Spending Insights:
+${stats.monthlyTrends
+  .filter(t => t.isHighSpending)
+  .map(t => `${t.category} spending is high at ${t.percentage}%. Potential savings: $${t.potentialSavings}`)
+  .join('\n')}`;
+
+      // Customize prompt based on message type
+      if (message.toLowerCase().includes('analyze spending')) {
+        return `You are a friendly AI financial advisor. Analyze the user's spending patterns and provide actionable insights.
+
+${baseContext}
+
+Response Format:
 {
-  "message": "Friendly response with specific numbers",
-  "suggestions": [
+  "message": "Brief, friendly greeting",
+  "sections": [
     {
-      "title": "Action item",
-      "description": "Specific advice"
+      "title": "Monthly Overview",
+      "content": "Focus on total spending and top 2-3 categories with clear percentage breakdowns"
+    },
+    {
+      "title": "Recent Activity",
+      "content": "Highlight significant changes in spending patterns over the last 7 days"
+    },
+    {
+      "title": "Insights & Recommendations",
+      "content": "2-3 specific, actionable recommendations with potential savings amounts and clear steps"
     }
   ]
 }`;
+      }
 
-    const result = await model.generateContent(contextPrompt);
+      if (message.toLowerCase().includes('budget')) {
+        return `You are a friendly AI financial advisor. Create a personalized budget based on spending patterns.
+
+${baseContext}
+
+Important Guidelines:
+1. Always include specific dollar amounts and percentages
+2. Use the 50/30/20 rule as a baseline
+3. Provide actionable steps
+4. Keep recommendations realistic and achievable
+
+Response Format:
+{
+  "message": "Hi there! I've analyzed your spending patterns and created a budget to help you manage your finances more effectively.",
+  "sections": [
+    {
+      "title": "Monthly Overview",
+      "content": "Your total monthly spending is $${(stats.monthlyStats.total / 100).toFixed(2)}. Food & Drink is your biggest expense at $${(stats.monthlyBreakdown[0]?.amount / 100).toFixed(2)} (${stats.monthlyBreakdown[0]?.percentage}%). Other major categories include ${stats.monthlyBreakdown[1]?.category} ($${(stats.monthlyBreakdown[1]?.amount / 100).toFixed(2)}), ${stats.monthlyBreakdown[2]?.category} ($${(stats.monthlyBreakdown[2]?.amount / 100).toFixed(2)}), and ${stats.monthlyBreakdown[3]?.category} ($${(stats.monthlyBreakdown[3]?.amount / 100).toFixed(2)})."
+    },
+    {
+      "title": "Recommended Budget",
+      "content": "Based on the 50/30/20 rule, I recommend allocating your income as follows:\\n* 50% to Needs (e.g., Food & Drink, Housing, Transportation)\\n* 30% to Wants (e.g., Entertainment, Dining Out)\\n* 20% to Savings and Debt Repayment\\nThis would result in a budget of:\\n* Needs: $${(stats.monthlyStats.total * 0.5 / 100).toFixed(2)}\\n* Wants: $${(stats.monthlyStats.total * 0.3 / 100).toFixed(2)}\\n* Savings and Debt Repayment: $${(stats.monthlyStats.total * 0.2 / 100).toFixed(2)}"
+    },
+    {
+      "title": "Action Steps",
+      "content": "To implement this budget, consider the following steps:\\n1. Track all expenses using categories\\n2. Set up automatic transfers for savings\\n3. Review and adjust spending in high-cost categories\\n4. Consider meal planning to reduce food costs\\n5. Look for opportunities to reduce non-essential spending"
+    }
+  ]
+}`;
+      }
+
+      if (message.toLowerCase().includes('saving tips')) {
+        return `You are a friendly AI financial advisor. Provide personalized saving tips based on spending patterns.
+
+${baseContext}
+
+Response Format:
+{
+  "message": "Brief, friendly greeting",
+  "sections": [
+    {
+      "title": "Top Saving Opportunities",
+      "content": "2-3 major areas where significant savings are possible"
+    },
+    {
+      "title": "Quick Wins",
+      "content": "2-3 immediate actions that can lead to savings"
+    },
+    {
+      "title": "Long-term Strategies",
+      "content": "2-3 sustainable saving strategies with specific steps and potential impact"
+    }
+  ]
+}`;
+      }
+
+      if (message.toLowerCase().includes('recurring charges')) {
+        return `You are a friendly AI financial advisor. Analyze recurring charges and suggest optimizations.
+
+${baseContext}
+
+Response Format:
+{
+  "message": "Brief, friendly greeting",
+  "sections": [
+    {
+      "title": "Recurring Charges Overview",
+      "content": "List of identified recurring charges with amounts and frequencies"
+    },
+    {
+      "title": "Potential Optimizations",
+      "content": "2-3 specific suggestions for reducing or eliminating unnecessary subscriptions"
+    },
+    {
+      "title": "Action Plan",
+      "content": "Step-by-step guide to review and optimize recurring charges"
+    }
+  ]
+}`;
+      }
+
+      // Default prompt for other queries
+      return `You are a friendly AI financial advisor. Help with: "${message}"
+
+${baseContext}
+
+Response Format:
+{
+  "message": "Brief, friendly greeting",
+  "sections": [
+    {
+      "title": "Monthly Overview",
+      "content": "Key monthly spending insights"
+    },
+    {
+      "title": "Recent Activity",
+      "content": "Important recent trends"
+    },
+    {
+      "title": "Insights & Recommendations",
+      "content": "2-3 specific, actionable recommendations"
+    }
+  ]
+}`;
+    };
+
+    const contextPrompt = getPromptTemplate(message, {
+      startDate: startOfMonth,
+      endDate: now,
+      monthlyStats,
+      recentStats,
+      monthlyBreakdown,
+      recentBreakdown,
+      monthlyTrends,
+      recentTrends
+    });
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: contextPrompt }]}],
+      generationConfig: {
+        maxOutputTokens: 2000,
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40
+      }
+    });
+
     const text = result.response.text();
     const parsed = JSON.parse(text);
 
-    const response = {
-      message: parsed.message || "I'm analyzing your financial data to help.",
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 2) : []
+    // Format the response to ensure completeness
+    const formatResponse = (parsed: any) => {
+      const sections = parsed.sections || [];
+      const message = [parsed.message || "Here's your detailed financial analysis:"];
+      
+      sections.forEach((section: any) => {
+        message.push(`\n**${section.title}**\n${section.content}`);
+      });
+
+      return {
+        message: message.join('\n'),
+        suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 3) : []
+      };
     };
+
+    const response = formatResponse(parsed);
 
     // Cache the response
     setCachedResponse(cacheKey, response);

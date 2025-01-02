@@ -58,89 +58,123 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
-          {/* Rich gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-background">
+          {/* Restored and enhanced gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-600/98 to-blue-700/95">
             <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20"></div>
-            {/* Gradient overlay for depth */}
-            <div className="absolute inset-0 bg-gradient-radial from-transparent via-primary/30 to-primary/50"></div>
+            {/* Enhanced gradient overlay for depth */}
+            <div className="absolute inset-0 bg-gradient-radial from-transparent via-blue-600/30 to-blue-700/50"></div>
           </div>
           
           {/* Enhanced animated background elements */}
           <div className="absolute inset-0 overflow-hidden">
-            {/* Larger floating orbs */}
-            <div 
-              className="absolute top-20 left-[10%] w-48 h-48 bg-white/10 rounded-full blur-[100px] animate-float-slow"
-            />
-            <div 
-              className="absolute bottom-40 right-[15%] w-64 h-64 bg-primary-foreground/10 rounded-full blur-[120px] animate-float-medium"
-            />
-            <div 
-              className="absolute top-1/4 right-1/4 w-40 h-40 bg-white/10 rounded-full blur-[80px] animate-float-fast"
-            />
+            {/* Larger floating orbs with improved positioning */}
+            <div className="absolute top-20 left-[10%] w-[500px] h-[500px] bg-blue-400/10 rounded-full blur-[140px] animate-float-slow"></div>
+            <div className="absolute bottom-40 right-[15%] w-[600px] h-[600px] bg-cyan-400/10 rounded-full blur-[160px] animate-float-medium"></div>
+            <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-blue-300/10 rounded-full blur-[120px] animate-float-fast"></div>
             
-            {/* Additional decorative elements */}
-            <div className="absolute top-[15%] left-[25%] w-2 h-2 bg-white/40 rounded-full animate-pulse"/>
-            <div className="absolute top-[45%] right-[35%] w-2 h-2 bg-white/30 rounded-full animate-pulse delay-300"/>
-            <div className="absolute bottom-[25%] left-[40%] w-2 h-2 bg-white/20 rounded-full animate-pulse delay-700"/>
+            {/* Restored decorative elements with improved visibility */}
+            <div className="absolute top-[15%] left-[25%] w-2 h-2 bg-blue-200/40 rounded-full animate-pulse"></div>
+            <div className="absolute top-[45%] right-[35%] w-2 h-2 bg-blue-200/30 rounded-full animate-pulse delay-300"></div>
+            <div className="absolute bottom-[25%] left-[40%] w-2 h-2 bg-blue-200/20 rounded-full animate-pulse delay-700"></div>
             
-            {/* Subtle accent lines */}
-            <div className="absolute top-[30%] left-0 w-[20%] h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent transform -rotate-45"/>
-            <div className="absolute bottom-[40%] right-0 w-[15%] h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent transform rotate-45"/>
+            {/* Enhanced accent lines */}
+            <div className="absolute top-[30%] left-0 w-[20%] h-[1px] bg-gradient-to-r from-transparent via-blue-200/20 to-transparent transform -rotate-45"></div>
+            <div className="absolute bottom-[40%] right-0 w-[15%] h-[1px] bg-gradient-to-r from-transparent via-blue-200/15 to-transparent transform rotate-45"></div>
           </div>
         </div>
         
-        <div className="container relative mx-auto px-4 py-32 text-center">
+        <div className="container relative mx-auto px-4 py-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="max-w-3xl mx-auto space-y-12"
+            className="max-w-4xl mx-auto space-y-8 text-center"
           >
-            {/* Enhanced Logo and Tagline */}
-            <div className="space-y-3">
-              <h1 className="text-7xl font-extrabold tracking-tight">
-                <span className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-blue-300 via-cyan-300 to-blue-400 animate-gradient font-display">
-                  Fintellect
+            {/* Logo Section */}
+            <div className="space-y-4">
+              <motion.h1 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="text-8xl sm:text-9xl font-extrabold tracking-tighter"
+              >
+                <span className="relative inline-block">
+                  {/* Enhanced glow effect */}
+                  <div className="absolute inset-0 blur-3xl bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-blue-400/20 animate-pulse"></div>
+                  
+                  {/* Main logo text with lighter gradient for better visibility */}
+                  <span className="relative inline-block bg-clip-text text-transparent bg-gradient-to-r from-blue-100 via-cyan-100 to-blue-100 animate-gradient font-display">
+                    Fintellect
+                  </span>
                 </span>
-              </h1>
-              <div className="flex items-center justify-center gap-2 text-lg text-white/90">
-                <Sparkles className="h-5 w-5 text-blue-300" />
-                <span className="font-light tracking-wide">Powered by Advanced AI</span>
-              </div>
+              </motion.h1>
+
+              {/* Improved tagline and beta badge layout */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="flex items-center justify-center gap-4"
+              >
+                <div className="flex items-center gap-2 text-xl text-white/95">
+                  <Sparkles className="h-6 w-6 text-blue-100 animate-pulse" />
+                  <span className="font-light tracking-wide">Powered by Advanced AI</span>
+                </div>
+                
+                {/* Refined Beta Badge */}
+                <div className="flex items-center px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-400/10 to-cyan-400/10 border border-blue-200/20 backdrop-blur-sm">
+                  <span className="text-sm font-semibold tracking-widest text-blue-50">
+                    BETA
+                  </span>
+                </div>
+              </motion.div>
             </div>
 
-            {/* Main Headline with consistent styling */}
-            <h2 className="text-4xl font-bold tracking-tight sm:text-5xl text-white">
-              Transform Your Finances with{" "}
-              <span className="text-white">AI-Powered</span>{" "}
-              Intelligence
-            </h2>
-            
-            {/* Subheading */}
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="text-xl mb-8 text-white/90 max-w-2xl mx-auto leading-relaxed"
-            >
-              Experience intelligent financial management powered by advanced AI. Get personalized insights, 
-              smart budgeting, and secure bank integration through Plaid.
-            </motion.p>
-            
-            {/* CTA Button */}
+            {/* Main headline with improved spacing */}
+            <div className="space-y-6">
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white leading-tight"
+              >
+                Transform Your Finances with{" "}
+                <span className="relative inline-block">
+                  <span className="relative z-10 bg-clip-text text-transparent bg-gradient-to-r from-cyan-200 to-blue-200">
+                    AI-Powered
+                  </span>
+                  <div className="absolute inset-0 blur-lg bg-blue-400/20 animate-pulse"></div>
+                </span>{" "}
+                Intelligence
+              </motion.h2>
+              
+              {/* Enhanced subheading */}
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="text-xl md:text-2xl text-blue-100/90 max-w-2xl mx-auto leading-relaxed font-light"
+              >
+                Experience intelligent financial management powered by advanced AI. 
+                Get personalized insights, smart budgeting, and secure bank integration 
+                through Plaid.
+              </motion.p>
+            </div>
+
+            {/* Enhanced CTA Button */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
+              className="pt-4"
             >
               <Link href="/auth">
                 <Button 
                   size="lg" 
-                  variant="secondary" 
-                  className="min-w-[200px] shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="min-w-[240px] h-14 text-lg font-medium shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0"
                 >
                   Get Started
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-6 w-6" />
                 </Button>
               </Link>
             </motion.div>

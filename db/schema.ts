@@ -1,11 +1,11 @@
-import { pgTable, text, serial, integer, timestamp, jsonb, boolean, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, jsonb, boolean, varchar, index } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").unique().notNull(),
-  password: text("password").notNull(),
+  password: text("password"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   hasPlaidSetup: boolean("has_plaid_setup").default(false).notNull(),
   hasCompletedOnboarding: boolean("has_completed_onboarding").default(false).notNull(),
@@ -14,8 +14,18 @@ export const users = pgTable("users", {
   lastLoginAt: timestamp("last_login_at"),
   rememberToken: text("remember_token"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  legalConsent: jsonb("legal_consent").default(null),
-  consentVersion: varchar("consent_version", { length: 10 }).default(null),
+  legalConsent: jsonb("legal_consent"),
+  consentVersion: varchar("consent_version", { length: 10 }),
+  investmentProfile: jsonb("investment_profile").$type<{
+    riskTolerance: number;
+    investmentGoal: string;
+    monthlyInvestment: number;
+    investmentTimeframe: string;
+    existingInvestments: string[];
+    preferredSectors: string[];
+    emergencyFund: boolean;
+    retirementPlan: boolean;
+  }>(),
 });
 
 export const plaidItems = pgTable("plaid_items", {

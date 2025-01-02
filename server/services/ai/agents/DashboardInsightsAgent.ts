@@ -85,7 +85,7 @@ ${this.analyzeTransactionTrends(transactions)}
   }
 
   private analyzeTransactions(transactions: UserContext['recentTransactions']) {
-    // Group transactions by normalized category
+    // Group transactions by normalized category with improved categorization
     const categoryTotals = transactions.reduce((acc, t) => {
       const category = normalizeCategory(t.category);
       if (t.amount > 0) { // Only count expenses
@@ -94,89 +94,190 @@ ${this.analyzeTransactionTrends(transactions)}
       return acc;
     }, {} as Record<string, number>);
 
-    // Find recurring transactions with normalized merchant names
+    // Enhanced recurring transaction detection with pattern analysis
     const recurringTransactions = transactions.reduce((acc, t) => {
       const merchantName = t.merchantName?.trim() || t.description;
       const category = normalizeCategory(t.category);
-      const key = `${merchantName} (${category})`;
+      const amount = Math.abs(t.amount);
+      // Create a unique key that includes the amount range for better pattern matching
+      const amountRange = Math.round(amount / 100) * 100; // Round to nearest 100
+      const key = `${merchantName} (${category}) - ~$${(amountRange/100).toFixed(0)}`;
       if (!acc[key]) acc[key] = [];
-      acc[key].push(t);
+      acc[key].push({
+        ...t,
+        date: new Date(t.date)
+      });
       return acc;
-    }, {} as Record<string, typeof transactions>);
+    }, {} as Record<string, Array<typeof transactions[0] & { date: Date }>>);
 
-    // Filter for truly recurring transactions (appear multiple times)
+    // Improved recurring pattern detection with frequency analysis
     const recurringPatterns = Object.entries(recurringTransactions)
-      .filter(([, txs]) => txs.length > 1)
-      .map(([key, txs]) => ({
-        key,
-        transactions: txs,
-        averageAmount: txs.reduce((sum, t) => sum + t.amount, 0) / txs.length,
-        frequency: txs.length
-      }));
+      .map(([key, txs]) => {
+        // Sort transactions by date
+        const sortedTxs = txs.sort((a, b) => a.date.getTime() - b.date.getTime());
+        
+        // Calculate average time between transactions
+        const timeDiffs = sortedTxs.slice(1).map((tx, i) => 
+          tx.date.getTime() - sortedTxs[i].date.getTime()
+        );
+        const avgTimeDiff = timeDiffs.length > 0 
+          ? timeDiffs.reduce((a, b) => a + b, 0) / timeDiffs.length 
+          : 0;
+        
+        // Calculate standard deviation of amounts
+        const amounts = txs.map(t => Math.abs(t.amount));
+        const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+        const stdDev = Math.sqrt(
+          amounts.reduce((sq, n) => sq + Math.pow(n - avgAmount, 2), 0) / amounts.length
+        );
 
-    // Calculate spending trends
-    const monthlyTotals = transactions.reduce((acc, t) => {
-      const month = new Date(t.date).getMonth();
+        return {
+          key,
+          transactions: txs,
+          averageAmount: avgAmount,
+          frequency: txs.length,
+          frequencyDays: Math.round(avgTimeDiff / (1000 * 60 * 60 * 24)),
+          isConsistent: stdDev / avgAmount < 0.1, // Less than 10% variation
+          totalSpent: amounts.reduce((a, b) => a + b, 0),
+          category: normalizeCategory(txs[0].category)
+        };
+      })
+      .filter(p => 
+        p.frequency >= 2 && // At least 2 occurrences
+        p.frequencyDays > 0 && p.frequencyDays <= 45 // Reasonable frequency
+      )
+      .sort((a, b) => b.totalSpent - a.totalSpent);
+
+    // Enhanced spending trend analysis with daily and weekly patterns
+    const spendingTrends = transactions.reduce((acc, t) => {
+      const date = new Date(t.date);
+      const month = date.getMonth();
+      const week = Math.floor(date.getDate() / 7);
+      const dayOfWeek = date.getDay();
+
       if (t.amount > 0) { // Only count expenses
-        acc[month] = (acc[month] || 0) + t.amount;
+        // Monthly totals
+        acc.monthly[month] = (acc.monthly[month] || 0) + t.amount;
+        
+        // Weekly patterns
+        acc.weekly[week] = (acc.weekly[week] || 0) + t.amount;
+        
+        // Day of week patterns
+        acc.dayOfWeek[dayOfWeek] = (acc.dayOfWeek[dayOfWeek] || 0) + t.amount;
+        
+        // Category trends by week
+        const category = normalizeCategory(t.category);
+        if (!acc.categoryTrends[category]) {
+          acc.categoryTrends[category] = {};
+        }
+        acc.categoryTrends[category][week] = (acc.categoryTrends[category][week] || 0) + t.amount;
       }
       return acc;
-    }, {} as Record<number, number>);
+    }, {
+      monthly: {} as Record<number, number>,
+      weekly: {} as Record<number, number>,
+      dayOfWeek: {} as Record<number, number>,
+      categoryTrends: {} as Record<string, Record<number, number>>
+    });
+
+    // Calculate velocity and acceleration of spending
+    const weeklyTotals = Object.entries(spendingTrends.weekly)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+      .map(([, amount]) => amount);
+    
+    const weeklyChanges = weeklyTotals.slice(1).map((amount, i) => 
+      amount - weeklyTotals[i]
+    );
+
+    const spendingVelocity = weeklyChanges.length > 0 
+      ? weeklyChanges.reduce((a, b) => a + b, 0) / weeklyChanges.length 
+      : 0;
 
     return {
       categoryTotals,
       recurringPatterns,
-      monthlyTotals
+      spendingTrends,
+      spendingVelocity,
+      highestSpendingDay: Object.entries(spendingTrends.dayOfWeek)
+        .sort(([, a], [, b]) => b - a)[0]?.[0],
+      categoryAcceleration: Object.entries(spendingTrends.categoryTrends)
+        .map(([category, weeklyAmounts]) => {
+          const weeks = Object.entries(weeklyAmounts)
+            .sort(([a], [b]) => parseInt(a) - parseInt(b))
+            .map(([, amount]) => amount);
+          const changes = weeks.slice(1).map((amount, i) => amount - weeks[i]);
+          return {
+            category,
+            acceleration: changes.length > 0 
+              ? changes.reduce((a, b) => a + b, 0) / changes.length 
+              : 0
+          };
+        })
+        .sort((a, b) => Math.abs(b.acceleration) - Math.abs(a.acceleration))
     };
   }
 
   public async getInsights(userId: number): Promise<DashboardInsight[]> {
     try {
       const userContext = await knowledgeStore.getUserContext(userId);
-      const { categoryTotals, recurringPatterns, monthlyTotals } = 
-        this.analyzeTransactions(userContext.recentTransactions);
+      const analysis = this.analyzeTransactions(userContext.recentTransactions);
 
-      // Format the data for the AI prompt
+      // Enhanced data formatting for AI prompt
       const analysisData = `
 Transaction Analysis:
-- Top spending categories: ${Object.entries(categoryTotals)
+
+1. Spending Overview:
+- Top spending categories: ${Object.entries(analysis.categoryTotals)
   .sort(([,a], [,b]) => b - a)
   .slice(0, 3)
   .map(([cat, amt]) => `${cat}: $${(amt/100).toFixed(2)}`)
   .join(', ')}
+- Weekly spending velocity: ${analysis.spendingVelocity > 0 ? 'Increasing' : 'Decreasing'} by $${Math.abs(analysis.spendingVelocity/100).toFixed(2)}/week
+- Highest spending day: ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][parseInt(analysis.highestSpendingDay || '0')]}
 
-- Recurring transactions: ${recurringPatterns
-  .map(p => `${p.key}: $${(p.averageAmount/100).toFixed(2)} (${p.frequency}x)`)
-  .join(', ')}
+2. Recurring Patterns:
+${analysis.recurringPatterns.slice(0, 5).map(p => 
+  `- ${p.key}: $${(p.averageAmount/100).toFixed(2)} every ${p.frequencyDays} days (${p.isConsistent ? 'consistent' : 'variable'} amount)`
+).join('\n')}
 
-- Monthly spending trend: ${Object.entries(monthlyTotals)
-  .map(([month, total]) => `Month ${parseInt(month) + 1}: $${(total/100).toFixed(2)}`)
-  .join(', ')}
+3. Category Trends:
+${analysis.categoryAcceleration.slice(0, 3).map(c => 
+  `- ${c.category}: ${c.acceleration > 0 ? 'Increasing' : 'Decreasing'} by $${Math.abs(c.acceleration/100).toFixed(2)}/week`
+).join('\n')}
 
-- Savings rate: ${userContext.monthlyIncome ? 
-  ((userContext.monthlyIncome - Object.values(categoryTotals).reduce((a,b) => a+b, 0)) / 
+4. Financial Context:
+- Monthly Income: ${userContext.monthlyIncome ? `$${(userContext.monthlyIncome/100).toFixed(2)}` : 'Unknown'}
+- Savings Rate: ${userContext.monthlyIncome ? 
+  ((userContext.monthlyIncome - Object.values(analysis.categoryTotals).reduce((a,b) => a+b, 0)) / 
    userContext.monthlyIncome * 100).toFixed(1) + '%' : 'Unknown'}
+- Active Financial Goals: ${userContext.activeGoals.map(g => g.name).join(', ') || 'None set'}
 `;
 
-      const prompt = `As an AI Financial Advisor, analyze this user's actual transaction data and provide 3 key insights:
+      const prompt = `As an AI Financial Advisor, analyze this detailed transaction data and provide 3 highly personalized, actionable insights. Consider spending patterns, recurring expenses, and category trends.
 
 ${analysisData}
 
-Provide exactly 3 insights in this JSON format, using clean category names (no underscores):
+Provide exactly 3 insights in this JSON format:
 {
   "insights": [
     {
       "type": "spending/saving/investment",
       "title": "concise actionable title",
-      "description": "detailed explanation based on the actual transaction data",
-      "impact": "potential financial impact",
+      "description": "detailed explanation based on the specific patterns observed",
+      "impact": "quantified potential financial impact",
       "priority": "HIGH/MEDIUM/LOW",
       "badge": "short status label"
     }
   ]
 }
 
-Focus on clear patterns in the transaction data. Use proper category names (e.g., "Food & Dining" instead of "FOOD_DINING").`;
+Focus on:
+1. Most significant patterns or changes in spending behavior
+2. Specific opportunities for optimization based on recurring patterns
+3. Actionable recommendations tied to actual transaction data
+4. Quantifiable potential impact of following the advice
+
+Use proper category names and be specific about amounts and percentages when relevant.`;
 
       const result = await model.generateContent(prompt);
       const responseText = result.response.text();
@@ -199,7 +300,7 @@ Focus on clear patterns in the transaction data. Use proper category names (e.g.
             type: "spending",
             title: "Transaction Analysis",
             description: `Your top spending categories are: ${
-              Object.entries(categoryTotals)
+              Object.entries(analysis.categoryTotals)
                 .sort(([,a], [,b]) => b - a)
                 .slice(0, 3)
                 .map(([cat, amt]) => `${cat} ($${(amt/100).toFixed(2)})`)
@@ -211,8 +312,8 @@ Focus on clear patterns in the transaction data. Use proper category names (e.g.
           {
             type: "saving",
             title: "Recurring Expenses",
-            description: `You have ${recurringPatterns.length} recurring transactions, including ${
-              recurringPatterns
+            description: `You have ${analysis.recurringPatterns.length} recurring transactions, including ${
+              analysis.recurringPatterns
                 .slice(0, 2)
                 .map(p => `${p.key} (avg. $${(p.averageAmount/100).toFixed(2)})`)
                 .join(' and ')
@@ -224,7 +325,7 @@ Focus on clear patterns in the transaction data. Use proper category names (e.g.
             type: "investment",
             title: "Monthly Spending Trend",
             description: `Your monthly spending has ${
-              Object.values(monthlyTotals).reduce((a, b) => b - a, 0) > 0 
+              Object.values(analysis.spendingTrends.monthly).reduce((a, b) => b - a, 0) > 0 
                 ? 'increased' 
                 : 'decreased'
             } over time. Consider reviewing your budget to optimize expenses.`,

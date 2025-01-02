@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { usePlaidLink } from "@/hooks/use-plaid-link";
 import { cn } from "@/lib/utils";
+import { isDemoMode, setDemoMode } from "@/lib/demo";
 
 interface PlaidLinkProps {
   onSuccess?: () => void;
@@ -199,7 +200,6 @@ export default function PlaidLink({
       disabled={!linkToken || !scriptLoaded || isLoading}
       variant={variant}
       className={`relative inline-flex items-center justify-center ${className}`}
-      onSuccess={handlePlaidSuccess}
     >
       {isLoading ? (
         <>

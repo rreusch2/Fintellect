@@ -1,31 +1,11 @@
-import { QueryClient, type QueryFunction } from "@tanstack/react-query";
-
-const defaultQueryFn: QueryFunction = async ({ queryKey }) => {
-  const response = await fetch(queryKey[0] as string, {
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    if (response.status >= 500) {
-      throw new Error(`${response.status}: ${response.statusText}`);
-    }
-    throw new Error(await response.text());
-  }
-
-  return response.json();
-};
+import { QueryClient } from "@tanstack/react-query";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: defaultQueryFn,
-      refetchInterval: false,
+      retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
     },
-    mutations: {
-      retry: false,
-    }
   },
 });

@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Sheet,
   SheetContent,
@@ -26,6 +27,7 @@ export function Navigation() {
   const [location] = useLocation();
   const { user, logout } = useUser();
   const [isOpen, setIsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -54,6 +56,11 @@ export function Navigation() {
     { href: "/ai/hub", label: "AI Hub", icon: Sparkles },
   ];
 
+  // Add loading state for SSR
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/10 backdrop-blur-md bg-background/70">
       <div className="container mx-auto px-4 py-4">
@@ -73,98 +80,104 @@ export function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-2">
-            {navItems.map(({ href, label, icon: Icon }) => (
-              <Button
-                key={href}
-                variant={location === href ? "secondary" : "ghost"}
-                className={cn(
-                  "gap-2",
-                  location === href && "bg-primary/10 text-primary"
-                )}
-                asChild
-              >
-                <Link href={href}>
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Link>
-              </Button>
-            ))}
-          </div>
+          {!isMobile && (
+            <div className="hidden md:flex items-center gap-2">
+              {navItems.map(({ href, label, icon: Icon }) => (
+                <Button
+                  key={href}
+                  variant={location === href ? "secondary" : "ghost"}
+                  className={cn(
+                    "gap-2",
+                    location === href && "bg-primary/10 text-primary"
+                  )}
+                  asChild
+                >
+                  <Link href={href}>
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </Link>
+                </Button>
+              ))}
+            </div>
+          )}
 
           {/* Desktop User Actions */}
-          <div className="hidden md:flex items-center gap-4">
-            <span className="text-muted-foreground">Welcome, {user?.username}</span>
-            <Link href="/profile">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <UserCircle className="h-6 w-6" />
+          {!isMobile && (
+            <div className="hidden md:flex items-center gap-4">
+              <span className="text-muted-foreground">Welcome, {user?.username}</span>
+              <Link href="/profile">
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <UserCircle className="h-6 w-6" />
+                </Button>
+              </Link>
+              <Button variant="outline" onClick={handleLogout} className="gap-2">
+                <LogOut className="h-4 w-4" />
+                Logout
               </Button>
-            </Link>
-            <Button variant="outline" onClick={handleLogout} className="gap-2">
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
-          </div>
+            </div>
+          )}
 
           {/* Mobile Menu Button */}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <SheetHeader>
-                <SheetTitle>Menu</SheetTitle>
-              </SheetHeader>
-              <div className="flex flex-col gap-4 mt-6">
-                {/* Mobile Navigation Items */}
-                {navItems.map(({ href, label, icon: Icon }) => (
-                  <Button
-                    key={href}
-                    variant={location === href ? "secondary" : "ghost"}
-                    className={cn(
-                      "w-full justify-start gap-2",
-                      location === href && "bg-primary/10 text-primary"
-                    )}
-                    onClick={() => {
-                      setIsOpen(false);
-                      window.location.href = href;
-                    }}
-                  >
-                    <Icon className="h-5 w-5" />
-                    {label}
-                  </Button>
-                ))}
-                
-                {/* Mobile User Actions */}
-                <div className="mt-4 pt-4 border-t">
-                  <div className="text-muted-foreground mb-4">
-                    Welcome, {user?.username}
+          {isMobile && (
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col gap-4 mt-6">
+                  {/* Mobile Navigation Items */}
+                  {navItems.map(({ href, label, icon: Icon }) => (
+                    <Button
+                      key={href}
+                      variant={location === href ? "secondary" : "ghost"}
+                      className={cn(
+                        "w-full justify-start gap-2",
+                        location === href && "bg-primary/10 text-primary"
+                      )}
+                      onClick={() => {
+                        setIsOpen(false);
+                        window.location.href = href;
+                      }}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {label}
+                    </Button>
+                  ))}
+                  
+                  {/* Mobile User Actions */}
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="text-muted-foreground mb-4">
+                      Welcome, {user?.username}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-2"
+                      onClick={() => {
+                        setIsOpen(false);
+                        window.location.href = '/profile';
+                      }}
+                    >
+                      <UserCircle className="h-5 w-5" />
+                      Profile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start gap-2 mt-2"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Logout
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-2"
-                    onClick={() => {
-                      setIsOpen(false);
-                      window.location.href = '/profile';
-                    }}
-                  >
-                    <UserCircle className="h-5 w-5" />
-                    Profile
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 mt-2"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="h-5 w-5" />
-                    Logout
-                  </Button>
                 </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
+          )}
         </div>
       </div>
     </nav>

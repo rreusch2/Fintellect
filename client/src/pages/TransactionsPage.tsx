@@ -125,7 +125,7 @@ export default function TransactionsPage() {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold">Transactions</h1>
               <AIDisclaimer variant="minimal" />
@@ -134,7 +134,7 @@ export default function TransactionsPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="flex items-center gap-4"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4"
             >
               <div className="flex items-center gap-2 bg-gray-900/50 backdrop-blur-sm rounded-lg p-2 border border-gray-800">
                 <Search className="h-4 w-4 text-muted-foreground" />
@@ -142,38 +142,40 @@ export default function TransactionsPage() {
                   placeholder="Search transactions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="border-0 bg-transparent focus-visible:ring-0 w-[200px]"
+                  className="border-0 bg-transparent focus-visible:ring-0 w-full sm:w-[200px]"
                 />
               </div>
-              <Select
-                value={selectedCategory || undefined}
-                onValueChange={(value) => setSelectedCategory(value)}
-              >
-                <SelectTrigger className="bg-gray-900/50 backdrop-blur-sm border-gray-800">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {formatCategoryName(category)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="icon"
-                className="bg-gray-900/50 backdrop-blur-sm border-gray-800"
-                onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              >
-                <ArrowUpDown className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={selectedCategory || undefined}
+                  onValueChange={(value) => setSelectedCategory(value)}
+                >
+                  <SelectTrigger className="bg-gray-900/50 backdrop-blur-sm border-gray-800 flex-1 sm:flex-initial">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {formatCategoryName(category)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="bg-gray-900/50 backdrop-blur-sm border-gray-800"
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                </Button>
+              </div>
             </motion.div>
           </div>
         </motion.div>
 
-        {/* Stats Cards Grid */}
+        {/* Stats Cards Grid - Updated for better mobile layout */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -191,7 +193,7 @@ export default function TransactionsPage() {
                   Total Spending
                 </CardTitle>
               </div>
-              <div className="text-xl md:text-2xl font-bold">
+              <div className="text-2xl font-bold">
                 ${(totalSpending / 100).toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
@@ -247,51 +249,8 @@ export default function TransactionsPage() {
           </Card>
         </motion.div>
 
-        {/* Main Content Grid */}
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[2fr,1fr] mb-6">
-          {/* Search and Filter Controls - Mobile Optimized */}
-          <div className="lg:hidden mb-4 space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 bg-gray-900/50 backdrop-blur-sm rounded-lg p-2 border border-gray-800">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search transactions..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="border-0 bg-transparent focus-visible:ring-0"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Select
-                  value={selectedCategory || undefined}
-                  onValueChange={(value) => setSelectedCategory(value)}
-                >
-                  <SelectTrigger className="bg-gray-900/50 backdrop-blur-sm border-gray-800 w-[140px]">
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {formatCategoryName(category)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="bg-gray-900/50 backdrop-blur-sm border-gray-800"
-                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                >
-                  <ArrowUpDown className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
+        {/* Main Content Grid - Updated for mobile */}
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-[2fr,1fr] mb-6">
           {/* Left Column: Transaction List */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -300,14 +259,14 @@ export default function TransactionsPage() {
           >
             <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors">
               <CardHeader className="border-b border-gray-800">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/20">
                       <TrendingUp className="h-5 w-5 text-blue-400" />
                     </div>
                     <CardTitle>Recent Transactions</CardTitle>
                   </div>
-                  <span className="text-xs md:text-sm text-muted-foreground">
+                  <span className="text-sm text-muted-foreground">
                     {summary?.transactions?.length || 0} transactions found
                   </span>
                 </div>
@@ -321,60 +280,52 @@ export default function TransactionsPage() {
             </Card>
           </motion.div>
 
-          {/* Right Column */}
+          {/* Right Column - Updated for mobile */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
             className="space-y-6"
           >
-            {/* Spending Distribution */}
+            {/* Spending Distribution - Enhanced for mobile */}
             <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChart className="h-5 w-5 text-primary" />
-                  Spending Distribution
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Chart container with mobile-specific height */}
-                <div className="mb-6 h-[200px] sm:h-[300px] relative">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <SpendingDistributionChart 
-                      data={spendingData} 
-                      showLegend={false}
-                    />
+              <CardHeader className="border-b border-gray-800">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20">
+                    <PieChart className="h-5 w-5 text-purple-400" />
                   </div>
+                  <CardTitle>Spending Distribution</CardTitle>
                 </div>
-                {/* Legend with improved mobile spacing */}
-                <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent mt-8 sm:mt-0">
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="h-[300px] sm:h-[400px]">
+                  <SpendingDistributionChart data={spendingData} showLegend={false} />
+                </div>
+                <div className="mt-6 space-y-2 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent pr-2">
                   {Object.entries(spendingData)
-                    .sort(([, a], [, b]) => b - a)
+                    .sort(([,a], [,b]) => b - a)
                     .map(([category, amount]) => {
-                      const percentage = (amount / Object.values(spendingData).reduce((sum, val) => sum + val, 0)) * 100;
+                      const percentage = ((amount / totalSpending) * 100).toFixed(1);
                       return (
                         <div 
                           key={category} 
-                          className="flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer border border-transparent hover:border-gray-800"
+                          className="flex items-center justify-between p-2.5 rounded-lg hover:bg-gray-900/40 transition-all cursor-pointer group"
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
                             <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ 
-                                backgroundColor: getCategoryColor(category),
-                                boxShadow: '0 0 10px rgba(var(--primary), 0.1)'
-                              }}
+                              className="w-3 h-3 rounded-full shrink-0 transition-transform group-hover:scale-110" 
+                              style={{ backgroundColor: COLORS[category as keyof typeof COLORS] }}
                             />
-                            <span className="text-sm font-medium text-foreground/90">
+                            <span className="text-sm group-hover:text-blue-400 transition-colors truncate">
                               {formatCategoryName(category)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-sm font-semibold tabular-nums text-foreground/90">
-                              ${(amount / 100).toFixed(2)}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-sm font-medium tabular-nums">
+                              ${(amount/100).toFixed(2)}
                             </span>
-                            <span className="text-xs font-medium text-muted-foreground min-w-[60px] text-right">
-                              ({percentage.toFixed(1)}%)
+                            <span className="text-xs text-muted-foreground group-hover:text-blue-400/70 transition-colors">
+                              ({percentage}%)
                             </span>
                           </div>
                         </div>

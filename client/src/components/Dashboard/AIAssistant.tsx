@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAIChat } from "@/hooks/use-ai-chat";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 const quickActions = [
   { 
@@ -268,113 +268,173 @@ export default function AIAssistant() {
   };
 
   return (
-    <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors h-full">
-      <CardHeader className="border-b border-gray-800">
-        <CardTitle className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/20">
-            <Bot className="h-5 w-5 text-blue-400" />
+    <Card className="bg-gray-900/50 backdrop-blur-sm rounded-lg border border-gray-800 flex flex-col h-[85rem] hover:bg-gray-900/60 transition-colors">
+      <div className="p-6 border-b border-gray-800 bg-gray-900/30">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-500/10 rounded-lg">
+            <Bot className="h-5 w-5 text-blue-500" />
           </div>
-          AI Assistant
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="flex flex-col h-[600px] md:h-full">
-          {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messagesEndRef}>
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-4">
-                <div className="p-4 rounded-full bg-primary/10 mb-2 hidden md:flex">
-                  <Bot className="h-8 w-8 text-primary" />
-                </div>
-                <div className="p-3 rounded-full bg-primary/10 mb-2 md:hidden">
-                  <Bot className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg md:text-xl font-semibold mb-2">How can I help you today?</h3>
-                  <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto">
-                    Ask me anything about your finances, spending patterns, or get personalized recommendations.
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md mt-4">
-                  {quickActions.map((action) => (
-                    <button
-                      key={action.label}
-                      onClick={() => handleSendMessage(action.message)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${action.bgColor} hover:opacity-80`}
-                    >
-                      <action.icon className={`h-4 w-4 ${action.color}`} />
-                      <span className={`text-sm font-medium ${action.color}`}>{action.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  } animate-in slide-in-from-bottom-2 duration-300`}
-                >
-                  <div className="flex items-start gap-2 max-w-[85%] group">
-                    {message.role === "assistant" && (
-                      <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
-                        <Bot className="h-5 w-5 text-blue-500" />
-                      </div>
-                    )}
-                    <div
-                      className={`rounded-lg px-4 py-2 shadow-lg ${
-                        message.role === "user"
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-800/80 backdrop-blur-sm border border-gray-700 group-hover:bg-gray-800/90 transition-colors"
-                      }`}
-                    >
-                      {message.role === "assistant" ? (
-                        <div className="prose prose-invert max-w-none">
-                          {formatMessageContent(message.content)}
-                        </div>
-                      ) : (
-                        <div className="whitespace-pre-wrap font-sans">
-                          {message.content}
-                        </div>
-                      )}
+          <div>
+            <h2 className="text-lg font-semibold">AI Assistant</h2>
+            <p className="text-sm text-muted-foreground">
+              Get personalized financial guidance through natural conversation
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex flex-col flex-1 min-h-0">
+        <div className="p-6 pb-2 bg-gradient-to-b from-gray-900/30 to-transparent">
+          <div className="flex gap-2 flex-wrap">
+            {quickActions.map((action) => (
+              <Button
+                key={action.label}
+                variant="outline"
+                size="sm"
+                onClick={() => handleSendMessage(action.message)}
+                disabled={isLoading}
+                className={`${action.bgColor} border-${action.color}/20 hover:bg-${action.color}/20 transition-colors flex items-center gap-2 shadow-sm`}
+              >
+                <action.icon className={`h-4 w-4 ${action.color}`} />
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-hidden px-6 pb-6 min-h-0">
+          <div className="h-full overflow-y-auto rounded-lg bg-background/5 border border-gray-800/50 shadow-xl">
+            <div className="p-4 space-y-4">
+              {messages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-8 py-12">
+                  <div className="relative">
+                    <div className="absolute -inset-4 rounded-full bg-blue-500/20 blur-lg animate-pulse"></div>
+                    <div className="relative p-6 rounded-full bg-blue-500/10 shadow-lg ring-1 ring-blue-500/20">
+                      <Bot className="h-16 w-16 text-blue-500" />
                     </div>
                   </div>
-                </div>
-              ))
-            )}
-            {isLoading && (
-              <div className="flex justify-start animate-in fade-in duration-200">
-                <div className="flex items-center gap-3 bg-gray-800/80 backdrop-blur-sm border border-gray-700 rounded-lg px-4 py-3 shadow-lg">
-                  <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                  <span className="text-sm font-medium">Analyzing your finances...</span>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+                  
+                  <div className="space-y-4 max-w-md px-4">
+                    <h3 className="text-2xl font-semibold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                      Start a Conversation
+                    </h3>
+                    <p className="text-base text-gray-400 leading-relaxed">
+                      Get personalized financial insights and advice through natural conversation. Choose a quick action below or type your question.
+                    </p>
+                  </div>
 
-          {/* Input Section - Mobile Optimized */}
-          <div className="p-4 border-t border-gray-800 bg-gray-900/30 backdrop-blur-sm">
-            <div className="flex gap-2">
-              <Input
-                ref={inputRef}
-                placeholder="Ask about your finances..."
-                className="flex-1 bg-gray-800/50 border-gray-700 focus:border-blue-500/50 transition-colors shadow-sm md:text-base text-sm"
-                onKeyPress={handleKeyPress}
-                disabled={isLoading}
-              />
-              <Button
-                onClick={() => handleSendMessage(inputRef.current?.value || "")}
-                disabled={isLoading}
-                className="bg-blue-500 hover:bg-blue-600 transition-colors shadow-sm"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+                  <div className="grid grid-cols-2 gap-4 w-full max-w-2xl p-4">
+                    {quickActions.map((action) => (
+                      <div
+                        key={action.label}
+                        onClick={() => handleSendMessage(action.message)}
+                        className="flex items-center gap-4 p-4 rounded-lg bg-gray-800/50 border border-gray-700/50 cursor-pointer hover:bg-gray-800/80 hover:border-gray-600/50 transition-all hover:scale-[1.02] group"
+                      >
+                        <div className={`p-3 rounded-xl ${action.bgColor} ring-1 ring-${action.color}/20 group-hover:ring-${action.color}/40 transition-all`}>
+                          <action.icon className={`h-6 w-6 ${action.color}`} />
+                        </div>
+                        <div className="flex flex-col items-start text-left">
+                          <div className="font-medium text-gray-200 group-hover:text-white transition-colors">
+                            {action.label}
+                          </div>
+                          <div className="text-sm text-gray-500 group-hover:text-gray-400 transition-colors">
+                            {action.label === "Analyze Spending" && "Get insights on your spending patterns"}
+                            {action.label === "Budget Help" && "Create a personalized budget plan"}
+                            {action.label === "Savings Tips" && "Discover ways to save money"}
+                            {action.label === "Recurring Charges" && "Review your subscriptions"}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="w-full max-w-md px-4">
+                    <div className="relative mt-4 p-4 rounded-lg bg-gray-800/30 border border-gray-700/50">
+                      <div className="absolute -top-3 left-4 px-2 bg-gray-900 text-sm text-gray-500">
+                        Example Questions
+                      </div>
+                      <div className="space-y-2 text-sm text-gray-400">
+                        <p>"How much did I spend on food last month?"</p>
+                        <p>"What are my top spending categories?"</p>
+                        <p>"Help me reduce my monthly expenses"</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-sm text-gray-500">
+                    <Bot className="h-4 w-4" />
+                    <span>Powered by AI Financial Assistant</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((message, i) => (
+                    <div
+                      key={i}
+                      className={`flex ${
+                        message.role === "user" ? "justify-end" : "justify-start"
+                      } animate-in slide-in-from-bottom-2 duration-300`}
+                    >
+                      <div className="flex items-start gap-2 max-w-[85%] group">
+                        {message.role === "assistant" && (
+                          <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                            <Bot className="h-5 w-5 text-blue-500" />
+                          </div>
+                        )}
+                        <div
+                          className={`rounded-lg px-4 py-2 shadow-lg ${
+                            message.role === "user"
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-800/80 backdrop-blur-sm border border-gray-700 group-hover:bg-gray-800/90 transition-colors"
+                          }`}
+                        >
+                          {message.role === "assistant" ? (
+                            <div className="prose prose-invert max-w-none">
+                              {formatMessageContent(message.content)}
+                            </div>
+                          ) : (
+                            <div className="whitespace-pre-wrap font-sans">
+                              {message.content}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {isLoading && (
+                    <div className="flex justify-start animate-in fade-in duration-200">
+                      <div className="flex items-center gap-3 bg-gray-800/80 backdrop-blur-sm border border-gray-700 rounded-lg px-4 py-3 shadow-lg">
+                        <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                        <span className="text-sm font-medium">Analyzing your finances...</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </CardContent>
+
+        <div className="p-4 border-t border-gray-800 bg-gray-900/30 backdrop-blur-sm">
+          <div className="flex gap-2">
+            <Input
+              ref={inputRef}
+              placeholder="Ask about your finances..."
+              className="flex-1 bg-gray-800/50 border-gray-700 focus:border-blue-500/50 transition-colors shadow-sm"
+              onKeyPress={handleKeyPress}
+              disabled={isLoading}
+            />
+            <Button
+              onClick={() => handleSendMessage(inputRef.current?.value || "")}
+              disabled={isLoading}
+              className="bg-blue-500 hover:bg-blue-600 transition-colors shadow-sm"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
     </Card>
   );
 } 

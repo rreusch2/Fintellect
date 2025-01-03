@@ -208,7 +208,7 @@ export default function DashboardPage() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[100px] animate-float-medium"></div>
       </div>
 
-      <main className="container mx-auto px-4 py-8 relative z-10">
+      <main className="container mx-auto px-2 sm:px-4 py-8 relative z-10">
         {/* Demo Mode Banner */}
         {isDemo && (
           <div className="mb-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20 p-6 backdrop-blur-sm relative overflow-hidden">
@@ -268,37 +268,33 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="grid gap-8">
+          <div className="grid gap-6 sm:gap-8">
             <FinanceOverview />
           </div>
         </motion.div>
 
-        {/* Main Content Grid - Update grid layout for mobile */}
-        <div className="grid gap-6 mt-8 md:grid-cols-2">
+        {/* Main Content Grid - Update for better mobile layout */}
+        <div className="grid gap-4 sm:gap-6 mt-6 sm:mt-8 md:grid-cols-2">
           {/* Left Column */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-6"
-          >
-            <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChart className="h-5 w-5 text-primary" />
+          <motion.div className="space-y-4 sm:space-y-6">
+            {/* Spending Distribution Card */}
+            <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors overflow-hidden">
+              <CardHeader className="px-3 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <PieChart className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Spending Distribution
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {/* Adjust chart container height for mobile */}
-                <div className="h-[250px] md:h-[300px]">
+              <CardContent className="px-3 sm:px-6">
+                {/* Chart container */}
+                <div className="h-[200px] sm:h-[250px] md:h-[300px] w-full">
                   <SpendingDistributionChart 
                     data={spendingData} 
                     showLegend={false}
                   />
                 </div>
-                {/* Make legend scrollable on mobile */}
-                <div className="mt-4 max-h-[150px] md:max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent pr-2">
+                {/* Scrollable legend */}
+                <div className="mt-4 max-h-[150px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent pr-2">
                   {Object.entries(spendingData)
                     .sort(([, a], [, b]) => b - a)
                     .map(([category, amount]) => {
@@ -335,18 +331,14 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <div className="h-auto md:h-full">
+            {/* AI Financial Insights */}
+            <div className="w-full">
               <AIFinancialInsights />
             </div>
           </motion.div>
 
           {/* Right Column - AI Assistant */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="h-auto md:h-full"
-          >
+          <motion.div className="w-full">
             <AIAssistant />
           </motion.div>
         </div>

@@ -295,17 +295,16 @@ export default function AIAssistant() {
                     Ask me anything about your finances, spending patterns, or get personalized recommendations.
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-md mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md mt-4">
                   {quickActions.map((action) => (
-                    <Button
+                    <button
                       key={action.label}
-                      variant="outline"
-                      className="text-sm md:text-base justify-start gap-2 h-auto py-2 px-3"
                       onClick={() => handleSendMessage(action.message)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${action.bgColor} hover:opacity-80`}
                     >
-                      <action.icon className="h-4 w-4 text-primary" />
-                      {action.label}
-                    </Button>
+                      <action.icon className={`h-4 w-4 ${action.color}`} />
+                      <span className={`text-sm font-medium ${action.color}`}>{action.label}</span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -355,12 +354,13 @@ export default function AIAssistant() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Input Section - Mobile Optimized */}
           <div className="p-4 border-t border-gray-800 bg-gray-900/30 backdrop-blur-sm">
             <div className="flex gap-2">
               <Input
                 ref={inputRef}
                 placeholder="Ask about your finances..."
-                className="flex-1 bg-gray-800/50 border-gray-700 focus:border-blue-500/50 transition-colors shadow-sm"
+                className="flex-1 bg-gray-800/50 border-gray-700 focus:border-blue-500/50 transition-colors shadow-sm md:text-base text-sm"
                 onKeyPress={handleKeyPress}
                 disabled={isLoading}
               />

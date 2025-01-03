@@ -330,43 +330,51 @@ export default function TransactionsPage() {
           >
             {/* Spending Distribution */}
             <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors">
-              <CardHeader className="border-b border-gray-800">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20">
-                    <PieChart className="h-5 w-5 text-purple-400" />
-                  </div>
-                  <CardTitle>Spending Distribution</CardTitle>
-                </div>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5 text-primary" />
+                  Spending Distribution
+                </CardTitle>
               </CardHeader>
-              <CardContent className="pt-6">
-                <div className="h-[200px] md:h-[300px]">
-                  <SpendingDistributionChart data={spendingData} showLegend={false} />
+              <CardContent>
+                {/* Chart container with mobile-specific height */}
+                <div className="mb-6 h-[200px] sm:h-[300px] relative">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <SpendingDistributionChart 
+                      data={spendingData} 
+                      showLegend={false}
+                    />
+                  </div>
                 </div>
-                <div className="mt-6 space-y-2 max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800">
+                {/* Legend with improved mobile spacing */}
+                <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent mt-8 sm:mt-0">
                   {Object.entries(spendingData)
-                    .sort(([,a], [,b]) => b - a)
+                    .sort(([, a], [, b]) => b - a)
                     .map(([category, amount]) => {
-                      const percentage = ((amount / totalSpending) * 100).toFixed(1);
+                      const percentage = (amount / Object.values(spendingData).reduce((sum, val) => sum + val, 0)) * 100;
                       return (
                         <div 
                           key={category} 
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-900/40 transition-all cursor-pointer group"
+                          className="flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer border border-transparent hover:border-gray-800"
                         >
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-3">
                             <div 
-                              className="w-3 h-3 rounded-full transition-transform group-hover:scale-110 shrink-0" 
-                              style={{ backgroundColor: COLORS[category as keyof typeof COLORS] }}
+                              className="w-3 h-3 rounded-full" 
+                              style={{ 
+                                backgroundColor: getCategoryColor(category),
+                                boxShadow: '0 0 10px rgba(var(--primary), 0.1)'
+                              }}
                             />
-                            <span className="text-sm group-hover:text-blue-400 transition-colors truncate">
+                            <span className="text-sm font-medium text-foreground/90">
                               {formatCategoryName(category)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-sm font-medium">
-                              ${(amount/100).toFixed(2)}
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm font-semibold tabular-nums text-foreground/90">
+                              ${(amount / 100).toFixed(2)}
                             </span>
-                            <span className="text-xs text-muted-foreground group-hover:text-blue-400/70 transition-colors">
-                              ({percentage}%)
+                            <span className="text-xs font-medium text-muted-foreground min-w-[60px] text-right">
+                              ({percentage.toFixed(1)}%)
                             </span>
                           </div>
                         </div>

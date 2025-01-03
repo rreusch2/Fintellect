@@ -272,7 +272,7 @@ export default function AIAssistant() {
     <Card className={cn(
       "bg-gray-900/50 backdrop-blur-sm rounded-lg border border-gray-800 flex flex-col hover:bg-gray-900/60 transition-colors",
       // Adjust height based on screen size
-      "h-[85rem] md:h-[85rem]"
+      "h-[600px] md:h-[85rem]"
     )}>
       <div className="p-4 md:p-6 border-b border-gray-800 bg-gray-900/30">
         <div className="flex items-center gap-3">

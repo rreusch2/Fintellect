@@ -273,14 +273,14 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Main Content Grid - update styling */}
-        <div className="grid gap-8 mt-8 md:grid-cols-2">
+        {/* Main Content Grid - Update grid layout for mobile */}
+        <div className="grid gap-6 mt-8 md:grid-cols-2">
           {/* Left Column */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="space-y-8"
+            className="space-y-6"
           >
             <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors">
               <CardHeader>
@@ -290,15 +290,15 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Chart container */}
-                <div className="mb-6">
+                {/* Adjust chart container height for mobile */}
+                <div className="h-[250px] md:h-[300px]">
                   <SpendingDistributionChart 
                     data={spendingData} 
                     showLegend={false}
                   />
                 </div>
-                {/* Legend */}
-                <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
+                {/* Make legend scrollable on mobile */}
+                <div className="mt-4 max-h-[150px] md:max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent pr-2">
                   {Object.entries(spendingData)
                     .sort(([, a], [, b]) => b - a)
                     .map(([category, amount]) => {
@@ -335,7 +335,9 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <AIFinancialInsights />
+            <div className="h-auto md:h-full">
+              <AIFinancialInsights />
+            </div>
           </motion.div>
 
           {/* Right Column - AI Assistant */}
@@ -343,7 +345,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="h-full"
+            className="h-auto md:h-full"
           >
             <AIAssistant />
           </motion.div>

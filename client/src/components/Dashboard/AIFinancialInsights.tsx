@@ -3,6 +3,7 @@ import { Bot, TrendingUp, AlertCircle, Sparkles, Target, Wallet, LineChart, Arro
 import { useAIInsights } from "@/hooks/use-ai-insights";
 import { Card } from "@/components/ui/card";
 import { useTransactions } from "@/hooks/use-transactions";
+import { cn } from "@/lib/utils";
 
 // Format currency helper
 const formatCurrency = (amount: number) => {
@@ -82,39 +83,45 @@ export default function AIFinancialInsights() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="flex items-center gap-2 text-lg font-medium mb-4">
-          <Sparkles className="h-5 w-5 text-blue-400" />
-          AI Financial Insights
-        </h2>
+    <Card className={cn(
+      "bg-gray-900/50 backdrop-blur-sm border-gray-800 hover:bg-gray-900/60 transition-colors",
+      // Adjust height for mobile
+      "h-auto md:h-full max-h-[500px] md:max-h-none overflow-auto"
+    )}>
+      <div className="space-y-6">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-medium mb-4">
+            <Sparkles className="h-5 w-5 text-blue-400" />
+            AI Financial Insights
+          </h2>
 
-        <div className="space-y-4">
-          {insights.map((insight, index) => (
-            <Card key={index} className="p-4 bg-[#1D2839]/50 border-[#1D2839] hover:bg-[#1D2839]/60 transition-colors">
-              <div className="flex items-start gap-3">
-                <div className={`p-2 rounded-lg ${insight.bgColor} flex-shrink-0`}>
-                  <insight.icon className={`h-4 w-4 ${insight.color}`} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-medium">{insight.title}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full ${insight.bgColor} ${insight.color}`}>
-                      {insight.priority}
-                    </span>
+          <div className="space-y-4">
+            {insights.map((insight, index) => (
+              <Card key={index} className="p-4 bg-[#1D2839]/50 border-[#1D2839] hover:bg-[#1D2839]/60 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg ${insight.bgColor} flex-shrink-0`}>
+                    <insight.icon className={`h-4 w-4 ${insight.color}`} />
                   </div>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{insight.description}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className={`text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-400`}>
-                      {insight.badge}
-                    </span>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-medium">{insight.title}</h3>
+                      <span className={`text-xs px-2 py-1 rounded-full ${insight.bgColor} ${insight.color}`}>
+                        {insight.priority}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">{insight.description}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className={`text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-400`}>
+                        {insight.badge}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 } 

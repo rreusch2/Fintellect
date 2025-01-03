@@ -120,29 +120,29 @@ export default function TransactionList({ transactions, searchQuery }: Transacti
 
   return (
     <div className="divide-y divide-gray-800">
-      {/* Table Header */}
-      <div className="grid grid-cols-[2fr,1fr,auto] gap-8 p-4 bg-gray-900/30">
+      {/* Table Header - Hide on mobile */}
+      <div className="hidden md:grid grid-cols-[2fr,1fr,auto] gap-8 p-4 bg-gray-900/30">
         <div className="text-sm font-medium text-muted-foreground">Transaction</div>
         <div className="text-sm font-medium text-muted-foreground">Category</div>
         <div className="text-sm font-medium text-muted-foreground text-right">Amount</div>
       </div>
 
-      {/* Transactions */}
+      {/* Transactions - Responsive layout */}
       {filteredTransactions.map((transaction) => (
         <div 
           key={transaction.id}
-          className="grid grid-cols-[2fr,1fr,auto] gap-8 p-4 hover:bg-gray-900/40 transition-colors group items-center"
+          className="grid grid-cols-1 md:grid-cols-[2fr,1fr,auto] gap-2 md:gap-8 p-4 hover:bg-gray-900/40 transition-colors group"
         >
-          {/* Transaction Info */}
+          {/* Transaction Info - Stack on mobile */}
           <div className="flex items-center gap-3">
             <div 
-              className="p-2 rounded-lg group-hover:scale-110 transition-transform"
+              className="p-2 rounded-lg group-hover:scale-110 transition-transform shrink-0"
               style={{ backgroundColor: `${COLORS[transaction.category as keyof typeof COLORS]}10` }}
             >
               {getTransactionIcon(transaction.category)}
             </div>
-            <div>
-              <p className="font-medium">
+            <div className="min-w-0">
+              <p className="font-medium truncate">
                 {transaction.merchantName || transaction.description}
               </p>
               <p className="text-sm text-muted-foreground">
@@ -151,10 +151,10 @@ export default function TransactionList({ transactions, searchQuery }: Transacti
             </div>
           </div>
 
-          {/* Enhanced Category Display - Fixed Width Container */}
-          <div className="flex items-center">
+          {/* Category - Full width on mobile */}
+          <div className="flex items-center mt-2 md:mt-0">
             <div 
-              className="px-3 py-1.5 rounded-full transition-colors w-full max-w-[200px]"
+              className="px-3 py-1.5 rounded-full transition-colors w-full max-w-full md:max-w-[200px]"
               style={{ 
                 backgroundColor: `${COLORS[transaction.category as keyof typeof COLORS]}10`,
                 borderColor: `${COLORS[transaction.category as keyof typeof COLORS]}20`,
@@ -176,8 +176,8 @@ export default function TransactionList({ transactions, searchQuery }: Transacti
             </div>
           </div>
 
-          {/* Amount */}
-          <span className={`font-medium justify-self-end whitespace-nowrap ${
+          {/* Amount - Right aligned on both mobile and desktop */}
+          <span className={`font-medium justify-self-end whitespace-nowrap mt-2 md:mt-0 ${
             transaction.amount > 0 ? 'text-red-400' : 'text-emerald-400'
           }`}>
             {transaction.amount > 0 ? '-' : '+'}${Math.abs(transaction.amount/100).toFixed(2)}

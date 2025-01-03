@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useAIChat } from "@/hooks/use-ai-chat";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const quickActions = [
   { 
@@ -268,8 +269,12 @@ export default function AIAssistant() {
   };
 
   return (
-    <Card className="bg-gray-900/50 backdrop-blur-sm rounded-lg border border-gray-800 flex flex-col h-[85rem] hover:bg-gray-900/60 transition-colors">
-      <div className="p-6 border-b border-gray-800 bg-gray-900/30">
+    <Card className={cn(
+      "bg-gray-900/50 backdrop-blur-sm rounded-lg border border-gray-800 flex flex-col hover:bg-gray-900/60 transition-colors",
+      // Adjust height based on screen size
+      "h-[85rem] md:h-[85rem]"
+    )}>
+      <div className="p-4 md:p-6 border-b border-gray-800 bg-gray-900/30">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-500/10 rounded-lg">
             <Bot className="h-5 w-5 text-blue-500" />
@@ -284,8 +289,9 @@ export default function AIAssistant() {
       </div>
       
       <div className="flex flex-col flex-1 min-h-0">
-        <div className="p-6 pb-2 bg-gradient-to-b from-gray-900/30 to-transparent">
-          <div className="flex gap-2 flex-wrap">
+        {/* Quick Actions - Make scrollable on mobile */}
+        <div className="p-4 md:p-6 pb-2 bg-gradient-to-b from-gray-900/30 to-transparent">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
             {quickActions.map((action) => (
               <Button
                 key={action.label}
@@ -293,7 +299,7 @@ export default function AIAssistant() {
                 size="sm"
                 onClick={() => handleSendMessage(action.message)}
                 disabled={isLoading}
-                className={`${action.bgColor} border-${action.color}/20 hover:bg-${action.color}/20 transition-colors flex items-center gap-2 shadow-sm`}
+                className={`${action.bgColor} border-${action.color}/20 hover:bg-${action.color}/20 transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap`}
               >
                 <action.icon className={`h-4 w-4 ${action.color}`} />
                 {action.label}
@@ -302,9 +308,10 @@ export default function AIAssistant() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden px-6 pb-6 min-h-0">
+        {/* Messages Container - Adjust padding for mobile */}
+        <div className="flex-1 overflow-hidden px-4 md:px-6 pb-4 md:pb-6 min-h-0">
           <div className="h-full overflow-y-auto rounded-lg bg-background/5 border border-gray-800/50 shadow-xl">
-            <div className="p-4 space-y-4">
+            <div className="p-3 md:p-4 space-y-4">
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-8 py-12">
                   <div className="relative">
@@ -416,12 +423,13 @@ export default function AIAssistant() {
           </div>
         </div>
 
-        <div className="p-4 border-t border-gray-800 bg-gray-900/30 backdrop-blur-sm">
+        {/* Input Area - Adjust padding and layout for mobile */}
+        <div className="p-3 md:p-4 border-t border-gray-800 bg-gray-900/30 backdrop-blur-sm">
           <div className="flex gap-2">
             <Input
               ref={inputRef}
               placeholder="Ask about your finances..."
-              className="flex-1 bg-gray-800/50 border-gray-700 focus:border-blue-500/50 transition-colors shadow-sm"
+              className="flex-1 bg-gray-800/50 border-gray-700 focus:border-blue-500/50 transition-colors shadow-sm text-sm md:text-base"
               onKeyPress={handleKeyPress}
               disabled={isLoading}
             />
@@ -429,6 +437,7 @@ export default function AIAssistant() {
               onClick={() => handleSendMessage(inputRef.current?.value || "")}
               disabled={isLoading}
               className="bg-blue-500 hover:bg-blue-600 transition-colors shadow-sm"
+              size="icon"
             >
               <Send className="h-4 w-4" />
             </Button>

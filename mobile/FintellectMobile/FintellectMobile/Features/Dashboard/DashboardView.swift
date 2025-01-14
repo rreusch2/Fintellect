@@ -1,12 +1,23 @@
 import SwiftUI
 import Charts
 
-struct SpendingCategory: Identifiable {
+enum InsightType: String, CaseIterable {
+    case spending = "Analyze Spending"
+    case budget = "Budget Review"
+    case savings = "Savings Tips"
+    case recurring = "Recurring Charges"
+}
+
+struct SpendingCategory: Identifiable, Equatable {
     let id = UUID()
     let name: String
     let amount: Double
     let percentage: Double
     var color: Color
+    
+    static func == (lhs: SpendingCategory, rhs: SpendingCategory) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 // MARK: - Main DashboardView

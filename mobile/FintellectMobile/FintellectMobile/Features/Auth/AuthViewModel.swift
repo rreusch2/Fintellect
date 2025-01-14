@@ -10,11 +10,12 @@ class AuthViewModel: ObservableObject {
     // Add development bypass
     func loginAsDemoUser() {
         currentUser = User(
-            id: "demo-user",
+            id: 1,
             username: "DemoUser",
-            email: "demo@example.com",
-            monthlyIncome: 5000,
-            hasCompletedOnboarding: true
+            hasPlaidSetup: true,
+            hasCompletedOnboarding: true,
+            monthlyIncome: 500000, // Stored in cents
+            onboardingStep: nil
         )
         isAuthenticated = true
     }
@@ -65,13 +66,4 @@ struct LoginResponse: Codable {
 }
 
 struct EmptyResponse: Codable {}
-struct EmptyBody: Codable {}
-
-// Add User model if not already defined
-struct User: Codable {
-    let id: String
-    let username: String
-    let email: String
-    let monthlyIncome: Double?
-    let hasCompletedOnboarding: Bool
-} 
+struct EmptyBody: Codable {} 

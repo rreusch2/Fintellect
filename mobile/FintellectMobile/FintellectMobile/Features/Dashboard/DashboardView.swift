@@ -22,7 +22,7 @@ struct DashboardView: View {
                 BackgroundView()
                 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 12) {
+                    VStack(spacing: 16) {
                         // Balance Overview
                         VStack(spacing: 4) {
                             Text(viewModel.totalBalance.formatted(.currency(code: "USD")))
@@ -47,8 +47,8 @@ struct DashboardView: View {
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(.white)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
+                            .frame(maxWidth: screenWidth - 32, alignment: .leading)
+                            .padding(12)
                             .background(Color.black.opacity(0.3))
                             .cornerRadius(12)
                             
@@ -61,15 +61,14 @@ struct DashboardView: View {
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(.white)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
+                            .frame(maxWidth: screenWidth - 32, alignment: .leading)
+                            .padding(12)
                             .background(Color.black.opacity(0.3))
                             .cornerRadius(12)
                         }
-                        .padding(.horizontal, 16)
                         
                         // AI Assistant Section
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Label("AI Assistant", systemImage: "sparkles")
                                     .font(.footnote)
@@ -80,7 +79,7 @@ struct DashboardView: View {
                             Text("Get personalized financial guidance through natural conversation")
                                 .font(.caption)
                                 .foregroundColor(.gray)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(maxWidth: screenWidth - 56, alignment: .leading)
                             
                             // Quick Actions
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -92,12 +91,14 @@ struct DashboardView: View {
                                             HStack(spacing: 4) {
                                                 Image(systemName: iconFor(type))
                                                 Text(type.rawValue)
-                                                    .lineLimit(1)
+                                                    .lineLimit(2)
+                                                    .multilineTextAlignment(.leading)
                                             }
                                             .font(.caption)
                                             .foregroundColor(.white)
                                             .padding(.horizontal, 10)
-                                            .padding(.vertical, 6)
+                                            .padding(.vertical, 8)
+                                            .frame(width: 120)
                                             .background(Color(hex: "1E293B"))
                                             .cornerRadius(16)
                                         }
@@ -105,7 +106,6 @@ struct DashboardView: View {
                                 }
                                 .padding(.horizontal, 4)
                             }
-                            .frame(maxWidth: .infinity)
                             
                             // Chat Area
                             VStack(spacing: 8) {
@@ -132,12 +132,12 @@ struct DashboardView: View {
                             }
                         }
                         .padding(12)
+                        .frame(width: screenWidth - 32)
                         .background(Color(hex: "0F172A"))
                         .cornerRadius(16)
-                        .padding(.horizontal, 16)
                         
                         // AI Insights
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Label("AI Financial Insights", systemImage: "chart.bar.fill")
                                     .font(.footnote)
@@ -147,7 +147,7 @@ struct DashboardView: View {
                             
                             if !viewModel.aiInsights.isEmpty {
                                 ForEach(viewModel.aiInsights) { insight in
-                                    VStack(alignment: .leading, spacing: 4) {
+                                    VStack(alignment: .leading, spacing: 8) {
                                         HStack {
                                             Text(insight.title)
                                                 .font(.caption)
@@ -166,20 +166,20 @@ struct DashboardView: View {
                                         Text(insight.description)
                                             .font(.caption)
                                             .foregroundColor(.white.opacity(0.8))
-                                            .lineLimit(3)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .lineLimit(4)
+                                            .fixedSize(horizontal: false, vertical: true)
                                     }
-                                    .padding(10)
-                                    .frame(maxWidth: .infinity)
+                                    .padding(12)
+                                    .frame(maxWidth: screenWidth - 56)
                                     .background(Color(hex: "1E293B"))
                                     .cornerRadius(12)
                                 }
                             }
                         }
                         .padding(12)
+                        .frame(width: screenWidth - 32)
                         .background(Color(hex: "0F172A"))
                         .cornerRadius(16)
-                        .padding(.horizontal, 16)
                     }
                     .padding(.vertical, 16)
                 }

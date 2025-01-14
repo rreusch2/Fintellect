@@ -31,3 +31,13 @@ out/
 # OS-specific files
 .DS_Store
 Thumbs.db
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+.build/

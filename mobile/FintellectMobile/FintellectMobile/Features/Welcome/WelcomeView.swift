@@ -28,39 +28,79 @@ struct WelcomeView: View {
     
     var body: some View {
         ZStack {
-            // Enhanced gradient background
+            // Base gradient background
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color(hex: "3B82F6"),  // Bright blue
                     Color(hex: "1E40AF"),  // Royal blue
                     Color(hex: "1E3A8A")   // Deep blue
                 ]),
-                startPoint: animateBackground ? .topLeading : .bottomTrailing,
-                endPoint: animateBackground ? .bottomTrailing : .topLeading
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
             
-            // Enhanced grid overlay
-            Image(systemName: "grid")
-                .resizable(resizingMode: .tile)
-                .foregroundColor(.white.opacity(0.07))
-                .ignoresSafeArea()
+            // Animated background elements
+            ZStack {
+                // Large primary orb
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            gradient: Gradient(colors: [
+                                Color(hex: "60A5FA").opacity(0.3),
+                                Color(hex: "3B82F6").opacity(0)
+                            ]),
+                            center: .center,
+                            startRadius: 100,
+                            endRadius: 300
+                        )
+                    )
+                    .frame(width: 600, height: 600)
+                    .blur(radius: 60)
+                    .offset(x: animateBackground ? 100 : -100, y: animateBackground ? -50 : 50)
+                    .animation(.easeInOut(duration: 8).repeatForever(autoreverses: true), value: animateBackground)
+                
+                // Secondary floating orb
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            gradient: Gradient(colors: [
+                                Color(hex: "93C5FD").opacity(0.2),
+                                Color(hex: "60A5FA").opacity(0)
+                            ]),
+                            center: .center,
+                            startRadius: 50,
+                            endRadius: 200
+                        )
+                    )
+                    .frame(width: 400, height: 400)
+                    .blur(radius: 45)
+                    .offset(x: animateBackground ? -130 : 130, y: animateBackground ? 100 : -100)
+                    .animation(.easeInOut(duration: 10).repeatForever(autoreverses: true), value: animateBackground)
+                
+                // Accent orbs
+                ForEach(0..<3) { index in
+                    Circle()
+                        .fill(Color(hex: "60A5FA").opacity(0.1))
+                        .frame(width: 200, height: 200)
+                        .blur(radius: 30)
+                        .offset(
+                            x: animateBackground ? 
+                                CGFloat(sin(Double(index) * .pi * 2/3) * 150) : 
+                                CGFloat(cos(Double(index) * .pi * 2/3) * 150),
+                            y: animateBackground ? 
+                                CGFloat(cos(Double(index) * .pi * 2/3) * 150) : 
+                                CGFloat(sin(Double(index) * .pi * 2/3) * 150)
+                        )
+                        .animation(
+                            .easeInOut(duration: Double(7 + index))
+                                .repeatForever(autoreverses: true),
+                            value: animateBackground
+                        )
+                }
+            }
             
-            // Enhanced animated orbs
-            Circle()
-                .fill(Color(hex: "60A5FA").opacity(0.15))
-                .frame(width: 350, height: 350)
-                .blur(radius: 60)
-                .offset(x: animateBackground ? 50 : -50, y: animateBackground ? -100 : 100)
-                .animation(.easeInOut(duration: 8).repeatForever(autoreverses: true), value: animateBackground)
-            
-            Circle()
-                .fill(Color(hex: "3B82F6").opacity(0.15))
-                .frame(width: 250, height: 250)
-                .blur(radius: 45)
-                .offset(x: animateBackground ? -100 : 100, y: animateBackground ? 50 : -50)
-                .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateBackground)
-            
+            // Content overlay
             VStack(spacing: 0) {
                 // Page content
                 TabView(selection: $currentPage) {

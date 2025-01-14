@@ -233,8 +233,10 @@ struct CustomTextField: View {
             
             if isSecure {
                 SecureField(placeholder, text: $text)
+                    .foregroundColor(.white)
             } else {
                 TextField(placeholder, text: $text)
+                    .foregroundColor(.white)
             }
         }
         .padding()

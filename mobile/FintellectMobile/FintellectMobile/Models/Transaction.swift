@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct Transaction: Identifiable {
+struct Transaction: Identifiable, Codable {
     let id = UUID()
     let name: String
     let amount: Double
@@ -18,9 +18,13 @@ struct Transaction: Identifiable {
     var formattedDate: String {
         date.formatted(date: .abbreviated, time: .omitted)
     }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, amount, date, category
+    }
 }
 
-enum TransactionCategory: String, CaseIterable {
+enum TransactionCategory: String, Codable, CaseIterable {
     case food = "Food & Dining"
     case shopping = "Shopping"
     case utilities = "Utilities"

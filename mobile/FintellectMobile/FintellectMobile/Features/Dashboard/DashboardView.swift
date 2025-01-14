@@ -17,14 +17,41 @@ struct DashboardView: View {
     @State private var chatMessages: [ChatMessage] = []
     @State private var selectedCategory: SpendingCategory? = nil
     
-    // Sample spending categories (replace with your actual data)
-    let categories = [
-        SpendingCategory(name: "Utilities", amount: 594.96, percentage: 0.373, color: Color(hex: "3B82F6")),
-        SpendingCategory(name: "Food & Drink", amount: 366.18, percentage: 0.229, color: Color(hex: "10B981")),
-        SpendingCategory(name: "Shopping", amount: 314.92, percentage: 0.198, color: Color(hex: "8B5CF6")),
-        SpendingCategory(name: "Entertainment", amount: 200.00, percentage: 0.125, color: Color(hex: "F59E0B")),
-        SpendingCategory(name: "Other", amount: 120.00, percentage: 0.075, color: Color(hex: "EC4899"))
-    ]
+    // Move categories to a computed property
+    private var categories: [SpendingCategory] {
+        [
+            .init(
+                name: "Utilities",
+                amount: 594.96,
+                percentage: 0.373,
+                color: Color(hex: "3B82F6")
+            ),
+            .init(
+                name: "Food & Drink",
+                amount: 366.18,
+                percentage: 0.229,
+                color: Color(hex: "10B981")
+            ),
+            .init(
+                name: "Shopping",
+                amount: 314.92,
+                percentage: 0.198,
+                color: Color(hex: "8B5CF6")
+            ),
+            .init(
+                name: "Entertainment",
+                amount: 200.00,
+                percentage: 0.125,
+                color: Color(hex: "F59E0B")
+            ),
+            .init(
+                name: "Other",
+                amount: 120.00,
+                percentage: 0.075,
+                color: Color(hex: "EC4899")
+            )
+        ]
+    }
     
     enum InsightType: String, CaseIterable {
         case spending = "Analyze Spending"

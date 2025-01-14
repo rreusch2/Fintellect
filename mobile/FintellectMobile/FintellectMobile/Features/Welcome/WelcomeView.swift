@@ -128,9 +128,7 @@ struct WelcomeView: View {
                         .foregroundColor(Color(hex: "1E40AF"))
                         .frame(width: 220)
                         .padding(.vertical, 16)
-                        .background(
-                            .white
-                        )
+                        .background(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .shadow(
                             color: Color.black.opacity(0.15),
@@ -293,6 +291,23 @@ extension Color {
             blue:  Double(b) / 255,
             opacity: Double(a) / 255
         )
+    }
+}
+
+@main
+struct FintellectMobileApp: App {
+    @StateObject private var authViewModel = AuthViewModel()
+    @AppStorage("hasSeenWelcome") private var hasSeenWelcome = false
+    
+    var body: some Scene {
+        WindowGroup {
+            if hasSeenWelcome {
+                AuthView(hasSeenWelcome: $hasSeenWelcome)
+                    .environmentObject(authViewModel)
+            } else {
+                WelcomeView(hasSeenWelcome: $hasSeenWelcome)
+            }
+        }
     }
 }
 

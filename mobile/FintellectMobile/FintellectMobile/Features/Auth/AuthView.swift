@@ -2,10 +2,10 @@ import SwiftUI
 
 struct AuthView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
+    @Binding var hasSeenWelcome: Bool
     @State private var username = ""
     @State private var password = ""
     @State private var isRegistering = false
-    @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         ZStack {
@@ -17,7 +17,9 @@ struct AuthView: View {
                 // Back Button in SafeArea
                 HStack {
                     Button(action: {
-                        presentationMode.wrappedValue.dismiss()
+                        withAnimation(.spring()) {
+                            hasSeenWelcome = false
+                        }
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: "chevron.left")
@@ -130,6 +132,6 @@ struct CustomTextFieldStyle: TextFieldStyle {
 }
 
 #Preview {
-    AuthView()
+    AuthView(hasSeenWelcome: .constant(true))
         .environmentObject(AuthViewModel())
 } 

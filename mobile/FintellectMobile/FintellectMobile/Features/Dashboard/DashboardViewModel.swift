@@ -1,5 +1,35 @@
 import Foundation
+import SwiftUI
 
+// MARK: - Models
+struct TransactionSummary: Codable {
+    let totalBalance: Int
+    let monthlySpending: Int
+    let monthlySavings: Int
+    let transactions: [Transaction]
+    let totalTransactions: Int
+    let totalAmount: Double
+    let averageAmount: Double
+    
+    enum CodingKeys: String, CodingKey {
+        case totalBalance = "total_balance"
+        case monthlySpending = "monthly_spending"
+        case monthlySavings = "monthly_savings"
+        case transactions
+        case totalTransactions = "total_transactions"
+        case totalAmount = "total_amount"
+        case averageAmount = "average_amount"
+    }
+}
+
+struct AIInsight: Codable, Identifiable {
+    let id = UUID()
+    let type: String
+    let title: String
+    let description: String
+}
+
+// MARK: - View Model
 @MainActor
 class DashboardViewModel: ObservableObject {
     @Published var totalBalance: Double = 0
@@ -75,32 +105,4 @@ class DashboardViewModel: ObservableObject {
         
         isLoading = false
     }
-}
-
-// Models
-struct TransactionSummary: Codable {
-    let totalBalance: Int
-    let monthlySpending: Int
-    let monthlySavings: Int
-    let transactions: [Transaction]
-    let totalTransactions: Int
-    let totalAmount: Double
-    let averageAmount: Double
-    
-    enum CodingKeys: String, CodingKey {
-        case totalBalance = "total_balance"
-        case monthlySpending = "monthly_spending"
-        case monthlySavings = "monthly_savings"
-        case transactions
-        case totalTransactions = "total_transactions"
-        case totalAmount = "total_amount"
-        case averageAmount = "average_amount"
-    }
-}
-
-struct AIInsight: Codable, Identifiable {
-    let id = UUID()
-    let type: String
-    let title: String
-    let description: String
 } 

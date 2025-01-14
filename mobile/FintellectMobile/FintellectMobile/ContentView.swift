@@ -9,10 +9,14 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var authViewModel = AuthViewModel()
+    @AppStorage("hasSeenWelcome") private var hasSeenWelcome = false
     
     var body: some View {
         Group {
-            if authViewModel.isAuthenticated {
+            if !hasSeenWelcome {
+                WelcomeView(hasSeenWelcome: $hasSeenWelcome)
+                    .environmentObject(authViewModel)
+            } else if authViewModel.isAuthenticated {
                 MainTabView()
                     .environmentObject(authViewModel)
             } else {

@@ -11,7 +11,7 @@ struct TransactionsView: View {
     private let limitOptions = [10, 20, 50, 100]
     
     var filteredTransactions: [Transaction] {
-        viewModel.transactions
+        Array(viewModel.transactions
             .filter { transaction in
                 if searchText.isEmpty { return true }
                 return transaction.name.localizedCaseInsensitiveContains(searchText) ||
@@ -23,7 +23,7 @@ struct TransactionsView: View {
                 }
                 return true
             }
-            .prefix(selectedLimit)
+            .prefix(selectedLimit))
     }
     
     var body: some View {
@@ -43,7 +43,7 @@ struct TransactionsView: View {
                 )
                 
                 // Transactions List
-                TransactionsList(transactions: Array(filteredTransactions))
+                TransactionsList(transactions: filteredTransactions)
             }
             .padding(.vertical, 24)
         }
@@ -69,10 +69,10 @@ struct SummaryStatsSection: View {
                 
                 StatCard(
                     title: "Top Category",
-                    subtitle: viewModel.topCategory?.rawValue ?? "None",
                     amount: viewModel.topCategoryAmount,
                     icon: "chart.pie.fill",
-                    color: viewModel.topCategory?.color ?? .gray
+                    color: viewModel.topCategory?.color ?? .gray,
+                    subtitle: viewModel.topCategory?.rawValue ?? "None"
                 )
                 
                 StatCard(
@@ -259,6 +259,67 @@ struct EmptyStateView: View {
                 .fill(Color(hex: "1E293B"))
                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
         )
+    }
+}
+
+// MARK: - Date Range Picker View
+struct DateRangePickerView: View {
+    @Binding var startDate: Date?
+    @Binding var endDate: Date?
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        VStack {
+            HStack {
+                Text("Select Date Range")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Spacer()
+                Button("Done") {
+                    withAnimation {
+                        isPresented = false
+                    }
+                }
+                .foregroundColor(Color(hex: "3B82F6"))
+            }
+            .padding()
+            
+            HStack(spacing: 16) {
+                DatePicker(
+                    "Start Date",
+                    selection: Binding(
+                        get: { startDate ?? Date() },
+                        set: { startDate = $0 }
+                    ),
+                    displayedComponents: .date
+                )
+                .labelsHidden()
+                
+                DatePicker(
+                    "End Date",
+                    selection: Binding(
+                        get: { endDate ?? Date() },
+                        set: { endDate = $0 }
+                    ),
+                    displayedComponents: .date
+                )
+                .labelsHidden()
+            }
+            .padding()
+            
+            Button("Clear Dates") {
+                startDate = nil
+                endDate = nil
+                withAnimation {
+                    isPresented = false
+                }
+            }
+            .foregroundColor(Color(hex: "EF4444"))
+            .padding(.bottom)
+        }
+        .background(Color(hex: "1E293B"))
+        .cornerRadius(16)
+        .padding()
     }
 }
 

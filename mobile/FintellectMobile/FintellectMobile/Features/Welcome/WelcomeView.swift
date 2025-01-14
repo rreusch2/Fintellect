@@ -183,8 +183,9 @@ struct WelcomePageView: View {
     @State private var appear = false
     
     var body: some View {
-        VStack(spacing: 25) {
+        VStack(spacing: 20) {
             Spacer()
+                .frame(maxHeight: 60)
             
             if isFirstPage {
                 // Special styling for first page (Fintellect logo)
@@ -227,7 +228,7 @@ struct WelcomePageView: View {
                     .animation(.spring(duration: 0.7).delay(0.2), value: appear)
             }
             
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 if !isFirstPage {
                     Text(page.title)
                         .font(.title)
@@ -236,7 +237,7 @@ struct WelcomePageView: View {
                 }
                 
                 Text(page.subtitle)
-                    .font(.title2)
+                    .font(.title3)
                     .fontWeight(.medium)
                     .foregroundColor(.white.opacity(0.9))
                     .multilineTextAlignment(.center)
@@ -245,24 +246,23 @@ struct WelcomePageView: View {
                     .animation(.spring(duration: 0.7).delay(0.4), value: appear)
                 
                 Text(page.description)
-                    .font(.system(size: 15))
+                    .font(.system(size: 14))
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-                    .lineSpacing(4)
-                    .minimumScaleFactor(0.8)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                    .padding(.bottom, 20)
+                    .padding(.horizontal, 32)
+                    .lineSpacing(2)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.9)
+                    .frame(maxWidth: 300)
+                    .padding(.top, 8)
                     .opacity(appear ? 1 : 0)
                     .offset(y: appear ? 0 : 20)
                     .animation(.spring(duration: 0.7).delay(0.5), value: appear)
             }
             
             Spacer()
-                .frame(height: 40)
         }
-        .frame(maxHeight: .infinity)
+        .padding(.top, 20)
         .onAppear {
             appear = true
         }

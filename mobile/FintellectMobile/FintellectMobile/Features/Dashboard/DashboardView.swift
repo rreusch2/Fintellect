@@ -47,7 +47,7 @@ struct DashboardView: View {
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(.white)
                             }
-                            .frame(maxWidth: screenWidth - 32, alignment: .leading)
+                            .frame(width: screenWidth - 48, alignment: .leading)
                             .padding(12)
                             .background(Color.black.opacity(0.3))
                             .cornerRadius(12)
@@ -61,11 +61,12 @@ struct DashboardView: View {
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(.white)
                             }
-                            .frame(maxWidth: screenWidth - 32, alignment: .leading)
+                            .frame(width: screenWidth - 48, alignment: .leading)
                             .padding(12)
                             .background(Color.black.opacity(0.3))
                             .cornerRadius(12)
                         }
+                        .frame(maxWidth: .infinity)
                         
                         // AI Assistant Section
                         VStack(alignment: .leading, spacing: 12) {
@@ -79,7 +80,7 @@ struct DashboardView: View {
                             Text("Get personalized financial guidance through natural conversation")
                                 .font(.caption)
                                 .foregroundColor(.gray)
-                                .frame(maxWidth: screenWidth - 56, alignment: .leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             
                             // Quick Actions
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -132,7 +133,7 @@ struct DashboardView: View {
                             }
                         }
                         .padding(12)
-                        .frame(width: screenWidth - 32)
+                        .frame(width: screenWidth - 48)
                         .background(Color(hex: "0F172A"))
                         .cornerRadius(16)
                         
@@ -170,22 +171,24 @@ struct DashboardView: View {
                                             .fixedSize(horizontal: false, vertical: true)
                                     }
                                     .padding(12)
-                                    .frame(maxWidth: screenWidth - 56)
+                                    .frame(maxWidth: .infinity)
                                     .background(Color(hex: "1E293B"))
                                     .cornerRadius(12)
                                 }
                             }
                         }
                         .padding(12)
-                        .frame(width: screenWidth - 32)
+                        .frame(width: screenWidth - 48)
                         .background(Color(hex: "0F172A"))
                         .cornerRadius(16)
                     }
+                    .padding(.horizontal, 24)
                     .padding(.vertical, 16)
                 }
             }
+            .edgesIgnoringSafeArea(.all)
         }
-        .navigationTitle("Dashboard")
+        .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.fetchDashboardData()
         }

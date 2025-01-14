@@ -19,6 +19,7 @@ struct FintellectMobileApp: App {
                     .environmentObject(authViewModel)
             } else {
                 WelcomeView(hasSeenWelcome: $hasSeenWelcome)
+                    .environmentObject(authViewModel)
             }
         }
     }

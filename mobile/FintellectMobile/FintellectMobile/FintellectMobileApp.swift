@@ -14,7 +14,10 @@ struct FintellectMobileApp: App {
     
     var body: some Scene {
         WindowGroup {
-            if hasSeenWelcome {
+            if authViewModel.isAuthenticated {
+                MainTabView()
+                    .environmentObject(authViewModel)
+            } else if hasSeenWelcome {
                 AuthView(hasSeenWelcome: $hasSeenWelcome)
                     .environmentObject(authViewModel)
             } else {

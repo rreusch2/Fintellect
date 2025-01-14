@@ -7,36 +7,15 @@ struct InsightsView: View {
         VStack(alignment: .leading, spacing: 15) {
             Text("AI Insights")
                 .font(.headline)
+                .foregroundColor(.white)
             
             ForEach(insights) { insight in
                 InsightCard(insight: insight)
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color(hex: "1E293B"))
         .cornerRadius(12)
-        .shadow(radius: 2)
-    }
-}
-
-struct InsightCard: View {
-    let insight: AIInsight
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(insight.title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            
-            Text(insight.description)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(3)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(8)
     }
 }
 

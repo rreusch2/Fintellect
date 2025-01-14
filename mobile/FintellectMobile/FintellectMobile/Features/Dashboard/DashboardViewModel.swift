@@ -63,26 +63,16 @@ class DashboardViewModel: ObservableObject {
 }
 
 // Models
-struct Transaction: Codable, Identifiable {
-    let id: Int
-    let amount: Int
-    let category: String
-    let description: String
-    let date: String
-    let merchantName: String?
-    
-    var formattedAmount: String {
-        let dollars = Double(amount) / 100.0
-        return String(format: "$%.2f", dollars)
-    }
-}
-
 struct TransactionSummary: Codable {
-    let hasPlaidConnection: Bool
-    let totalBalance: Int
-    let monthlySpending: Int
-    let monthlySavings: Int
-    let transactions: [Transaction]
+    let totalTransactions: Int
+    let totalAmount: Double
+    let averageAmount: Double
+    
+    enum CodingKeys: String, CodingKey {
+        case totalTransactions = "total_transactions"
+        case totalAmount = "total_amount"
+        case averageAmount = "average_amount"
+    }
 }
 
 struct AIInsight: Codable, Identifiable {

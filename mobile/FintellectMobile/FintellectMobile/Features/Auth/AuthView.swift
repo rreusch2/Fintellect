@@ -125,10 +125,12 @@ struct AuthView: View {
                     // Form Fields
                     VStack(spacing: 16) {
                         CustomTextField(text: $username, placeholder: "Username", systemImage: "person")
+                            .frame(maxWidth: min(UIScreen.main.bounds.width - 60, 360))
                             .opacity(appear[2] ? 1 : 0)
                             .offset(y: appear[2] ? 0 : 20)
                         
                         CustomTextField(text: $password, placeholder: "Password", systemImage: "lock", isSecure: true)
+                            .frame(maxWidth: min(UIScreen.main.bounds.width - 60, 360))
                             .opacity(appear[2] ? 1 : 0)
                             .offset(y: appear[2] ? 0 : 20)
                     }
@@ -159,7 +161,7 @@ struct AuthView: View {
                                         .font(.headline)
                                 }
                             }
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: min(UIScreen.main.bounds.width - 60, 360))
                             .padding(.vertical, 16)
                             .background(
                                 LinearGradient(
@@ -172,19 +174,21 @@ struct AuthView: View {
                             .cornerRadius(14)
                             .shadow(color: Color(hex: "3B82F6").opacity(0.3), radius: 8, x: 0, y: 4)
                         }
+                        .frame(maxWidth: .infinity)
                         
                         Button(action: {
                             authViewModel.loginAsDemoUser()
                         }) {
                             Text("Login as Demo User")
                                 .font(.headline)
-                                .frame(maxWidth: .infinity)
+                                .frame(maxWidth: min(UIScreen.main.bounds.width - 60, 360))
                                 .padding(.vertical, 16)
                                 .background(Color(hex: "22C55E"))
                                 .foregroundColor(.white)
                                 .cornerRadius(14)
                                 .shadow(color: Color(hex: "22C55E").opacity(0.3), radius: 8, x: 0, y: 4)
                         }
+                        .frame(maxWidth: .infinity)
                         
                         Button(action: { isRegistering.toggle() }) {
                             Text(isRegistering ? "Already have an account? Sign In" : "Don't have an account? Register")

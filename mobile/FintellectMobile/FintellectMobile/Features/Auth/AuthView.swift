@@ -58,6 +58,22 @@ struct AuthView: View {
                 .cornerRadius(10)
                 .padding(.horizontal)
                 
+                // Add Demo Login Button
+                #if DEBUG
+                Button(action: {
+                    authViewModel.loginAsDemoUser()
+                }) {
+                    Text("Login as Demo User")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.green)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+                .padding(.horizontal)
+                #endif
+                
                 // Toggle Register/Login
                 Button(action: { isRegistering.toggle() }) {
                     Text(isRegistering ? "Already have an account? Sign In" : "Don't have an account? Register")

@@ -7,7 +7,27 @@ class AuthViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     
+    // Add development bypass
+    func loginAsDemoUser() {
+        currentUser = User(
+            id: "demo-user",
+            username: "DemoUser",
+            email: "demo@example.com",
+            monthlyIncome: 5000,
+            hasCompletedOnboarding: true
+        )
+        isAuthenticated = true
+    }
+    
+    // Keep existing login method for later
     func login(username: String, password: String) async {
+        #if DEBUG
+        // In debug builds, use demo login
+        loginAsDemoUser()
+        return
+        #endif
+        
+        // Original login code
         isLoading = true
         error = nil
         
@@ -45,4 +65,13 @@ struct LoginResponse: Codable {
 }
 
 struct EmptyResponse: Codable {}
-struct EmptyBody: Codable {} 
+struct EmptyBody: Codable {}
+
+// Add User model if not already defined
+struct User: Codable {
+    let id: String
+    let username: String
+    let email: String
+    let monthlyIncome: Double?
+    let hasCompletedOnboarding: Bool
+} 

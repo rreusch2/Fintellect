@@ -11,17 +11,25 @@ enum APIError: Error {
 
 class APIClient {
     static let shared = APIClient()
-    private let baseURL = URL(string: "http://localhost:5001")! // Update with your actual backend URL
+    private let baseURL = URL(string: "http://192.168.1.98:5001")!
+    private let session: URLSession
     
-    private init() {}
+    private init() {
+        let configuration = URLSessionConfiguration.default
+        configuration.httpShouldSetCookies = true
+        configuration.httpCookieAcceptPolicy = .always
+        configuration.httpCookieStorage = .shared
+        self.session = URLSession(configuration: configuration)
+    }
     
     func get<T: Decodable>(_ endpoint: String) async throws -> T {
         let url = baseURL.appendingPathComponent(endpoint)
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpShouldHandleCookies = true
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
@@ -46,11 +54,12 @@ class APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpShouldHandleCookies = true
         
         let encoder = JSONEncoder()
         request.httpBody = try encoder.encode(body)
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse

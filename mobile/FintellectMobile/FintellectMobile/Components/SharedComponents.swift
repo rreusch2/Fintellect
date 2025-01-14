@@ -47,30 +47,35 @@ struct InsightCard: View {
     let insight: AIInsight
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(insight.title)
-                    .font(.headline)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
                     .foregroundColor(.white)
-                
                 Spacer()
-                
-                Text(insight.type.uppercased())
-                    .font(.caption2)
+                Text(insight.type)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color(hex: "3B82F6").opacity(0.2))
-                    .foregroundColor(Color(hex: "60A5FA"))
+                    .background(Color(hex: "3B82F6"))
                     .cornerRadius(8)
             }
             
             Text(insight.description)
                 .font(.subheadline)
-                .foregroundColor(.gray)
-                .lineLimit(3)
+                .foregroundColor(.white.opacity(0.8))
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding()
-        .background(Color(hex: "0F172A"))
-        .cornerRadius(12)
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(hex: "1E293B"))
+                .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
+        )
     }
-} 
+}

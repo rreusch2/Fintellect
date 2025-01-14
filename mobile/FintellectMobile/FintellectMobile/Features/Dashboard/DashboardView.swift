@@ -377,7 +377,7 @@ struct ChartView: View {
                 )
             }
         }
-        .chartAnimate(.easeInOut(duration: 0.5))
+        .animation(.easeInOut(duration: 0.5), value: selectedCategory)
     }
 }
 
@@ -443,44 +443,6 @@ struct AIInsightsSection: View {
                 .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
         )
         .padding(.horizontal, 16)
-    }
-}
-
-// MARK: - Insight Card
-struct InsightCard: View {
-    let insight: AIInsight
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(insight.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                Spacer()
-                Text(insight.type)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color(hex: "3B82F6"))
-                    .cornerRadius(8)
-            }
-            
-            Text(insight.description)
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
-                .lineLimit(4)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(hex: "1E293B"))
-                .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
-        )
     }
 }
 

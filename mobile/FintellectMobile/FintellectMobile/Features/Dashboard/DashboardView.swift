@@ -34,6 +34,7 @@ struct DashboardView: View {
                                         .foregroundColor(.white)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 12)
                             }
                             .frame(height: 50)
                             
@@ -51,6 +52,7 @@ struct DashboardView: View {
                                             .foregroundColor(.white)
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 12)
                                 }
                                 .frame(height: 45)
                                 
@@ -66,11 +68,12 @@ struct DashboardView: View {
                                             .foregroundColor(.white)
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 12)
                                 }
                                 .frame(height: 45)
                             }
                         }
-                        .frame(width: min(geometry.size.width - 24, 500))
+                        .frame(width: min(geometry.size.width - 32, 500))
                         
                         // AI Assistant Section
                         CardView {
@@ -78,6 +81,7 @@ struct DashboardView: View {
                                 Label("AI Assistant", systemImage: "sparkles")
                                     .font(.footnote)
                                     .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
                                 
                                 // Quick Actions
                                 ScrollView(.horizontal, showsIndicators: false) {
@@ -92,7 +96,7 @@ struct DashboardView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 2)
+                                    .padding(.horizontal, 12)
                                 }
                                 
                                 // Chat Display Area
@@ -117,10 +121,11 @@ struct DashboardView: View {
                                             .foregroundColor(Color(hex: "3B82F6"))
                                     }
                                 }
+                                .padding(.horizontal, 12)
                             }
-                            .padding(8)
+                            .padding(.vertical, 8)
                         }
-                        .frame(width: min(geometry.size.width - 24, 500))
+                        .frame(width: min(geometry.size.width - 32, 500))
                         
                         // AI Financial Insights Section
                         CardView {
@@ -128,19 +133,22 @@ struct DashboardView: View {
                                 Label("AI Financial Insights", systemImage: "chart.bar.fill")
                                     .font(.footnote)
                                     .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
                                 
                                 if !viewModel.aiInsights.isEmpty {
                                     ForEach(viewModel.aiInsights) { insight in
                                         InsightCard(insight: insight)
                                             .transition(.opacity)
+                                            .padding(.horizontal, 12)
                                     }
                                 }
                             }
-                            .padding(8)
+                            .padding(.vertical, 8)
                         }
-                        .frame(width: min(geometry.size.width - 24, 500))
+                        .frame(width: min(geometry.size.width - 32, 500))
                     }
                     .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                 }
             }

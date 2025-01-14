@@ -15,177 +15,169 @@ struct DashboardView: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
-            let screenWidth = geometry.size.width
-            
-            ZStack {
-                BackgroundView()
-                
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        // Balance Overview
-                        VStack(spacing: 4) {
-                            Text(viewModel.totalBalance.formatted(.currency(code: "USD")))
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(.white)
-                            
-                            Text("Available Balance")
-                                .font(.caption2)
-                                .foregroundColor(.gray)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 8)
-                        
-                        // Monthly Stats
-                        VStack(spacing: 8) {
-                            // Spending
-                            VStack(alignment: .leading) {
-                                Text("Spending")
-                                    .font(.caption2)
-                                    .foregroundColor(.red.opacity(0.8))
-                                Text(viewModel.monthlySpending.formatted(.currency(code: "USD")))
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                            .frame(maxWidth: screenWidth - 32, alignment: .leading)
-                            .padding(12)
-                            .background(Color.black.opacity(0.3))
-                            .cornerRadius(12)
-                            
-                            // Savings
-                            VStack(alignment: .leading) {
-                                Text("Savings")
-                                    .font(.caption2)
-                                    .foregroundColor(.green.opacity(0.8))
-                                Text(viewModel.monthlySavings.formatted(.currency(code: "USD")))
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                            .frame(maxWidth: screenWidth - 32, alignment: .leading)
-                            .padding(12)
-                            .background(Color.black.opacity(0.3))
-                            .cornerRadius(12)
-                        }
-                        
-                        // AI Assistant Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Label("AI Assistant", systemImage: "sparkles")
-                                    .font(.footnote)
-                                    .foregroundColor(.white)
-                                Spacer()
-                            }
-                            
-                            Text("Get personalized financial guidance through natural conversation")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .frame(maxWidth: screenWidth - 56, alignment: .leading)
-                            
-                            // Quick Actions
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(InsightType.allCases, id: \.self) { type in
-                                        Button {
-                                            handlePromptSelection(type)
-                                        } label: {
-                                            HStack(spacing: 4) {
-                                                Image(systemName: iconFor(type))
-                                                Text(type.rawValue)
-                                                    .lineLimit(2)
-                                                    .multilineTextAlignment(.leading)
-                                            }
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 8)
-                                            .frame(width: 120)
-                                            .background(Color(hex: "1E293B"))
-                                            .cornerRadius(16)
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 4)
-                            }
-                            
-                            // Chat Area
-                            VStack(spacing: 8) {
-                                ScrollView {
-                                    VStack(spacing: 8) {
-                                        ForEach(chatMessages) { message in
-                                            ChatBubble(message: message.content, isUser: message.isUser)
-                                        }
-                                    }
-                                    .padding(.vertical, 4)
-                                }
-                                .frame(height: 150)
-                                
-                                HStack(spacing: 8) {
-                                    TextField("Ask about your finances...", text: $chatMessage)
-                                        .textFieldStyle(CustomTextFieldStyle())
-                                    
-                                    Button(action: sendMessage) {
-                                        Image(systemName: "arrow.up.circle.fill")
-                                            .font(.system(size: 24))
-                                            .foregroundColor(Color(hex: "3B82F6"))
-                                    }
-                                }
-                            }
-                        }
-                        .padding(12)
-                        .frame(width: screenWidth - 32)
-                        .background(Color(hex: "0F172A"))
-                        .cornerRadius(16)
-                        
-                        // AI Insights
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Label("AI Financial Insights", systemImage: "chart.bar.fill")
-                                    .font(.footnote)
-                                    .foregroundColor(.white)
-                                Spacer()
-                            }
-                            
-                            if !viewModel.aiInsights.isEmpty {
-                                ForEach(viewModel.aiInsights) { insight in
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack {
-                                            Text(insight.title)
-                                                .font(.caption)
-                                                .fontWeight(.semibold)
-                                                .foregroundColor(.white)
-                                            Spacer()
-                                            Text(insight.type)
-                                                .font(.caption2)
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 2)
-                                                .background(Color(hex: "3B82F6"))
-                                                .cornerRadius(8)
-                                        }
-                                        
-                                        Text(insight.description)
-                                            .font(.caption)
-                                            .foregroundColor(.white.opacity(0.8))
-                                            .lineLimit(4)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                    }
-                                    .padding(12)
-                                    .frame(maxWidth: screenWidth - 56)
-                                    .background(Color(hex: "1E293B"))
-                                    .cornerRadius(12)
-                                }
-                            }
-                        }
-                        .padding(12)
-                        .frame(width: screenWidth - 32)
-                        .background(Color(hex: "0F172A"))
-                        .cornerRadius(16)
-                    }
-                    .padding(.vertical, 16)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+                // Balance Overview
+                VStack(spacing: 4) {
+                    Text(viewModel.totalBalance.formatted(.currency(code: "USD")))
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text("Available Balance")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                
+                // Monthly Stats
+                VStack(spacing: 8) {
+                    // Spending
+                    VStack(alignment: .leading) {
+                        Text("Spending")
+                            .font(.caption2)
+                            .foregroundColor(.red.opacity(0.8))
+                        Text(viewModel.monthlySpending.formatted(.currency(code: "USD")))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(Color.black.opacity(0.3))
+                    .cornerRadius(12)
+                    
+                    // Savings
+                    VStack(alignment: .leading) {
+                        Text("Savings")
+                            .font(.caption2)
+                            .foregroundColor(.green.opacity(0.8))
+                        Text(viewModel.monthlySavings.formatted(.currency(code: "USD")))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(Color.black.opacity(0.3))
+                    .cornerRadius(12)
+                }
+                
+                // AI Assistant Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Label("AI Assistant", systemImage: "sparkles")
+                            .font(.footnote)
+                            .foregroundColor(.white)
+                        Spacer()
+                    }
+                    
+                    Text("Get personalized financial guidance through natural conversation")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // Quick Actions
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(InsightType.allCases, id: \.self) { type in
+                                Button {
+                                    handlePromptSelection(type)
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: iconFor(type))
+                                        Text(type.rawValue)
+                                            .lineLimit(2)
+                                            .multilineTextAlignment(.leading)
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                    .frame(width: 120)
+                                    .background(Color(hex: "1E293B"))
+                                    .cornerRadius(16)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                    }
+                    
+                    // Chat Area
+                    VStack(spacing: 8) {
+                        ScrollView {
+                            VStack(spacing: 8) {
+                                ForEach(chatMessages) { message in
+                                    ChatBubble(message: message.content, isUser: message.isUser)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .frame(height: 150)
+                        
+                        HStack(spacing: 8) {
+                            TextField("Ask about your finances...", text: $chatMessage)
+                                .textFieldStyle(CustomTextFieldStyle())
+                            
+                            Button(action: sendMessage) {
+                                Image(systemName: "arrow.up.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(Color(hex: "3B82F6"))
+                            }
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color(hex: "0F172A"))
+                .cornerRadius(16)
+                
+                // AI Insights
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Label("AI Financial Insights", systemImage: "chart.bar.fill")
+                            .font(.footnote)
+                            .foregroundColor(.white)
+                        Spacer()
+                    }
+                    
+                    if !viewModel.aiInsights.isEmpty {
+                        ForEach(viewModel.aiInsights) { insight in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(insight.title)
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                    Spacer()
+                                    Text(insight.type)
+                                        .font(.caption2)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color(hex: "3B82F6"))
+                                        .cornerRadius(8)
+                                }
+                                
+                                Text(insight.description)
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.8))
+                                    .lineLimit(4)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(12)
+                            .frame(maxWidth: .infinity)
+                            .background(Color(hex: "1E293B"))
+                            .cornerRadius(12)
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color(hex: "0F172A"))
+                .cornerRadius(16)
             }
+            .padding(.horizontal)
+            .padding(.vertical, 16)
         }
-        .navigationTitle("Dashboard")
+        .background(BackgroundView())
+        .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.fetchDashboardData()
         }

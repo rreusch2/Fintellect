@@ -121,17 +121,36 @@ struct WelcomeView: View {
                     }) {
                         HStack {
                             Text("Get Started")
+                                .font(.headline)
                                 .fontWeight(.semibold)
                             Image(systemName: "arrow.right")
                         }
-                        .foregroundColor(Color(hex: "4169E1"))
+                        .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.white)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                colors: [
+                                    Color(hex: "60A5FA"),
+                                    Color(hex: "3B82F6")
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: Color.black.opacity(0.1), radius: 5)
+                        .shadow(
+                            color: Color(hex: "3B82F6").opacity(0.3),
+                            radius: 10,
+                            x: 0,
+                            y: 5
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
                     }
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, 32)
                     
                     if currentPage < pages.count - 1 {
                         Button(action: {
@@ -140,8 +159,19 @@ struct WelcomeView: View {
                             }
                         }) {
                             Text("Next")
+                                .font(.headline)
                                 .fontWeight(.medium)
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 32)
+                                .padding(.vertical, 12)
+                                .background(
+                                    Color.white.opacity(0.2)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
                         }
                     }
                 }
@@ -232,7 +262,9 @@ struct WelcomePageView: View {
                     .font(.body)
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, 40)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
                     .opacity(appear ? 1 : 0)
                     .offset(y: appear ? 0 : 20)
                     .animation(.spring(duration: 0.7).delay(0.5), value: appear)
@@ -240,6 +272,7 @@ struct WelcomePageView: View {
             
             Spacer()
             Spacer()
+                .frame(height: 20) // Add extra spacing before buttons
         }
         .onAppear {
             appear = true

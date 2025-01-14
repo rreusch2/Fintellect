@@ -16,6 +16,7 @@ import { promisify } from "util";
 import { PlaidService } from "./services/plaid";
 import plaidRouter from "./routes/plaid";
 import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent";
+import { financialTipAgent } from "./services/ai/agents/FinancialTipAgent";
 
 
 const scryptAsync = promisify(scrypt);
@@ -876,6 +877,29 @@ export function registerRoutes(app: Express): Server {
       console.error("Error getting dashboard insights:", error);
       res.status(500).json({
         error: "Failed to get insights",
+        details: process.env.NODE_ENV === "development" ? error.message : undefined
+      });
+    }
+  });
+
+  // Add this near your other AI endpoints
+  app.post("/api/ai/financial-tip", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not logged in");
+    }
+
+    try {
+      const { context } = req.body;
+      if (!context) {
+        return res.status(400).send("Context is required");
+      }
+
+      const tip = await financialTipAgent.generateTip(req.user.id, context);
+      res.json(tip);
+    } catch (error) {
+      console.error("Error generating financial tip:", error);
+      res.status(500).json({
+        error: "Failed to generate tip",
         details: process.env.NODE_ENV === "development" ? error.message : undefined
       });
     }

@@ -137,14 +137,14 @@ struct WelcomePageView: View {
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [
-                                    .white,
-                                    Color(hex: "E2E8F0")
+                                    Color(hex: "60A5FA"),
+                                    Color(hex: "3B82F6")
                                 ],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
                         )
-                        .shadow(color: .white.opacity(0.2), radius: 10, x: 0, y: 0)
+                        .shadow(color: Color(hex: "60A5FA").opacity(0.3), radius: 15, x: 0, y: 0)
                     
                     VStack(spacing: 4) {
                         HStack(spacing: 8) {

@@ -294,23 +294,6 @@ extension Color {
     }
 }
 
-@main
-struct FintellectMobileApp: App {
-    @StateObject private var authViewModel = AuthViewModel()
-    @AppStorage("hasSeenWelcome") private var hasSeenWelcome = false
-    
-    var body: some Scene {
-        WindowGroup {
-            if hasSeenWelcome {
-                AuthView(hasSeenWelcome: $hasSeenWelcome)
-                    .environmentObject(authViewModel)
-            } else {
-                WelcomeView(hasSeenWelcome: $hasSeenWelcome)
-            }
-        }
-    }
-}
-
 #Preview {
     WelcomeView(hasSeenWelcome: .constant(false))
 } 

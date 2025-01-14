@@ -20,6 +20,21 @@ class DashboardViewModel: ObservableObject {
         monthlySpending = 1595.97
         monthlySavings = 892.45
         
+        // Generate mock transactions
+        let calendar = Calendar.current
+        let today = Date()
+        let dates = (0..<30).map { days in
+            calendar.date(byAdding: .day, value: -days, to: today) ?? today
+        }
+        
+        recentTransactions = [
+            Transaction(name: "Whole Foods Market", amount: -82.47, date: dates[0], category: .food),
+            Transaction(name: "Netflix Subscription", amount: -15.99, date: dates[1], category: .entertainment),
+            Transaction(name: "Target", amount: -156.32, date: dates[2], category: .shopping),
+            Transaction(name: "Electric Bill", amount: -124.56, date: dates[3], category: .utilities),
+            Transaction(name: "Uber Ride", amount: -28.45, date: dates[4], category: .transportation)
+        ]
+        
         aiInsights = [
             AIInsight(
                 type: "HIGH",
@@ -64,11 +79,19 @@ class DashboardViewModel: ObservableObject {
 
 // Models
 struct TransactionSummary: Codable {
+    let totalBalance: Int
+    let monthlySpending: Int
+    let monthlySavings: Int
+    let transactions: [Transaction]
     let totalTransactions: Int
     let totalAmount: Double
     let averageAmount: Double
     
     enum CodingKeys: String, CodingKey {
+        case totalBalance = "total_balance"
+        case monthlySpending = "monthly_spending"
+        case monthlySavings = "monthly_savings"
+        case transactions
         case totalTransactions = "total_transactions"
         case totalAmount = "total_amount"
         case averageAmount = "average_amount"

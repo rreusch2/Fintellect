@@ -1,4 +1,13 @@
 import SwiftUI
+import Charts
+
+struct SpendingCategory: Identifiable {
+    let id = UUID()
+    let name: String
+    let amount: Double
+    let percentage: Double
+    var color: Color
+}
 
 struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
@@ -6,6 +15,16 @@ struct DashboardView: View {
     @State private var selectedInsightType: InsightType? = nil
     @State private var chatMessage = ""
     @State private var chatMessages: [ChatMessage] = []
+    @State private var selectedCategory: SpendingCategory? = nil
+    
+    // Sample spending categories (replace with your actual data)
+    let categories = [
+        SpendingCategory(name: "Utilities", amount: 594.96, percentage: 0.373, color: Color(hex: "3B82F6")),
+        SpendingCategory(name: "Food & Drink", amount: 366.18, percentage: 0.229, color: Color(hex: "10B981")),
+        SpendingCategory(name: "Shopping", amount: 314.92, percentage: 0.198, color: Color(hex: "8B5CF6")),
+        SpendingCategory(name: "Entertainment", amount: 200.00, percentage: 0.125, color: Color(hex: "F59E0B")),
+        SpendingCategory(name: "Other", amount: 120.00, percentage: 0.075, color: Color(hex: "EC4899"))
+    ]
     
     enum InsightType: String, CaseIterable {
         case spending = "Analyze Spending"
@@ -109,12 +128,14 @@ struct DashboardView: View {
                         .foregroundColor(.gray)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    // Quick Actions
+                    // Enhanced Quick Actions
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
                             ForEach(InsightType.allCases, id: \.self) { type in
                                 Button {
-                                    handlePromptSelection(type)
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                        handlePromptSelection(type)
+                                    }
                                 } label: {
                                     HStack(spacing: 6) {
                                         Image(systemName: iconFor(type))
@@ -126,13 +147,14 @@ struct DashboardView: View {
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 10)
-                                    .frame(width: 130)
+                                    .frame(width: 130, height: 50)
                                     .background(
                                         RoundedRectangle(cornerRadius: 16)
                                             .fill(Color(hex: "1E293B"))
                                             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                                     )
                                 }
+                                .buttonStyle(PressableButtonStyle())
                             }
                         }
                         .padding(.horizontal, 4)
@@ -213,6 +235,93 @@ struct DashboardView: View {
                             )
                         }
                     }
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color(hex: "0F172A"))
+                        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
+                )
+                .padding(.horizontal, 16)
+                
+                // New Spending Distribution Chart Section
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Label("Spending Distribution", systemImage: "chart.pie.fill")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Spacer()
+                    }
+                    
+                    // Donut Chart
+                    Chart {
+                        ForEach(categories) { category in
+                            SectorMark(
+                                angle: .value("Spending", category.percentage),
+                                innerRadius: .ratio(0.6),
+                                angularInset: 1.5
+                            )
+                            .cornerRadius(4)
+                            .foregroundStyle(category.color)
+                            .opacity(selectedCategory?.id == category.id ? 1 : 0.8)
+                        }
+                    }
+                    .frame(height: 200)
+                    .chartBackground { proxy in
+                        GeometryReader { geometry in
+                            VStack {
+                                if let selected = selectedCategory {
+                                    Text(selected.amount.formatted(.currency(code: "USD")))
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                    Text(selected.name)
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                } else {
+                                    Text(viewModel.monthlySpending.formatted(.currency(code: "USD")))
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                    Text("Total Spending")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .position(
+                                x: geometry.size.width / 2,
+                                y: geometry.size.height / 2
+                            )
+                        }
+                    }
+                    .chartAnimate(.easeInOut(duration: 0.5))
+                    
+                    // Legend
+                    VStack(spacing: 12) {
+                        ForEach(categories) { category in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedCategory = selectedCategory?.id == category.id ? nil : category
+                                }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(category.color)
+                                        .frame(width: 8, height: 8)
+                                    
+                                    Text(category.name)
+                                        .font(.footnote)
+                                        .foregroundColor(.white)
+                                    
+                                    Spacer()
+                                    
+                                    Text(category.percentage.formatted(.percent.precision(.fractionLength(1))))
+                                        .font(.footnote)
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                    .padding(.top, 8)
                 }
                 .padding(16)
                 .background(
@@ -318,6 +427,16 @@ struct CustomTextFieldStyle: TextFieldStyle {
                 RoundedRectangle(cornerRadius: 20)
                     .stroke(Color(hex: "3B82F6").opacity(0.3), lineWidth: 1)
             )
+    }
+}
+
+// Add this new button style for the press animation
+struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 

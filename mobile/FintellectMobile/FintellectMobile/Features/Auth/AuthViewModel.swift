@@ -47,6 +47,14 @@ class AuthViewModel: ObservableObject {
     func logout() async {
         isLoading = true
         
+        #if DEBUG
+        // In debug builds, just clear the state
+        isAuthenticated = false
+        currentUser = nil
+        isLoading = false
+        return
+        #endif
+        
         do {
             let _: EmptyResponse = try await APIClient.shared.post("/api/logout", body: EmptyBody())
             isAuthenticated = false

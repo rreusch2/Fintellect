@@ -21,8 +21,16 @@ struct ProfileView: View {
                             await authViewModel.logout()
                         }
                     }) {
-                        Text("Sign Out")
+                        HStack {
+                            if authViewModel.isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .red))
+                            } else {
+                                Text("Sign Out")
+                            }
+                        }
                     }
+                    .disabled(authViewModel.isLoading)
                 }
             }
             .navigationTitle("Profile")

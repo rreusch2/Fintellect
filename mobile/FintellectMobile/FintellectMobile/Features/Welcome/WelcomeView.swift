@@ -133,14 +133,28 @@ struct WelcomePageView: View {
                 // Special styling for first page (Fintellect logo)
                 VStack(spacing: 8) {
                     Text(page.title)
-                        .font(.system(size: 48, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(.system(size: 56, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    .white,
+                                    Color(hex: "E2E8F0")
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .shadow(color: .white.opacity(0.2), radius: 10, x: 0, y: 0)
                     
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkles")
-                            .foregroundColor(.white.opacity(0.9))
-                        Text("Powered by Advanced AI")
-                            .foregroundColor(.white.opacity(0.9))
+                    VStack(spacing: 4) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                                .foregroundColor(.white.opacity(0.9))
+                            Text("Powered by Advanced AI")
+                                .foregroundColor(.white.opacity(0.9))
+                                .font(.system(size: 14))
+                        }
+                        
                         Text("BETA")
                             .font(.caption)
                             .padding(.horizontal, 8)

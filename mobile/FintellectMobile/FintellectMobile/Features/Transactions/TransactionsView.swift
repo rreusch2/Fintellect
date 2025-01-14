@@ -68,11 +68,10 @@ struct SummaryStatsSection: View {
                 )
                 
                 StatCard(
-                    title: "Top Category",
+                    title: "Top Category (\(viewModel.topCategory?.rawValue ?? "None"))",
                     amount: viewModel.topCategoryAmount,
                     icon: "chart.pie.fill",
-                    color: viewModel.topCategory?.color ?? .gray,
-                    subtitle: viewModel.topCategory?.rawValue ?? "None"
+                    color: viewModel.topCategory?.color ?? .gray
                 )
                 
                 StatCard(

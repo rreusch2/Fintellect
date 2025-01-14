@@ -33,11 +33,11 @@ struct DashboardView: View {
                                 .font(.caption2)
                                 .foregroundColor(.gray)
                         }
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 8)
                         
                         // Monthly Stats
-                        HStack(spacing: 8) {
+                        VStack(spacing: 8) {
                             // Spending
                             VStack(alignment: .leading) {
                                 Text("Spending")
@@ -70,13 +70,17 @@ struct DashboardView: View {
                         
                         // AI Assistant Section
                         VStack(alignment: .leading, spacing: 8) {
-                            Label("AI Assistant", systemImage: "sparkles")
-                                .font(.footnote)
-                                .foregroundColor(.white)
+                            HStack {
+                                Label("AI Assistant", systemImage: "sparkles")
+                                    .font(.footnote)
+                                    .foregroundColor(.white)
+                                Spacer()
+                            }
                             
                             Text("Get personalized financial guidance through natural conversation")
                                 .font(.caption)
                                 .foregroundColor(.gray)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             
                             // Quick Actions
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -101,6 +105,7 @@ struct DashboardView: View {
                                 }
                                 .padding(.horizontal, 4)
                             }
+                            .frame(maxWidth: .infinity)
                             
                             // Chat Area
                             VStack(spacing: 8) {
@@ -133,9 +138,12 @@ struct DashboardView: View {
                         
                         // AI Insights
                         VStack(alignment: .leading, spacing: 8) {
-                            Label("AI Financial Insights", systemImage: "chart.bar.fill")
-                                .font(.footnote)
-                                .foregroundColor(.white)
+                            HStack {
+                                Label("AI Financial Insights", systemImage: "chart.bar.fill")
+                                    .font(.footnote)
+                                    .foregroundColor(.white)
+                                Spacer()
+                            }
                             
                             if !viewModel.aiInsights.isEmpty {
                                 ForEach(viewModel.aiInsights) { insight in
@@ -159,9 +167,10 @@ struct DashboardView: View {
                                             .font(.caption)
                                             .foregroundColor(.white.opacity(0.8))
                                             .lineLimit(3)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                     .padding(10)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .frame(maxWidth: .infinity)
                                     .background(Color(hex: "1E293B"))
                                     .cornerRadius(12)
                                 }

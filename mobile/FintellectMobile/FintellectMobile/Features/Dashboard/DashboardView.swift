@@ -18,73 +18,69 @@ struct DashboardView: View {
             BackgroundView()
             
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     // Financial Overview Cards
-                    VStack(spacing: 12) {
+                    VStack(spacing: 8) {
                         // Balance Card
                         CardView {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Label("Available Balance", systemImage: "creditcard.fill")
-                                    .font(.footnote)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Available Balance")
+                                    .font(.caption)
                                     .foregroundColor(.gray)
                                 
                                 Text(viewModel.totalBalance.formatted(.currency(code: "USD")))
-                                    .font(.system(size: 28, weight: .bold))
+                                    .font(.system(size: 24, weight: .bold))
                                     .foregroundColor(.white)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .frame(height: 80)
+                        .frame(height: 65)
                         
                         // Monthly Overview
-                        HStack(spacing: 12) {
+                        HStack(spacing: 8) {
                             // Spending Card
                             CardView {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Label("Spending", systemImage: "arrow.down.circle.fill")
-                                        .font(.footnote)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Spending")
+                                        .font(.caption)
                                         .foregroundColor(.red.opacity(0.8))
                                     
                                     Text(viewModel.monthlySpending.formatted(.currency(code: "USD")))
-                                        .font(.system(size: 17, weight: .semibold))
+                                        .font(.system(size: 16, weight: .semibold))
                                         .foregroundColor(.white)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .frame(height: 70)
+                            .frame(height: 55)
                             
                             // Savings Card
                             CardView {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Label("Savings", systemImage: "arrow.up.circle.fill")
-                                        .font(.footnote)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Savings")
+                                        .font(.caption)
                                         .foregroundColor(.green.opacity(0.8))
                                     
                                     Text(viewModel.monthlySavings.formatted(.currency(code: "USD")))
-                                        .font(.system(size: 17, weight: .semibold))
+                                        .font(.system(size: 16, weight: .semibold))
                                         .foregroundColor(.white)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .frame(height: 70)
+                            .frame(height: 55)
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 12)
                     
                     // AI Assistant Section
                     CardView {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Label("AI Assistant", systemImage: "sparkles")
-                                .font(.headline)
+                                .font(.subheadline)
                                 .foregroundColor(.white)
                             
-                            Text("Get personalized financial guidance through natural conversation")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            
-                            // Insight Type Selector
+                            // Quick Actions
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
+                                HStack(spacing: 6) {
                                     ForEach(InsightType.allCases, id: \.self) { type in
                                         InsightButton(
                                             title: type.rawValue,
@@ -97,38 +93,53 @@ struct DashboardView: View {
                                 }
                             }
                             
-                            // Chat Section
-                            VStack(spacing: 12) {
-                                // Chat messages would go here
-                                if !viewModel.aiInsights.isEmpty {
-                                    ForEach(viewModel.aiInsights) { insight in
-                                        InsightCard(insight: insight)
-                                            .transition(.opacity)
-                                    }
-                                }
-                                
-                                // Chat input
-                                HStack(spacing: 8) {
-                                    TextField("Ask about your finances...", text: $chatMessage)
-                                        .textFieldStyle(CustomTextFieldStyle())
-                                        .font(.subheadline)
-                                    
-                                    Button(action: {
-                                        // Send message action
-                                    }) {
-                                        Image(systemName: "arrow.up.circle.fill")
-                                            .font(.title2)
-                                            .foregroundColor(Color(hex: "3B82F6"))
-                                    }
+                            // Chat Display Area
+                            ScrollView {
+                                VStack(spacing: 8) {
+                                    // Example chat messages
+                                    ChatBubble(message: "How can I help you with your finances today?", isUser: false)
                                 }
                             }
-                            .padding(.top, 8)
+                            .frame(maxHeight: 150)
+                            
+                            // Chat input
+                            HStack(spacing: 8) {
+                                TextField("Ask about your finances...", text: $chatMessage)
+                                    .textFieldStyle(CustomTextFieldStyle())
+                                    .font(.footnote)
+                                
+                                Button(action: {
+                                    // Send message action
+                                }) {
+                                    Image(systemName: "arrow.up.circle.fill")
+                                        .font(.title3)
+                                        .foregroundColor(Color(hex: "3B82F6"))
+                                }
+                            }
                         }
-                        .padding()
+                        .padding(10)
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 12)
+                    
+                    // AI Financial Insights Section
+                    CardView {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("AI Financial Insights", systemImage: "chart.bar.fill")
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                            
+                            if !viewModel.aiInsights.isEmpty {
+                                ForEach(viewModel.aiInsights) { insight in
+                                    InsightCard(insight: insight)
+                                        .transition(.opacity)
+                                }
+                            }
+                        }
+                        .padding(10)
+                    }
+                    .padding(.horizontal, 12)
                 }
-                .padding(.vertical)
+                .padding(.vertical, 12)
             }
         }
         .navigationTitle("Dashboard")
@@ -147,11 +158,33 @@ struct DashboardView: View {
     }
 }
 
+struct ChatBubble: View {
+    let message: String
+    let isUser: Bool
+    
+    var body: some View {
+        HStack {
+            if isUser { Spacer() }
+            
+            Text(message)
+                .font(.footnote)
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(isUser ? Color(hex: "3B82F6") : Color(hex: "334155"))
+                .cornerRadius(16)
+            
+            if !isUser { Spacer() }
+        }
+        .padding(.horizontal, 4)
+    }
+}
+
 struct CustomTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
             .background(Color(hex: "1E293B"))
             .cornerRadius(20)
             .overlay(

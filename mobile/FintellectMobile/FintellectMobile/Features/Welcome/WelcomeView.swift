@@ -245,22 +245,24 @@ struct WelcomePageView: View {
                     .animation(.spring(duration: 0.7).delay(0.4), value: appear)
                 
                 Text(page.description)
-                    .font(.system(size: 16))
+                    .font(.system(size: 15))
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, 40)
+                    .lineSpacing(4)
+                    .minimumScaleFactor(0.8)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .padding(.bottom, 20)
                     .opacity(appear ? 1 : 0)
                     .offset(y: appear ? 0 : 20)
                     .animation(.spring(duration: 0.7).delay(0.5), value: appear)
             }
             
             Spacer()
-            Spacer()
-                .frame(height: 30)
+                .frame(height: 40)
         }
+        .frame(maxHeight: .infinity)
         .onAppear {
             appear = true
         }

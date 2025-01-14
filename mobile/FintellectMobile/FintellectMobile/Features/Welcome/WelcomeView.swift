@@ -31,34 +31,35 @@ struct WelcomeView: View {
             // Enhanced gradient background
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color(hex: "4169E1"),
-                    Color(hex: "1E40AF")
+                    Color(hex: "3B82F6"),  // Bright blue
+                    Color(hex: "1E40AF"),  // Royal blue
+                    Color(hex: "1E3A8A")   // Deep blue
                 ]),
                 startPoint: animateBackground ? .topLeading : .bottomTrailing,
                 endPoint: animateBackground ? .bottomTrailing : .topLeading
             )
             .ignoresSafeArea()
             
-            // Grid overlay
+            // Enhanced grid overlay
             Image(systemName: "grid")
                 .resizable(resizingMode: .tile)
-                .foregroundColor(.white.opacity(0.05))
+                .foregroundColor(.white.opacity(0.07))
                 .ignoresSafeArea()
             
-            // Animated orbs
+            // Enhanced animated orbs
             Circle()
-                .fill(Color.white.opacity(0.1))
-                .frame(width: 300, height: 300)
-                .blur(radius: 50)
+                .fill(Color(hex: "60A5FA").opacity(0.15))
+                .frame(width: 350, height: 350)
+                .blur(radius: 60)
                 .offset(x: animateBackground ? 50 : -50, y: animateBackground ? -100 : 100)
-                .animation(.easeInOut(duration: 7).repeatForever(autoreverses: true), value: animateBackground)
+                .animation(.easeInOut(duration: 8).repeatForever(autoreverses: true), value: animateBackground)
             
             Circle()
-                .fill(Color.blue.opacity(0.1))
-                .frame(width: 200, height: 200)
-                .blur(radius: 40)
+                .fill(Color(hex: "3B82F6").opacity(0.15))
+                .frame(width: 250, height: 250)
+                .blur(radius: 45)
                 .offset(x: animateBackground ? -100 : 100, y: animateBackground ? 50 : -50)
-                .animation(.easeInOut(duration: 5).repeatForever(autoreverses: true), value: animateBackground)
+                .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateBackground)
             
             VStack(spacing: 0) {
                 // Page content
@@ -133,18 +134,9 @@ struct WelcomePageView: View {
                 // Special styling for first page (Fintellect logo)
                 VStack(spacing: 8) {
                     Text(page.title)
-                        .font(.system(size: 56, weight: .bold))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [
-                                    Color(hex: "60A5FA"),
-                                    Color(hex: "3B82F6")
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .shadow(color: Color(hex: "60A5FA").opacity(0.3), radius: 15, x: 0, y: 0)
+                        .font(.system(size: 64, weight: .bold))
+                        .foregroundColor(.white)
+                        .shadow(color: Color(hex: "3B82F6").opacity(0.5), radius: 20, x: 0, y: 0)
                     
                     VStack(spacing: 4) {
                         HStack(spacing: 8) {

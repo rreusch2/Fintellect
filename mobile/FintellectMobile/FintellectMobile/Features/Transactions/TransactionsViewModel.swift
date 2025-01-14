@@ -7,27 +7,27 @@ class TransactionsViewModel: ObservableObject {
     
     // MARK: - Computed Properties
     var totalSpending: Double {
-        transactions.filter { $0.isExpense }.reduce(0) { $0 + abs($1.amount) }
+        transactions.filter { $0.isExpense }.reduce(0.0) { $0 + abs($1.amount) }
     }
     
     var averageTransaction: Double {
-        guard !transactions.isEmpty else { return 0 }
-        return totalSpending / Double(transactions.count)
+        guard !transactions.isEmpty else { return 0.0 }
+        return totalSpending / Double(transactions.filter { $0.isExpense }.count)
     }
     
     var topCategory: TransactionCategory? {
         let categoryTotals = Dictionary(grouping: transactions.filter { $0.isExpense }, by: { $0.category })
             .mapValues { transactions in
-                transactions.reduce(0) { $0 + abs($1.amount) }
+                transactions.reduce(0.0) { $0 + abs($1.amount) }
             }
         return categoryTotals.max(by: { $0.value < $1.value })?.key
     }
     
     var topCategoryAmount: Double {
-        guard let category = topCategory else { return 0 }
+        guard let category = topCategory else { return 0.0 }
         return transactions
             .filter { $0.category == category && $0.isExpense }
-            .reduce(0) { $0 + abs($1.amount) }
+            .reduce(0.0) { $0 + abs($1.amount) }
     }
     
     init() {

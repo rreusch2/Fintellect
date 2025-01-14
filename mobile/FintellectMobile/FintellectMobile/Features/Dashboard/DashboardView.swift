@@ -14,132 +14,135 @@ struct DashboardView: View {
     }
     
     var body: some View {
-        ZStack {
-            BackgroundView()
-            
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 12) {
-                    // Financial Overview Cards
+        GeometryReader { geometry in
+            ZStack {
+                BackgroundView()
+                
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: 8) {
-                        // Balance Card
-                        CardView {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Available Balance")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
+                        // Financial Overview Cards
+                        VStack(spacing: 6) {
+                            // Balance Card
+                            CardView {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Available Balance")
+                                        .font(.caption2)
+                                        .foregroundColor(.gray)
+                                    
+                                    Text(viewModel.totalBalance.formatted(.currency(code: "USD")))
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .frame(height: 50)
+                            
+                            // Monthly Overview
+                            HStack(spacing: 6) {
+                                // Spending Card
+                                CardView {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Spending")
+                                            .font(.caption2)
+                                            .foregroundColor(.red.opacity(0.8))
+                                        
+                                        Text(viewModel.monthlySpending.formatted(.currency(code: "USD")))
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .frame(height: 45)
                                 
-                                Text(viewModel.totalBalance.formatted(.currency(code: "USD")))
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.white)
+                                // Savings Card
+                                CardView {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Savings")
+                                            .font(.caption2)
+                                            .foregroundColor(.green.opacity(0.8))
+                                        
+                                        Text(viewModel.monthlySavings.formatted(.currency(code: "USD")))
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .frame(height: 45)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .frame(height: 65)
+                        .frame(width: min(geometry.size.width - 24, 500))
                         
-                        // Monthly Overview
-                        HStack(spacing: 8) {
-                            // Spending Card
-                            CardView {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Spending")
-                                        .font(.caption)
-                                        .foregroundColor(.red.opacity(0.8))
-                                    
-                                    Text(viewModel.monthlySpending.formatted(.currency(code: "USD")))
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.white)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .frame(height: 55)
-                            
-                            // Savings Card
-                            CardView {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Savings")
-                                        .font(.caption)
-                                        .foregroundColor(.green.opacity(0.8))
-                                    
-                                    Text(viewModel.monthlySavings.formatted(.currency(code: "USD")))
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.white)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .frame(height: 55)
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    
-                    // AI Assistant Section
-                    CardView {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("AI Assistant", systemImage: "sparkles")
-                                .font(.subheadline)
-                                .foregroundColor(.white)
-                            
-                            // Quick Actions
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 6) {
-                                    ForEach(InsightType.allCases, id: \.self) { type in
-                                        InsightButton(
-                                            title: type.rawValue,
-                                            systemImage: iconFor(type),
-                                            isSelected: selectedInsightType == type
-                                        ) {
-                                            selectedInsightType = type
+                        // AI Assistant Section
+                        CardView {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Label("AI Assistant", systemImage: "sparkles")
+                                    .font(.footnote)
+                                    .foregroundColor(.white)
+                                
+                                // Quick Actions
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 4) {
+                                        ForEach(InsightType.allCases, id: \.self) { type in
+                                            InsightButton(
+                                                title: type.rawValue,
+                                                systemImage: iconFor(type),
+                                                isSelected: selectedInsightType == type
+                                            ) {
+                                                selectedInsightType = type
+                                            }
                                         }
+                                    }
+                                    .padding(.horizontal, 2)
+                                }
+                                
+                                // Chat Display Area
+                                ScrollView {
+                                    VStack(spacing: 6) {
+                                        ChatBubble(message: "How can I help you with your finances today?", isUser: false)
+                                    }
+                                }
+                                .frame(maxHeight: 120)
+                                
+                                // Chat input
+                                HStack(spacing: 6) {
+                                    TextField("Ask about your finances...", text: $chatMessage)
+                                        .textFieldStyle(CustomTextFieldStyle())
+                                        .font(.caption)
+                                    
+                                    Button(action: {
+                                        // Send message action
+                                    }) {
+                                        Image(systemName: "arrow.up.circle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(Color(hex: "3B82F6"))
                                     }
                                 }
                             }
-                            
-                            // Chat Display Area
-                            ScrollView {
-                                VStack(spacing: 8) {
-                                    // Example chat messages
-                                    ChatBubble(message: "How can I help you with your finances today?", isUser: false)
-                                }
-                            }
-                            .frame(maxHeight: 150)
-                            
-                            // Chat input
-                            HStack(spacing: 8) {
-                                TextField("Ask about your finances...", text: $chatMessage)
-                                    .textFieldStyle(CustomTextFieldStyle())
+                            .padding(8)
+                        }
+                        .frame(width: min(geometry.size.width - 24, 500))
+                        
+                        // AI Financial Insights Section
+                        CardView {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Label("AI Financial Insights", systemImage: "chart.bar.fill")
                                     .font(.footnote)
+                                    .foregroundColor(.white)
                                 
-                                Button(action: {
-                                    // Send message action
-                                }) {
-                                    Image(systemName: "arrow.up.circle.fill")
-                                        .font(.title3)
-                                        .foregroundColor(Color(hex: "3B82F6"))
+                                if !viewModel.aiInsights.isEmpty {
+                                    ForEach(viewModel.aiInsights) { insight in
+                                        InsightCard(insight: insight)
+                                            .transition(.opacity)
+                                    }
                                 }
                             }
+                            .padding(8)
                         }
-                        .padding(10)
+                        .frame(width: min(geometry.size.width - 24, 500))
                     }
-                    .padding(.horizontal, 12)
-                    
-                    // AI Financial Insights Section
-                    CardView {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("AI Financial Insights", systemImage: "chart.bar.fill")
-                                .font(.subheadline)
-                                .foregroundColor(.white)
-                            
-                            if !viewModel.aiInsights.isEmpty {
-                                ForEach(viewModel.aiInsights) { insight in
-                                    InsightCard(insight: insight)
-                                        .transition(.opacity)
-                                }
-                            }
-                        }
-                        .padding(10)
-                    }
-                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
                 }
-                .padding(.vertical, 12)
             }
         }
         .navigationTitle("Dashboard")

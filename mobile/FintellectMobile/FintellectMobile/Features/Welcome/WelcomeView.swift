@@ -113,44 +113,32 @@ struct WelcomeView: View {
                 .indexViewStyle(.page(backgroundDisplayMode: .interactive))
                 
                 // Bottom buttons
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     Button(action: {
                         withAnimation(.spring()) {
                             hasSeenWelcome = true
                         }
                     }) {
-                        HStack {
+                        HStack(spacing: 12) {
                             Text("Get Started")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                             Image(systemName: "arrow.right")
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
+                        .foregroundColor(Color(hex: "1E40AF"))
+                        .frame(width: 220)
                         .padding(.vertical, 16)
                         .background(
-                            LinearGradient(
-                                colors: [
-                                    Color(hex: "60A5FA"),
-                                    Color(hex: "3B82F6")
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                            .white
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .shadow(
-                            color: Color(hex: "3B82F6").opacity(0.3),
-                            radius: 10,
+                            color: Color.black.opacity(0.15),
+                            radius: 12,
                             x: 0,
                             y: 5
                         )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                        )
                     }
-                    .padding(.horizontal, 32)
                     
                     if currentPage < pages.count - 1 {
                         Button(action: {
@@ -162,10 +150,10 @@ struct WelcomeView: View {
                                 .font(.headline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.white)
-                                .padding(.horizontal, 32)
+                                .frame(width: 120)
                                 .padding(.vertical, 12)
                                 .background(
-                                    Color.white.opacity(0.2)
+                                    Color(hex: "1E40AF").opacity(0.3)
                                 )
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .overlay(
@@ -259,12 +247,13 @@ struct WelcomePageView: View {
                     .animation(.spring(duration: 0.7).delay(0.4), value: appear)
                 
                 Text(page.description)
-                    .font(.body)
+                    .font(.system(size: 16))
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, 32)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 8)
                     .opacity(appear ? 1 : 0)
                     .offset(y: appear ? 0 : 20)
                     .animation(.spring(duration: 0.7).delay(0.5), value: appear)
@@ -272,7 +261,7 @@ struct WelcomePageView: View {
             
             Spacer()
             Spacer()
-                .frame(height: 20) // Add extra spacing before buttons
+                .frame(height: 30)
         }
         .onAppear {
             appear = true

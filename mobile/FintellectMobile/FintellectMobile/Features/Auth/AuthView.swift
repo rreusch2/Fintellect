@@ -5,6 +5,7 @@ struct AuthView: View {
     @State private var username = ""
     @State private var password = ""
     @State private var isRegistering = false
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         NavigationView {
@@ -82,6 +83,22 @@ struct AuthView: View {
             }
             .padding()
             .navigationBarHidden(true)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(.system(size: 16, weight: .regular))
+                        }
+                        .foregroundColor(Color(hex: "3B82F6"))
+                    }
+                }
+            }
         }
     }
 }

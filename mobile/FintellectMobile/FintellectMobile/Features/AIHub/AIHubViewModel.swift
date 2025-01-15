@@ -41,7 +41,7 @@ class AIHubViewModel: ObservableObject {
                 "Personalized recommendations",
                 "Transaction analysis"
             ],
-            destination: AnyView(AIAssistantView())
+            destination: AnyView(AIFinancialAssistantView())
         ),
         AIService(
             title: "AI Investment Strategist",

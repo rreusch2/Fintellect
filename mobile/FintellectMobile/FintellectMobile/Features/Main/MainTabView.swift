@@ -15,9 +15,9 @@ struct MainTabView: View {
                     Label("Transactions", systemImage: "list.bullet")
                 }
             
-            BudgetView()
+            AIHubView()
                 .tabItem {
-                    Label("Budget", systemImage: "dollarsign.circle")
+                    Label("AI Hub", systemImage: "brain.head.profile")
                 }
             
             GoalsView()

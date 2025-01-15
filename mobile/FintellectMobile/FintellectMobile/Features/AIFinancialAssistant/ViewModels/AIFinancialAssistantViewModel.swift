@@ -2,7 +2,7 @@ import SwiftUI
 
 @MainActor
 class AIFinancialAssistantViewModel: ObservableObject {
-    @Published var chatMessages: [ChatMessage] = []
+    @Published var chatMessages: [PremiumChatMessage] = []
     @Published var workflows: [AIWorkflow] = []
     @Published var proactiveInsights: [ProactiveInsight] = []
     @Published var learningModules: [LearningModule] = []
@@ -92,7 +92,7 @@ class AIFinancialAssistantViewModel: ObservableObject {
         
         // Mock Chat Messages
         chatMessages = [
-            ChatMessage(
+            PremiumChatMessage(
                 content: "Welcome to your premium AI Financial Assistant! How can I help you today?",
                 type: .assistant,
                 timestamp: Date()
@@ -101,7 +101,7 @@ class AIFinancialAssistantViewModel: ObservableObject {
     }
     
     func sendMessage(_ message: String) {
-        let userMessage = ChatMessage(content: message, type: .user, timestamp: Date())
+        let userMessage = PremiumChatMessage(content: message, type: .user, timestamp: Date())
         chatMessages.append(userMessage)
         currentMessage = ""
         
@@ -111,7 +111,7 @@ class AIFinancialAssistantViewModel: ObservableObject {
         // Simulate AI response after delay
         Task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
-            let response = ChatMessage(
+            let response = PremiumChatMessage(
                 content: "I understand you're interested in \(message.lowercased()). Let me analyze your financial data and provide personalized insights.",
                 type: .assistant,
                 timestamp: Date()
@@ -123,7 +123,7 @@ class AIFinancialAssistantViewModel: ObservableObject {
     
     func startWorkflow(_ workflow: AIWorkflow) {
         // Simulate workflow start
-        let message = ChatMessage(
+        let message = PremiumChatMessage(
             content: "Starting the \(workflow.title) workflow. Let me analyze your data...",
             type: .system,
             timestamp: Date()

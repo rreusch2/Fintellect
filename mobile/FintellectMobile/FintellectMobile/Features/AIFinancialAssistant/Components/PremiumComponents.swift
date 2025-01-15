@@ -110,7 +110,7 @@ struct InsightCard: View {
 
 // MARK: - Chat Message Bubble
 struct ChatBubble: View {
-    let message: ChatMessage
+    let message: PremiumChatMessage
     
     private var isUser: Bool {
         message.type == .user

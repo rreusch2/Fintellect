@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Chat Models
-struct ChatMessage: Identifiable {
+struct PremiumChatMessage: Identifiable {
     let id = UUID()
     let content: String
     let type: MessageType

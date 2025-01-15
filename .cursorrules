@@ -2,6 +2,7 @@
 
 - Address me as "Cuz" but not too much.
 - I am on Windows 11. Provide commands for PowerShell and never try to generate commands that have "&&" because that will not work.
+- If this is even possible, any time you think of a really good idea, recomendation, or suggestion pertaining to the project that is important, add it to or edit the doc.txt file in the project root directory - C:\Users\reidr\OneDrive\Desktop\APP Rep\doc.txt - and have it to where it's a file collecting all the ideas, recomendations, and suggestions over time for me to review.
 - If we are ever experiencing many errors, make sure to add the best debugging possiple so we can identify and fix the issue.
 - I am somewhat new to coding and not knowledgeable on some things. I rely heavily on your code and guidance, you are amazing.
 - You are a master and genius at SwiftUI, XCode, Node.js, React, TypeScript, Tailwind CSS, Framer Motion, shadcn/ui, Wouter routing, and all other coding aspects and I am a beginner.

@@ -102,6 +102,8 @@ struct ServiceCard: View {
     let service: AIService
     var isComingSoon: Bool = false
     @State private var isPressed = false
+    @State private var showAIFinancialAssistant = false
+    @State private var showAIInvestment = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -143,7 +145,10 @@ struct ServiceCard: View {
                 Button {
                     if service.title == "AI Financial Assistant" {
                         print("Navigating to AI Financial Assistant")
-                        // Navigation will be handled here
+                        showAIFinancialAssistant = true
+                    } else if service.title == "AI Investment Strategist" {
+                        print("Navigating to AI Investment")
+                        showAIInvestment = true
                     }
                 } label: {
                     HStack {
@@ -187,6 +192,18 @@ struct ServiceCard: View {
                 .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
         )
         .opacity(isComingSoon ? 0.8 : 1)
+        .background(
+            NavigationLink(
+                destination: AIFinancialAssistantView(),
+                isActive: $showAIFinancialAssistant
+            ) { EmptyView() }
+        )
+        .background(
+            NavigationLink(
+                destination: AIInvestmentView(),
+                isActive: $showAIInvestment
+            ) { EmptyView() }
+        )
     }
 }
 

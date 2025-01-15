@@ -139,30 +139,35 @@ struct ChatContent: View {
     @ObservedObject var viewModel: AIFinancialAssistantViewModel
     
     var body: some View {
-        if viewModel.chatMessages.isEmpty {
-            EmptyChatState()
-        } else {
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    ForEach(viewModel.chatMessages) { message in
-                        PremiumChatBubble(message: message)
-                    }
-                    
-                    if viewModel.isTyping {
-                        HStack {
-                            Text("AI is typing...")
-                                .font(.caption)
-                                .foregroundColor(Color(hex: "64748B"))
-                            Spacer()
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(hex: "0F172A"))
+                .frame(height: 300)
+            
+            if viewModel.chatMessages.isEmpty {
+                EmptyChatState()
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(viewModel.chatMessages) { message in
+                            PremiumChatBubble(message: message)
                         }
-                        .padding(.horizontal)
+                        
+                        if viewModel.isTyping {
+                            HStack {
+                                Text("AI is typing...")
+                                    .font(.caption)
+                                    .foregroundColor(Color(hex: "64748B"))
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                        }
                     }
+                    .padding(.vertical)
                 }
+                .frame(maxWidth: .infinity)
             }
         }
-        .frame(height: 300)
-        .background(Color(hex: "0F172A"))
-        .cornerRadius(12)
     }
 }
 

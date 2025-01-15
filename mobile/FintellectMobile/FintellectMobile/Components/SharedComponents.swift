@@ -1,144 +1,81 @@
 import SwiftUI
 
-struct InsightCard: View {
-    let title: String
-    let description: String
-    let icon: String
-    let color: Color
+struct CardView<Content: View>: View {
+    let content: Content
     
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 24))
-                .foregroundColor(color)
-                .frame(width: 48, height: 48)
-                .background(color.opacity(0.2))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Text(description)
-                    .font(.subheadline)
-                    .foregroundColor(Color(hex: "94A3B8"))
-                    .lineLimit(2)
-            }
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(hex: "1E293B"))
-        )
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
     }
-}
-
-struct WorkflowCard: View {
-    let title: String
-    let description: String
-    let icon: String
-    let color: Color
-    let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 24))
-                    .foregroundColor(color)
-                
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(Color(hex: "94A3B8"))
-                    .lineLimit(2)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        content
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color(hex: "1E293B"))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
             )
+            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+    }
+}
+
+struct InsightButton: View {
+    let title: String
+    let systemImage: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: systemImage)
+                Text(title)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(isSelected ? Color(hex: "3B82F6") : Color(hex: "334155"))
+            .foregroundColor(.white)
+            .cornerRadius(20)
         }
     }
 }
 
-struct LearningModuleCard: View {
-    let title: String
-    let description: String
-    let duration: String
-    let level: String
-    let progress: Double
-    let action: () -> Void
-    
-    var levelColor: Color {
-        switch level.lowercased() {
-        case "beginner": return Color(hex: "22C55E")
-        case "intermediate": return Color(hex: "F59E0B")
-        case "advanced": return Color(hex: "EF4444")
-        default: return Color(hex: "94A3B8")
-        }
-    }
+struct InsightCard: View {
+    let insight: AIInsight
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Text(description)
-                    .font(.subheadline)
-                    .foregroundColor(Color(hex: "94A3B8"))
-                    .lineLimit(2)
-            }
-            
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock")
-                        .font(.caption)
-                    Text(duration)
-                        .font(.caption)
-                }
-                .foregroundColor(Color(hex: "94A3B8"))
-                
-                Spacer()
-                
-                Text(level)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(levelColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(levelColor.opacity(0.2))
-                    )
-            }
-            
-            Button(action: action) {
-                Text("Start Learning")
+                Text(insight.title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(hex: "3B82F6"))
-                    )
+                Spacer()
+                Text(insight.type)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color(hex: "3B82F6"))
+                    .cornerRadius(8)
             }
+            
+            Text(insight.description)
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding()
+        .padding(16)
+        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(hex: "1E293B"))
+                .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
         )
     }
 }

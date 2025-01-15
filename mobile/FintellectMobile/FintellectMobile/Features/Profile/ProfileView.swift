@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
-    @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject private var authViewModel: AuthViewModel
     @State private var showingPasswordChange = false
     @State private var showingNotificationSettings = false
     @State private var showingLogoutAlert = false
@@ -11,12 +11,20 @@ struct ProfileView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Profile Header
-                ProfileHeader(username: authViewModel.currentUser?.username ?? "User")
+                if let user = authViewModel.currentUser {
+                    ProfileHeader(username: user.username)
+                } else {
+                    ProfileHeader(username: "User")
+                }
                 
                 // Main Content
                 VStack(spacing: 20) {
                     // Connected Accounts Section
-                    ConnectedAccountsSection(hasPlaidConnected: authViewModel.currentUser?.hasPlaidSetup ?? false)
+                    ConnectedAccountsSection(
+                        hasPlaidConnected: authViewModel.currentUser?.hasPlaidSetup ?? false,
+                        onConnect: viewModel.handlePlaidConnection,
+                        onDisconnect: viewModel.handlePlaidDisconnection
+                    )
                     
                     // Settings Section
                     SettingsSection(
@@ -83,6 +91,8 @@ struct ProfileHeader: View {
 // MARK: - Connected Accounts Section
 struct ConnectedAccountsSection: View {
     let hasPlaidConnected: Bool
+    let onConnect: () -> Void
+    let onDisconnect: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -112,9 +122,7 @@ struct ConnectedAccountsSection: View {
                     Spacer()
                     
                     if hasPlaidConnected {
-                        Button(action: {
-                            // Handle disconnect
-                        }) {
+                        Button(action: onDisconnect) {
                             Text("Disconnect")
                                 .font(.caption)
                                 .fontWeight(.medium)
@@ -125,9 +133,7 @@ struct ConnectedAccountsSection: View {
                                 .clipShape(Capsule())
                         }
                     } else {
-                        Button(action: {
-                            // Handle connect
-                        }) {
+                        Button(action: onConnect) {
                             Text("Connect")
                                 .font(.caption)
                                 .fontWeight(.medium)

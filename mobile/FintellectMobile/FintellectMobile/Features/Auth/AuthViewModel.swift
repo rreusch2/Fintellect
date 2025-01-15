@@ -1,77 +1,27 @@
 import Foundation
+import SwiftUI
 
-@MainActor
-class AuthViewModel: ObservableObject {
-    @Published var isAuthenticated = false
+final class AuthViewModel: ObservableObject {
     @Published var currentUser: User?
+    @Published var isAuthenticated = false
     @Published var isLoading = false
-    @Published var error: String?
     
-    // Add development bypass
-    func loginAsDemoUser() {
-        currentUser = User(
-            id: 1,
-            username: "DemoUser",
-            hasPlaidSetup: true,
-            hasCompletedOnboarding: true,
-            monthlyIncome: 500000, // Stored in cents
-            onboardingStep: nil
+    init() {
+        // Initialize with demo data for now
+        self.currentUser = User(
+            id: "1",
+            username: "Demo User",
+            email: "demo@example.com",
+            hasPlaidSetup: false
         )
-        isAuthenticated = true
+        self.isAuthenticated = true
     }
     
-    // Keep existing login method for later
-    func login(username: String, password: String) async {
-        #if DEBUG
-        // In debug builds, use demo login
-        loginAsDemoUser()
-        return
-        #endif
-        
-        // Original login code
+    func logout() {
         isLoading = true
-        error = nil
-        
-        do {
-            let credentials = ["username": username, "password": password]
-            let response: LoginResponse = try await APIClient.shared.post("/api/login", body: credentials)
-            currentUser = response.user
-            isAuthenticated = true
-        } catch {
-            self.error = error.localizedDescription
-        }
-        
-        isLoading = false
-    }
-    
-    func logout() async {
-        isLoading = true
-        
-        #if DEBUG
-        // In debug builds, just clear the state
-        isAuthenticated = false
+        // Add actual logout logic here when integrating with backend
         currentUser = nil
-        isLoading = false
-        return
-        #endif
-        
-        do {
-            let _: EmptyResponse = try await APIClient.shared.post("/api/logout", body: EmptyBody())
-            isAuthenticated = false
-            currentUser = nil
-        } catch {
-            self.error = error.localizedDescription
-        }
-        
+        isAuthenticated = false
         isLoading = false
     }
-}
-
-// Response types
-struct LoginResponse: Codable {
-    let message: String
-    let user: User
-}
-
-struct EmptyResponse: Codable {}
-struct EmptyBody: Codable {} 
+} 

@@ -101,6 +101,7 @@ struct AIDisclaimerCard: View {
 struct ServiceCard: View {
     let service: AIService
     var isComingSoon: Bool = false
+    @State private var isPressed = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -139,11 +140,10 @@ struct ServiceCard: View {
             }
             
             if !isComingSoon {
-                NavigationLink {
+                Button {
                     if service.title == "AI Financial Assistant" {
-                        AIFinancialAssistantView()
-                    } else if service.title == "AI Investment Strategist" {
-                        AIInvestmentView()
+                        print("Navigating to AI Financial Assistant")
+                        // Navigation will be handled here
                     }
                 } label: {
                     HStack {
@@ -160,10 +160,24 @@ struct ServiceCard: View {
                     .background(
                         RoundedRectangle(cornerRadius: 12)
                             .fill(service.iconColor)
-                            .opacity(0.2)
+                            .opacity(isPressed ? 0.4 : 0.2)
                     )
+                    .scaleEffect(isPressed ? 0.98 : 1.0)
                 }
                 .buttonStyle(PlainButtonStyle())
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { _ in
+                            withAnimation(.easeInOut(duration: 0.1)) {
+                                isPressed = true
+                            }
+                        }
+                        .onEnded { _ in
+                            withAnimation(.easeInOut(duration: 0.1)) {
+                                isPressed = false
+                            }
+                        }
+                )
             }
         }
         .padding()

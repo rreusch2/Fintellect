@@ -7,34 +7,20 @@ struct AIHubView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // Hero Section with Stats
+                // Hero Section
                 VStack(spacing: 16) {
                     Text("AI-Powered Financial Services")
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                     
-                    Text("Experience the future of finance with our advanced AI technologies")
+                    Text("Experience the future of finance with our advanced AI technologies. Featuring 24/7 availability, bank-grade security, real-time analysis, and seamless Plaid integration for your financial success.")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
-                    
-                    // Stats Grid
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 16) {
-                        ForEach(viewModel.aiStats) { stat in
-                            StatCard(
-                                title: stat.label,
-                                value: stat.value,
-                                icon: stat.icon,
-                                color: stat.color
-                            )
-                        }
-                    }
+                        .padding(.horizontal)
                 }
-                .padding(.horizontal)
+                .padding(.top)
                 
                 // AI Disclaimer
                 AIDisclaimerCard()
@@ -52,14 +38,12 @@ struct AIHubView: View {
                     }
                     .padding(.horizontal)
                     
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 16) {
-                            ForEach(viewModel.availableServices) { service in
-                                ServiceCard(service: service)
-                            }
+                    VStack(spacing: 16) {
+                        ForEach(viewModel.availableServices) { service in
+                            ServiceCard(service: service)
                         }
-                        .padding(.horizontal)
                     }
+                    .padding(.horizontal)
                 }
                 
                 // Coming Soon Section
@@ -74,14 +58,12 @@ struct AIHubView: View {
                     }
                     .padding(.horizontal)
                     
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 16) {
-                            ForEach(viewModel.upcomingServices) { service in
-                                ServiceCard(service: service, isComingSoon: true)
-                            }
+                    VStack(spacing: 16) {
+                        ForEach(viewModel.upcomingServices) { service in
+                            ServiceCard(service: service, isComingSoon: true)
                         }
-                        .padding(.horizontal)
                     }
+                    .padding(.horizontal)
                 }
             }
             .padding(.vertical, 24)
@@ -103,7 +85,7 @@ struct AIDisclaimerCard: View {
             Text("These insights are AI-generated based on your financial data. Consider them as suggestions, not professional financial advice.")
                 .font(.caption)
                 .foregroundColor(.gray)
-                .lineLimit(2)
+                .lineLimit(3)
                 .minimumScaleFactor(0.8)
         }
         .padding()
@@ -121,37 +103,36 @@ struct ServiceCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Icon
-            Image(systemName: service.icon)
-                .font(.system(size: 24))
-                .foregroundColor(service.iconColor)
-                .frame(width: 48, height: 48)
-                .background(service.iconColor.opacity(0.2))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            
-            // Content
-            VStack(alignment: .leading, spacing: 8) {
+            // Icon and Title Row
+            HStack(spacing: 16) {
+                Image(systemName: service.icon)
+                    .font(.system(size: 24))
+                    .foregroundColor(service.iconColor)
+                    .frame(width: 48, height: 48)
+                    .background(service.iconColor.opacity(0.2))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                
                 Text(service.title)
                     .font(.headline)
                     .foregroundColor(.white)
-                
-                Text(service.description)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .lineLimit(3)
-                    .frame(maxWidth: 250)
-                
-                // Features
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(service.features, id: \.self) { feature in
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(service.iconColor.opacity(0.6))
-                                .frame(width: 6, height: 6)
-                            Text(feature)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
+            }
+            
+            // Description
+            Text(service.description)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                .lineLimit(3)
+            
+            // Features
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(service.features, id: \.self) { feature in
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(service.iconColor.opacity(0.6))
+                            .frame(width: 6, height: 6)
+                        Text(feature)
+                            .font(.caption)
+                            .foregroundColor(.gray)
                     }
                 }
             }
@@ -172,7 +153,6 @@ struct ServiceCard: View {
             }
         }
         .padding()
-        .frame(width: 300)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(hex: "1E293B"))

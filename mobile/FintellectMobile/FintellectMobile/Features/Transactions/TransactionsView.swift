@@ -69,7 +69,7 @@ struct SummaryStatsSection: View {
                 
                 StatCard(
                     title: "Top Category (\(viewModel.topCategory?.rawValue ?? "None"))",
-                    amount: viewModel.topCategoryAmount,
+                    value: viewModel.topCategoryAmount.formatted(.currency(code: "USD")),
                     icon: "chart.pie.fill",
                     color: viewModel.topCategory?.color ?? .gray
                 )

@@ -69,8 +69,8 @@ struct PremiumInsightCard: View {
     private var iconName: String {
         switch insight.type {
         case .spending: return "creditcard.fill"
-        case .saving: return "piggybank.fill"
-        case .investment: return "chart.line.uptrend.xyaxis.fill"
+        case .saving: return "arrow.down.circle.fill"
+        case .investment: return "chart.xyaxis.line"
         case .bill: return "doc.text.fill"
         }
     }

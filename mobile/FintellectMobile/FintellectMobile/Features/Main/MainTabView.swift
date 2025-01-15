@@ -2,34 +2,55 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
+    @State private var selectedTab = 0
     
     var body: some View {
-        TabView {
-            DashboardView()
-                .tabItem {
-                    Label("Dashboard", systemImage: "chart.bar.fill")
-                }
+        TabView(selection: $selectedTab) {
+            NavigationStack {
+                DashboardView()
+            }
+            .tabItem {
+                Image(systemName: "chart.bar.fill")
+                Text("Dashboard")
+            }
+            .tag(0)
             
-            TransactionsView()
-                .tabItem {
-                    Label("Transactions", systemImage: "list.bullet")
-                }
+            NavigationStack {
+                TransactionsView()
+            }
+            .tabItem {
+                Image(systemName: "list.bullet")
+                Text("Transactions")
+            }
+            .tag(1)
             
-            AIHubView()
-                .tabItem {
-                    Label("AI Hub", systemImage: "brain.head.profile")
-                }
+            NavigationStack {
+                AIHubView()
+                    .navigationDestination(for: NavigationDestination.self) { destination in
+                        switch destination {
+                        case .aiFinancialAssistant:
+                            AIFinancialAssistantView()
+                        case .aiInvestment:
+                            AIInvestmentView()
+                        }
+                    }
+            }
+            .tabItem {
+                Image(systemName: "brain")
+                Text("AI Hub")
+            }
+            .tag(2)
             
-            GoalsView()
-                .tabItem {
-                    Label("Goals", systemImage: "target")
-                }
-            
-            ProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person.fill")
-                }
+            NavigationStack {
+                ProfileView()
+            }
+            .tabItem {
+                Image(systemName: "person.fill")
+                Text("Profile")
+            }
+            .tag(3)
         }
+        .tint(Color(hex: "3B82F6"))
     }
 }
 

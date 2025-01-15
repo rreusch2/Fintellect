@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @StateObject private var viewModel = ProfileViewModel()
     @EnvironmentObject var authViewModel: AuthViewModel
     @State private var showingPasswordChange = false
     @State private var showingNotificationSettings = false
@@ -10,12 +11,12 @@ struct ProfileView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Profile Header
-                ProfileHeader(username: authViewModel.user?.username ?? "User")
+                ProfileHeader(username: authViewModel.currentUser?.username ?? "User")
                 
                 // Main Content
                 VStack(spacing: 20) {
                     // Connected Accounts Section
-                    ConnectedAccountsSection(hasPlaidConnected: authViewModel.user?.hasPlaidSetup ?? false)
+                    ConnectedAccountsSection(hasPlaidConnected: authViewModel.currentUser?.hasPlaidSetup ?? false)
                     
                     // Settings Section
                     SettingsSection(

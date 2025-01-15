@@ -1,10 +1,10 @@
 import Foundation
 
-struct User: Codable {
-    let id: Int
-    let username: String
-    let hasPlaidSetup: Bool
-    let hasCompletedOnboarding: Bool
-    let monthlyIncome: Int?
-    let onboardingStep: Int?
+struct User: Codable, Identifiable {
+    let id: String
+    var username: String
+    var email: String
+    var hasPlaidSetup: Bool
+    
+    // Additional user properties can be added here
 } 

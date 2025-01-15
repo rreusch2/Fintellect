@@ -98,16 +98,19 @@ struct SmartWorkflowsSection: View {
                 .font(.subheadline)
                 .foregroundColor(Color(hex: "94A3B8"))
             
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 12) {
+            VStack(spacing: 12) {
                 ForEach(workflows) { workflow in
                     SmartWorkflowButton(workflow: workflow) {
                         onWorkflowSelected(workflow)
                     }
                 }
             }
+            
+            Text("Select a workflow above or type your question below")
+                .font(.caption)
+                .foregroundColor(Color(hex: "64748B"))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 4)
         }
         .padding(.horizontal)
     }
@@ -119,14 +122,6 @@ struct ChatSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "message.and.waveform")
-                    .foregroundColor(Color(hex: "3B82F6"))
-                Text("AI Chat Assistant")
-                    .font(.headline)
-                    .foregroundColor(.white)
-            }
-            
             ChatContent(viewModel: viewModel)
             ChatInput(currentMessage: $viewModel.currentMessage, onSend: viewModel.sendMessage)
         }
@@ -142,12 +137,12 @@ struct ChatContent: View {
         ZStack {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(hex: "0F172A"))
-                .frame(height: 300)
+                .frame(height: 400)
             
             if viewModel.chatMessages.isEmpty {
                 EmptyChatState()
             } else {
-                ScrollView {
+                ScrollView(showsIndicators: true) {
                     LazyVStack(spacing: 16) {
                         ForEach(viewModel.chatMessages) { message in
                             PremiumChatBubble(message: message)
@@ -166,6 +161,7 @@ struct ChatContent: View {
                     .padding(.vertical)
                 }
                 .frame(maxWidth: .infinity)
+                .padding(.horizontal)
             }
         }
     }

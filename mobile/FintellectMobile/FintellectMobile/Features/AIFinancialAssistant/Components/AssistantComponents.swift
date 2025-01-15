@@ -45,16 +45,15 @@ struct SmartWorkflowButton: View {
     let workflow: AIWorkflow
     let action: () -> Void
     @State private var isPressed = false
-    @State private var showFullDescription = false
     
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 12) {
                 // Icon
                 Image(systemName: workflow.icon)
                     .font(.system(size: 20))
                     .foregroundColor(workflow.color)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 40, height: 40)
                     .background(workflow.color.opacity(0.2))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 
@@ -64,15 +63,19 @@ struct SmartWorkflowButton: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
-                        .lineLimit(1)
                     
                     Text(workflow.description)
                         .font(.caption)
                         .foregroundColor(Color(hex: "94A3B8"))
-                        .lineLimit(showFullDescription ? nil : 2)
+                        .fixedSize(horizontal: false, vertical: true)  // Allow text to wrap
                 }
+                
+                Spacer(minLength: 8)
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "64748B"))
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 16)
@@ -99,10 +102,5 @@ struct SmartWorkflowButton: View {
                     }
                 }
         )
-        .onTapGesture {
-            withAnimation {
-                showFullDescription.toggle()
-            }
-        }
     }
 } 

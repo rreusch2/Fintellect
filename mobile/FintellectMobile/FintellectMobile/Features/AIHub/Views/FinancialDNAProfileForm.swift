@@ -108,36 +108,6 @@ struct FinancialDNAProfileForm: View {
     }
 }
 
-// MARK: - Button Styles
-struct PrimaryButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.headline)
-            .foregroundColor(.white)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(hex: "3B82F6"))
-                    .opacity(configuration.isPressed ? 0.8 : 1)
-            )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-    }
-}
-
-struct SecondaryButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.headline)
-            .foregroundColor(.white)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(hex: "3B82F6"), lineWidth: 2)
-            )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-    }
-}
-
 // MARK: - Form Sections
 struct FinancialGoalsSection: View {
     @ObservedObject var viewModel: FinancialDNAProfileViewModel
@@ -173,9 +143,6 @@ struct FinancialGoalsSection: View {
         }
     }
 }
-
-// Note: We'll continue with other section views in subsequent edits
-// This gives you an idea of the structure and styling we're implementing
 
 #Preview {
     FinancialDNAProfileForm(viewModel: FinancialDNAProfileViewModel())

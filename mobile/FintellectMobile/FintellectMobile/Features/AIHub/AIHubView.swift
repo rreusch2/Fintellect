@@ -101,7 +101,6 @@ struct AIDisclaimerCard: View {
 struct ServiceCard: View {
     let service: AIService
     var isComingSoon: Bool = false
-    @State private var isActive = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -140,29 +139,31 @@ struct ServiceCard: View {
             }
             
             if !isComingSoon {
-                NavigationLink(
-                    destination: AIFinancialAssistantView(),
-                    isActive: $isActive
-                ) {
-                    Button(action: { isActive = true }) {
-                        HStack {
-                            Text("Access Service")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.7))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(service.iconColor.opacity(0.2))
-                        )
+                NavigationLink {
+                    if service.title == "AI Financial Assistant" {
+                        AIFinancialAssistantView()
+                    } else if service.title == "AI Investment Strategist" {
+                        AIInvestmentView()
                     }
+                } label: {
+                    HStack {
+                        Text("Access Service")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(service.iconColor)
+                            .opacity(0.2)
+                    )
                 }
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding()

@@ -16,7 +16,6 @@ struct AIService: Identifiable {
     let icon: String
     let iconColor: Color
     let features: [String]
-    var destination: AnyView
 }
 
 // MARK: - ViewModel
@@ -48,8 +47,7 @@ class AIHubViewModel: ObservableObject {
                     "Natural language processing",
                     "Personalized recommendations",
                     "Transaction analysis"
-                ],
-                destination: AnyView(NavigationLink("", destination: AIFinancialAssistantView()))
+                ]
             ),
             AIService(
                 title: "AI Investment Strategist",
@@ -61,8 +59,7 @@ class AIHubViewModel: ObservableObject {
                     "AI risk analysis",
                     "Real-time market insights",
                     "Intelligent goal planning"
-                ],
-                destination: AnyView(NavigationLink("", destination: AIInvestmentView()))
+                ]
             )
         ]
         
@@ -76,8 +73,7 @@ class AIHubViewModel: ObservableObject {
                     "AI-driven spending analysis",
                     "Smart budget optimization",
                     "Automated savings detection"
-                ],
-                destination: AnyView(EmptyView())
+                ]
             ),
             AIService(
                 title: "AI Tax Strategist",
@@ -88,8 +84,7 @@ class AIHubViewModel: ObservableObject {
                     "AI tax optimization",
                     "Smart deduction finder",
                     "Proactive tax planning"
-                ],
-                destination: AnyView(EmptyView())
+                ]
             )
         ]
     }

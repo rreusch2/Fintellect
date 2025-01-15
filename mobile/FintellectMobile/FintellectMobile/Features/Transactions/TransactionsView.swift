@@ -76,7 +76,7 @@ struct SummaryStatsSection: View {
                 
                 StatCard(
                     title: "Avg Transaction",
-                    amount: viewModel.averageTransaction,
+                    value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
                     icon: "number.circle.fill",
                     color: Color(hex: "3B82F6")
                 )

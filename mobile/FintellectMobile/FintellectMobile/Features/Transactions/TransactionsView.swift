@@ -62,8 +62,8 @@ struct SummaryStatsSection: View {
             HStack(spacing: 16) {
                 StatCard(
                     title: "Total Spending",
-                    amount: viewModel.totalSpending,
-                    icon: "arrow.down.circle.fill",
+                    value: viewModel.totalSpending.formatted(.currency(code: "USD")),
+                    icon: "dollarsign.circle.fill",
                     color: .red
                 )
                 

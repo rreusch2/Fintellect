@@ -62,8 +62,8 @@ struct WorkflowCard: View {
     }
 }
 
-// MARK: - Insight Card
-struct InsightCard: View {
+// MARK: - Premium Insight Card
+struct PremiumInsightCard: View {
     let insight: ProactiveInsight
     
     private var iconName: String {
@@ -108,8 +108,8 @@ struct InsightCard: View {
     }
 }
 
-// MARK: - Chat Message Bubble
-struct ChatBubble: View {
+// MARK: - Premium Chat Bubble
+struct PremiumChatBubble: View {
     let message: PremiumChatMessage
     
     private var isUser: Bool {
@@ -167,6 +167,14 @@ struct LearningModuleCard: View {
         }
     }
     
+    private var difficultyText: String {
+        switch module.difficulty {
+        case .beginner: return "Beginner"
+        case .intermediate: return "Intermediate"
+        case .advanced: return "Advanced"
+        }
+    }
+    
     var body: some View {
         PremiumCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -177,7 +185,7 @@ struct LearningModuleCard: View {
                     
                     Spacer()
                     
-                    Text(module.difficulty.rawValue.capitalized)
+                    Text(difficultyText)
                         .font(.caption)
                         .foregroundColor(difficultyColor)
                         .padding(.horizontal, 8)

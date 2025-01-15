@@ -49,7 +49,7 @@ struct AIFinancialAssistantView: View {
                         .foregroundColor(.white)
                     
                     ForEach(viewModel.proactiveInsights) { insight in
-                        InsightCard(insight: insight)
+                        PremiumInsightCard(insight: insight)
                     }
                 }
                 .padding(.horizontal)
@@ -64,7 +64,7 @@ struct AIFinancialAssistantView: View {
                     ScrollView {
                         LazyVStack(spacing: 16) {
                             ForEach(viewModel.chatMessages) { message in
-                                ChatBubble(message: message)
+                                PremiumChatBubble(message: message)
                             }
                             
                             if viewModel.isTyping {

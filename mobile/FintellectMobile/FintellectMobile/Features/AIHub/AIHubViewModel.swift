@@ -36,54 +36,54 @@ class AIHubViewModel: ObservableObject {
     }
     
     private func setupServices() {
+        // Available Services
         availableServices = [
             AIService(
                 title: "AI Financial Assistant",
-                description: "Your personal AI-powered financial advisor available 24/7. Get real-time insights, spending analysis, and personalized recommendations through natural conversation.",
+                description: "Your personal AI-powered financial advisor, available 24/7 to help you make smarter financial decisions.",
                 icon: "brain.head.profile",
                 iconColor: Color(hex: "3B82F6"),
                 features: [
-                    "Real-time financial guidance",
-                    "Natural language processing",
+                    "Real-time financial insights",
                     "Personalized recommendations",
-                    "Transaction analysis"
+                    "Smart budgeting assistance"
                 ]
             ),
             AIService(
                 title: "AI Investment Strategist",
-                description: "Harness the power of AI to analyze your financial profile and create personalized investment strategies. Get dynamic portfolio recommendations, risk assessments, and market insights.",
+                description: "Advanced AI algorithms analyze market trends and your portfolio to provide tailored investment strategies.",
                 icon: "chart.line.uptrend.xyaxis",
-                iconColor: Color(hex: "8B5CF6"),
+                iconColor: Color(hex: "10B981"),
                 features: [
-                    "Smart portfolio optimization",
-                    "AI risk analysis",
-                    "Real-time market insights",
-                    "Intelligent goal planning"
+                    "Portfolio analysis",
+                    "Risk assessment",
+                    "Investment recommendations"
                 ]
             )
         ]
         
+        // Upcoming Services
         upcomingServices = [
             AIService(
                 title: "AI Budget Analyst",
-                description: "Advanced AI-powered analysis of your spending patterns with predictive insights and intelligent optimization suggestions.",
+                description: "Sophisticated AI-driven budget analysis and optimization to help you achieve your financial goals.",
                 icon: "dollarsign.circle",
-                iconColor: Color(hex: "10B981"),
+                iconColor: Color(hex: "8B5CF6"),
                 features: [
-                    "AI-driven spending analysis",
                     "Smart budget optimization",
-                    "Automated savings detection"
+                    "Spending pattern analysis",
+                    "Goal-based recommendations"
                 ]
             ),
             AIService(
                 title: "AI Tax Strategist",
-                description: "Intelligent tax optimization and planning powered by advanced AI analysis of your financial data.",
+                description: "AI-powered tax planning and optimization to maximize your returns and minimize tax liability.",
                 icon: "doc.text.magnifyingglass",
                 iconColor: Color(hex: "F59E0B"),
                 features: [
-                    "AI tax optimization",
-                    "Smart deduction finder",
-                    "Proactive tax planning"
+                    "Tax optimization strategies",
+                    "Deduction recommendations",
+                    "Year-round tax planning"
                 ]
             )
         ]

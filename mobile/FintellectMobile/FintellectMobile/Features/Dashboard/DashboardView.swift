@@ -79,50 +79,19 @@ struct MonthlyStatsSection: View {
         VStack(spacing: 12) {
             StatCard(
                 title: "Monthly Spending",
-                amount: spending,
+                value: spending.formatted(.currency(code: "USD")),
                 icon: "arrow.down.circle.fill",
                 color: .red
             )
             
             StatCard(
                 title: "Monthly Savings",
-                amount: savings,
+                value: savings.formatted(.currency(code: "USD")),
                 icon: "arrow.up.circle.fill",
                 color: .green
             )
         }
         .padding(.horizontal, 16)
-    }
-}
-
-// MARK: - Stat Card Component
-struct StatCard: View {
-    let title: String
-    let amount: Double
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(color.opacity(0.8))
-                Text(title)
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .textCase(.uppercase)
-            }
-            Text(amount.formatted(.currency(code: "USD")))
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundColor(.white)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(hex: "1E293B"))
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-        )
     }
 }
 

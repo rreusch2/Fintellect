@@ -25,7 +25,12 @@ struct AIHubView: View {
                         GridItem(.flexible())
                     ], spacing: 16) {
                         ForEach(viewModel.aiStats) { stat in
-                            StatCard(stat: stat)
+                            StatCard(
+                                title: stat.label,
+                                value: stat.value,
+                                icon: stat.icon,
+                                color: stat.color
+                            )
                         }
                     }
                 }
@@ -90,17 +95,20 @@ struct AIHubView: View {
 // MARK: - Supporting Views
 
 struct StatCard: View {
-    let stat: AIStat
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
     
     var body: some View {
         VStack(spacing: 8) {
-            Image(systemName: stat.icon)
+            Image(systemName: icon)
                 .font(.system(size: 20))
-                .foregroundColor(Color(hex: "3B82F6").opacity(0.8))
-            Text(stat.value)
+                .foregroundColor(color.opacity(0.8))
+            Text(value)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.white)
-            Text(stat.label)
+            Text(title)
                 .font(.caption)
                 .foregroundColor(.gray)
         }

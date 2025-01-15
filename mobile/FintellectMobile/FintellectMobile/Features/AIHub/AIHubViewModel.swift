@@ -6,6 +6,7 @@ struct AIStat: Identifiable {
     let value: String
     let label: String
     let icon: String
+    var color: Color = Color(hex: "3B82F6")
 }
 
 struct AIService: Identifiable {
@@ -23,9 +24,9 @@ struct AIService: Identifiable {
 class AIHubViewModel: ObservableObject {
     @Published var aiStats: [AIStat] = [
         AIStat(value: "24/7", label: "AI Availability", icon: "clock.fill"),
-        AIStat(value: "Bank-Grade", label: "Security", icon: "lock.shield.fill"),
-        AIStat(value: "Real-Time", label: "Analysis", icon: "sparkles"),
-        AIStat(value: "Plaid", label: "Integration", icon: "link.circle.fill")
+        AIStat(value: "Bank-Grade", label: "Security", icon: "lock.shield.fill", color: Color(hex: "22C55E")),
+        AIStat(value: "Real-Time", label: "Analysis", icon: "sparkles", color: Color(hex: "8B5CF6")),
+        AIStat(value: "Plaid", label: "Integration", icon: "link.circle.fill", color: Color(hex: "3B82F6"))
     ]
     
     @Published var availableServices: [AIService] = [

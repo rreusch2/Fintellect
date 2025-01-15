@@ -9,16 +9,17 @@ struct AIHubView: View {
             VStack(spacing: 24) {
                 // Hero Section
                 VStack(spacing: 16) {
-                    Text("AI-Powered Financial Services")
-                        .font(.system(size: 28, weight: .bold))
+                    Text("AI Financial Services")
+                        .font(.system(size: 32, weight: .bold))
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
                     
-                    Text("Experience the future of finance with our advanced AI technologies. Featuring 24/7 availability, bank-grade security, real-time analysis, and seamless Plaid integration for your financial success.")
+                    Text("Featuring 24/7 availability, bank-grade security, real-time analysis, and seamless Plaid integration for your financial success.")
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(Color(hex: "94A3B8"))
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                        .padding(.horizontal, 24)
                 }
                 .padding(.top)
                 
@@ -84,7 +85,7 @@ struct AIDisclaimerCard: View {
             
             Text("These insights are AI-generated based on your financial data. Consider them as suggestions, not professional financial advice.")
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(Color(hex: "94A3B8"))
                 .lineLimit(3)
                 .minimumScaleFactor(0.8)
         }
@@ -120,8 +121,8 @@ struct ServiceCard: View {
             // Description
             Text(service.description)
                 .font(.subheadline)
-                .foregroundColor(.gray)
-                .lineLimit(3)
+                .foregroundColor(Color(hex: "94A3B8"))
+                .fixedSize(horizontal: false, vertical: true)
             
             // Features
             VStack(alignment: .leading, spacing: 8) {
@@ -132,7 +133,7 @@ struct ServiceCard: View {
                             .frame(width: 6, height: 6)
                         Text(feature)
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(Color(hex: "94A3B8"))
                     }
                 }
             }

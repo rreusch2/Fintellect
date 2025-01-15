@@ -1,5 +1,8 @@
 import SwiftUI
 
+// Import the AIFinancialAssistantView
+@_exported import struct FintellectMobile.AIFinancialAssistantView
+
 // MARK: - Models
 struct AIStat: Identifiable {
     let id = UUID()

@@ -139,17 +139,25 @@ struct ServiceCard: View {
             }
             
             if !isComingSoon {
-                NavigationLink(destination: service.destination) {
-                    Text("Access Service")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(service.iconColor.opacity(0.2))
-                        )
+                NavigationLink {
+                    service.destination
+                } label: {
+                    HStack {
+                        Text("Access Service")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(service.iconColor.opacity(0.2))
+                    )
                 }
             }
         }
@@ -166,5 +174,6 @@ struct ServiceCard: View {
 #Preview {
     NavigationView {
         AIHubView()
+            .preferredColorScheme(.dark)
     }
 } 

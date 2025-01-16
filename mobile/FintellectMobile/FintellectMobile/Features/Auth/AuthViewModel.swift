@@ -20,7 +20,7 @@ class AuthViewModel: ObservableObject {
         
         do {
             let credentials = ["username": username.lowercased(), "password": password]
-            let response = try await APIClient.shared.post("/api/auth/mobile/login", body: credentials)
+            let response: Data = try await APIClient.shared.post("/api/auth/mobile/login", body: credentials)
             
             if let loginResponse = try? JSONDecoder().decode(LoginResponse.self, from: response) {
                 // Store tokens
@@ -65,7 +65,7 @@ class AuthViewModel: ObservableObject {
         }
         
         do {
-            let response = try await APIClient.shared.get("/api/auth/mobile/verify")
+            let response: Data = try await APIClient.shared.get("/api/auth/mobile/verify")
             if let user = try? JSONDecoder().decode(User.self, from: response) {
                 self.currentUser = user
                 self.isAuthenticated = true
@@ -85,7 +85,7 @@ class AuthViewModel: ObservableObject {
         }
         
         do {
-            let response = try await APIClient.shared.post("/api/auth/mobile/refresh", body: ["refreshToken": refreshToken])
+            let response: Data = try await APIClient.shared.post("/api/auth/mobile/refresh", body: ["refreshToken": refreshToken])
             if let refreshResponse = try? JSONDecoder().decode(RefreshResponse.self, from: response) {
                 try KeychainManager.saveToken(refreshResponse.accessToken, forKey: "accessToken")
                 print("[Auth] Access token refreshed successfully")

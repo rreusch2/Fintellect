@@ -187,6 +187,7 @@ struct AuthView: View {
                                 .cornerRadius(14)
                                 .shadow(color: Color(hex: "3B82F6").opacity(0.3), radius: 8, x: 0, y: 4)
                             }
+                            .disabled(authViewModel.isLoading)
                             .frame(maxWidth: .infinity)
                             
                             Button(action: {
@@ -227,6 +228,24 @@ struct AuthView: View {
                 }
                 withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
                     appear[2] = true
+                }
+            }
+            .onChange(of: authViewModel.isAuthenticated) { isAuthenticated in
+                if isAuthenticated {
+                    print("[Auth] Authentication state changed to authenticated")
+                    // Handle navigation based on onboarding status
+                    if let user = authViewModel.currentUser, !user.hasCompletedOnboarding {
+                        showRegister = true
+                    }
+                }
+            }
+            .alert("Error", isPresented: .constant(authViewModel.error != nil)) {
+                Button("OK") {
+                    authViewModel.error = nil
+                }
+            } message: {
+                if let error = authViewModel.error {
+                    Text(error)
                 }
             }
         }

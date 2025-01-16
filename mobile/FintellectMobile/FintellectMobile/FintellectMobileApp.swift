@@ -14,18 +14,30 @@ struct FintellectMobileApp: App {
     
     var body: some Scene {
         WindowGroup {
-
-            if authViewModel.isAuthenticated {
-                MainTabView()
-                    .environmentObject(authViewModel)
-            } else if hasSeenWelcome {
-                AuthView(hasSeenWelcome: $hasSeenWelcome)
-                    .environmentObject(authViewModel)
-            } else {
-                WelcomeView(hasSeenWelcome: $hasSeenWelcome)
-                    .environmentObject(authViewModel)
+            Group {
+                if authViewModel.isAuthenticated {
+                    if let user = authViewModel.currentUser {
+                        if user.hasCompletedOnboarding {
+                            MainTabView()
+                                .environmentObject(authViewModel)
+                        } else {
+                            OnboardingView()
+                                .environmentObject(authViewModel)
+                        }
+                    }
+                } else {
+                    if hasSeenWelcome {
+                        AuthView(hasSeenWelcome: $hasSeenWelcome)
+                            .environmentObject(authViewModel)
+                    } else {
+                        WelcomeView(hasSeenWelcome: $hasSeenWelcome)
+                            .environmentObject(authViewModel)
+                    }
+                }
             }
-        
+            .onChange(of: authViewModel.isAuthenticated) { newValue in
+                print("[App] Authentication state changed: \(newValue)")
+            }
         }
     }
 }

@@ -2,8 +2,8 @@ import Foundation
 import SwiftUI
 
 enum OnboardingStep: Int, CaseIterable {
-    case terms = 1
-    case bankConnection = 2
+    case terms = 0
+    case bankConnection = 1
     
     var title: String {
         switch self {

@@ -1,19 +1,5 @@
 import SwiftUI
 
-enum OnboardingStep: Int, CaseIterable {
-    case terms = 0
-    case bankConnection = 1
-    
-    var title: String {
-        switch self {
-        case .terms:
-            return "Terms & Privacy"
-        case .bankConnection:
-            return "Connect Bank"
-        }
-    }
-}
-
 struct OnboardingView: View {
     @StateObject private var viewModel = OnboardingViewModel()
     @Environment(\.dismiss) private var dismiss

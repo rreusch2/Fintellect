@@ -147,8 +147,8 @@ struct RegisterView: View {
                                 print("[Register] Attempting registration with username: \(username)")
                                 await authViewModel.register(
                                     username: username,
-                                    password: password,
-                                    email: email
+                                    email: email,
+                                    password: password
                                 )
                                 if authViewModel.isAuthenticated {
                                     print("[Register] Registration successful, showing onboarding")

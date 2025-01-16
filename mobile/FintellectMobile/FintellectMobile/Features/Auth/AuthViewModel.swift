@@ -75,7 +75,7 @@ class AuthViewModel: ObservableObject {
         isLoading = false
     }
     
-    private func loginAsDemoUser() async throws {
+    func loginAsDemoUser() async throws {
         let data = try await apiClient.post("/api/auth/mobile/login", body: ["username": "demo", "password": "demo"])
         let loginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
         

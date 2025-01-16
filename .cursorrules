@@ -56,8 +56,25 @@ environment:
   workflow:
     - "I code on Cursor on my Windows 11 PC."
     - "When changes are ready, I run 'gpush,' a custom PowerShell function that executes 'git add .', 'git commit -m "Update",' and 'git push origin ios-development.'"
-    - "I then switch to MacinCloud, pull the latest changes, and open them in Cursor or Xcode."
+    - "On MacinCloud, I can either:"
+      - "Option 1 (Direct): Open Xcode and use Source Control (⌘⇧P) to pull changes"
+      - "Option 2 (Traditional): Open Cursor, pull changes, then open in Xcode"
     - "On MacinCloud, I start the Node.js backend with 'npm run dev' and test the SwiftUI app using the Xcode simulator."
+  xcode_shortcuts:
+    - "⌘⇧P (Windows: Win/Alt + Shift + P): Pull changes"
+    - "⌘⌥C (Windows: Win/Alt + Alt/Win + C): Commit changes"
+    - "⌘⌥X (Windows: Win/Alt + Alt/Win + X): Push changes"
+    - "⌘2 (Windows: Win/Alt + 2): Source Control navigator"
+  windows_keyboard_mapping:
+    - "Command (⌘) = Windows key (⊞) or Alt key"
+    - "Option (⌥) = Alt key or Windows key (whichever you didn't use for Command)"
+    - "Control (⌃) = Control key"
+    - "Shift (⇧) = Shift key"
+  optimization_tips:
+    - "Enable 'Refresh local status automatically' in Xcode Source Control preferences"
+    - "Enable 'Refresh server status automatically' in Xcode Source Control preferences"
+    - "Set up SSH keys on MacinCloud to avoid entering credentials repeatedly"
+    - "Use Xcode's Source Control navigator for quick access to changes"
 
 # -----------------------------------------------------------
 # Directory Structure

@@ -226,29 +226,52 @@ struct CustomTextField: View {
     let placeholder: String
     let systemImage: String
     var isSecure: Bool = false
+    @State private var isShowingPassword = false
+    @FocusState private var isFocused: Bool
     
     var body: some View {
         HStack(spacing: 12) {
+            // Icon
             Image(systemName: systemImage)
-                .foregroundColor(Color(hex: "64748B"))
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(isFocused ? Color(hex: "3B82F6") : Color(hex: "64748B"))
                 .frame(width: 24)
             
+            // Text Field
+            Group {
+                if isSecure && !isShowingPassword {
+                    SecureField(placeholder, text: $text)
+                } else {
+                    TextField(placeholder, text: $text)
+                }
+            }
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .foregroundColor(.white)
+            .tint(Color(hex: "3B82F6"))
+            .focused($isFocused)
+            
+            // Show/Hide Password Button (only for secure fields)
             if isSecure {
-                SecureField(placeholder, text: $text)
-                    .foregroundColor(.white)
-            } else {
-                TextField(placeholder, text: $text)
-                    .foregroundColor(.white)
+                Button(action: {
+                    isShowingPassword.toggle()
+                }) {
+                    Image(systemName: isShowingPassword ? "eye.slash.fill" : "eye.fill")
+                        .foregroundColor(Color(hex: "64748B"))
+                        .frame(width: 20, height: 20)
+                }
             }
         }
-        .padding()
-        .background(Color(hex: "1E293B"))
-        .cornerRadius(12)
-        .overlay(
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: "3B82F6").opacity(0.2), lineWidth: 1)
+                .fill(Color(hex: "1E293B"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isFocused ? Color(hex: "3B82F6") : Color(hex: "334155"), lineWidth: 1)
+                )
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 2)
     }
 }
 

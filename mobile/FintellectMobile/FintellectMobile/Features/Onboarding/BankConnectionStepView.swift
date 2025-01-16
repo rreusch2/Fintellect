@@ -59,11 +59,8 @@ struct BankConnectionStepView: View {
             VStack(spacing: 16) {
                 // Connect Bank Button
                 Button(action: {
-                    isConnecting = true
-                    // Simulate connection delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        isConnecting = false
-                        viewModel.nextStep()
+                    Task {
+                        await connectBank()
                     }
                 }) {
                     HStack {
@@ -88,16 +85,26 @@ struct BankConnectionStepView: View {
                     .cornerRadius(14)
                     .shadow(color: Color(hex: "3B82F6").opacity(0.3), radius: 8, x: 0, y: 4)
                 }
-                .disabled(isConnecting)
+                .disabled(isConnecting || viewModel.isLoading)
                 
                 // Skip Button
                 Button(action: {
-                    viewModel.nextStep()
+                    Task {
+                        await viewModel.completeOnboarding()
+                    }
                 }) {
-                    Text("Skip for now")
-                        .font(.subheadline)
-                        .foregroundColor(Color(hex: "94A3B8"))
+                    HStack {
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+                        } else {
+                            Text("Skip for now")
+                                .font(.subheadline)
+                                .foregroundColor(Color(hex: "94A3B8"))
+                        }
+                    }
                 }
+                .disabled(isConnecting || viewModel.isLoading)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
@@ -115,6 +122,26 @@ struct BankConnectionStepView: View {
                 appear[2] = true
             }
         }
+    }
+    
+    private func connectBank() async {
+        isConnecting = true
+        
+        do {
+            // Get Plaid link token
+            let response: Data = try await APIClient.shared.post("/api/plaid/create-link-token", body: [:])
+            if let linkResponse = try? JSONDecoder().decode(PlaidLinkResponse.self, from: response) {
+                print("[Plaid] Link token created: \(linkResponse.linkToken)")
+                // TODO: Open Plaid Link using the token
+                // For now, we'll just complete onboarding
+                await viewModel.completeOnboarding()
+            }
+        } catch {
+            print("[Plaid] Error creating link token: \(error)")
+            viewModel.error = "Failed to connect bank account. Please try again."
+        }
+        
+        isConnecting = false
     }
 }
 
@@ -134,6 +161,14 @@ struct SecurityFeatureRow: View {
             
             Spacer()
         }
+    }
+}
+
+struct PlaidLinkResponse: Codable {
+    let linkToken: String
+    
+    enum CodingKeys: String, CodingKey {
+        case linkToken = "link_token"
     }
 }
 

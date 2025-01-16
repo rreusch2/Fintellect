@@ -92,23 +92,35 @@ struct TermsStepView: View {
             
             // Continue Button
             Button(action: {
-                viewModel.nextStep()
+                Task {
+                    await viewModel.acceptTerms()
+                }
             }) {
-                Text("Continue")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(hex: "3B82F6"), Color(hex: "2563EB")],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
+                HStack {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text("Continue")
+                            .font(.headline)
+                    }
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    LinearGradient(
+                        colors: viewModel.hasAcceptedTerms && viewModel.hasAcceptedPrivacy ?
+                            [Color(hex: "3B82F6"), Color(hex: "2563EB")] :
+                            [Color(hex: "64748B"), Color(hex: "475569")],
+                        startPoint: .leading,
+                        endPoint: .trailing
                     )
-                    .cornerRadius(14)
-                    .shadow(color: Color(hex: "3B82F6").opacity(0.3), radius: 8, x: 0, y: 4)
+                )
+                .cornerRadius(14)
+                .shadow(color: (viewModel.hasAcceptedTerms && viewModel.hasAcceptedPrivacy ? Color(hex: "3B82F6") : Color(hex: "64748B")).opacity(0.3), radius: 8, x: 0, y: 4)
             }
+            .disabled(!viewModel.hasAcceptedTerms || !viewModel.hasAcceptedPrivacy || viewModel.isLoading)
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
             .opacity(appear[2] ? 1 : 0)

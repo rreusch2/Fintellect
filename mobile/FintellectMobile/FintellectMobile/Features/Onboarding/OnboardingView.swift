@@ -21,6 +21,34 @@ class OnboardingViewModel: ObservableObject {
     @Published var showTermsSheet = false
     @Published var showPrivacySheet = false
     @Published var showBankConnectionSheet = false
+    @Published var error: String?
+    @Published var isLoading = false
+    
+    func acceptTerms() async {
+        guard hasAcceptedTerms && hasAcceptedPrivacy else {
+            error = "Please accept both Terms of Service and Privacy Policy"
+            return
+        }
+        
+        isLoading = true
+        error = nil
+        
+        do {
+            let body = [
+                "acceptedTerms": true,
+                "acceptedPrivacy": true
+            ]
+            
+            let _: Data = try await APIClient.shared.post("/api/auth/mobile/accept-terms", body: body)
+            print("[Onboarding] Terms accepted successfully")
+            nextStep()
+        } catch {
+            self.error = error.localizedDescription
+            print("[Onboarding] Error accepting terms: \(error)")
+        }
+        
+        isLoading = false
+    }
     
     func nextStep() {
         if let currentIndex = OnboardingStep.allCases.firstIndex(of: currentStep),
@@ -35,10 +63,21 @@ class OnboardingViewModel: ObservableObject {
     }
     
     func completeOnboarding() {
-        // TODO: Implement backend integration
-        // For now, we'll just set a local flag
-        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-        NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
+        Task {
+            isLoading = true
+            error = nil
+            
+            do {
+                let _: Data = try await APIClient.shared.post("/api/auth/mobile/complete-onboarding", body: [:])
+                print("[Onboarding] Onboarding completed successfully")
+                NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
+            } catch {
+                self.error = error.localizedDescription
+                print("[Onboarding] Error completing onboarding: \(error)")
+            }
+            
+            isLoading = false
+        }
     }
 }
 
@@ -85,12 +124,27 @@ struct OnboardingView: View {
                     }
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
+                
+                if viewModel.isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(1.5)
+                }
             }
             .sheet(isPresented: $viewModel.showTermsSheet) {
                 TermsSheet()
             }
             .sheet(isPresented: $viewModel.showPrivacySheet) {
                 PrivacySheet()
+            }
+            .alert("Error", isPresented: .constant(viewModel.error != nil)) {
+                Button("OK") {
+                    viewModel.error = nil
+                }
+            } message: {
+                if let error = viewModel.error {
+                    Text(error)
+                }
             }
         }
     }

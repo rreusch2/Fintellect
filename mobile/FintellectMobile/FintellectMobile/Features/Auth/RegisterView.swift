@@ -143,13 +143,17 @@ struct RegisterView: View {
                         
                         // Create Account Button
                         Button(action: {
+                            print("[Register] Attempting to create account for username: \(username)")
                             Task {
+                                print("[Register] Starting registration process")
                                 await authViewModel.register(
                                     username: username,
                                     email: email,
                                     password: password
                                 )
+                                print("[Register] Registration completed, isAuthenticated: \(authViewModel.isAuthenticated)")
                                 if authViewModel.isAuthenticated {
+                                    print("[Register] Showing onboarding view")
                                     showOnboarding = true
                                 }
                             }

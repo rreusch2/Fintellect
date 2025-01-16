@@ -30,7 +30,12 @@ const allowedOrigins = [
 ];
 
 if (process.env.NODE_ENV === 'development') {
-  allowedOrigins.push('http://localhost:5173');
+  allowedOrigins.push(
+    'http://localhost:5173',
+    'http://localhost:5001',
+    'capacitor://localhost',
+    'http://localhost'
+  );
 }
 
 app.use(cors({
@@ -46,6 +51,35 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization');
+  next();
+});
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+      log(logLine);
+    }
+  });
+
   next();
 });
 
@@ -82,38 +116,17 @@ async function startServer() {
   }
 }
 
-// Request logging middleware
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-      log(logLine);
-    }
-  });
-
-  next();
-});
-
 (async () => {
+  const serverStarted = await startServer();
+  if (!serverStarted) {
+    log('Failed to start server');
+    process.exit(1);
+  }
+
+  // Register API routes first
   const server = registerRoutes(app);
 
+  // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -121,6 +134,7 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // Setup web app after API routes
   if (process.env.NODE_ENV === "development") {
     const { setupVite } = await import("./vite.js");
     await setupVite(app, server);
@@ -129,13 +143,7 @@ app.use((req, res, next) => {
   }
 
   const PORT = process.env.PORT || 5001;
-  const serverStarted = await startServer();
-  if (serverStarted) {
-    server.listen(PORT, "0.0.0.0", () => {
-      log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
-    });
-  } else {
-    log('Failed to start server');
-    process.exit(1);
-  }
+  server.listen(PORT, "0.0.0.0", () => {
+    log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+  });
 })();

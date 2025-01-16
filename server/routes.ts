@@ -33,7 +33,12 @@ export function registerRoutes(app: Express): Server {
   // Setup authentication middleware and routes
   setupAuth(app);
 
-  // Mount the mobile auth router
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Mount the mobile auth router first
   app.use("/api/auth/mobile", mobileAuthRouter);
 
   // Mount the Plaid router

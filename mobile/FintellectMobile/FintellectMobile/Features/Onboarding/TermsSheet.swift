@@ -9,7 +9,7 @@ struct TermsSheet: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Agreement Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(icon: "doc.text", title: "Agreement to Terms")
+                        SectionTitle(title: "Agreement to Terms", icon: "doc.text")
                         
                         Text("By accessing or using our service, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service.")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -17,7 +17,7 @@ struct TermsSheet: View {
                     
                     // AI Services Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(icon: "brain", title: "AI Financial Services")
+                        SectionTitle(title: "AI Financial Services", icon: "brain")
                         
                         Text("Our AI-powered insights and recommendations are for informational purposes only and do not constitute financial advice. Always consult with qualified financial professionals for important financial decisions.")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -32,7 +32,7 @@ struct TermsSheet: View {
                     
                     // User Accounts Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(icon: "person.fill", title: "User Accounts")
+                        SectionTitle(title: "User Accounts", icon: "person.fill")
                         
                         Text("You are responsible for:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -47,7 +47,7 @@ struct TermsSheet: View {
                     
                     // Financial Data Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(icon: "lock.shield", title: "Financial Data & Privacy")
+                        SectionTitle(title: "Financial Data & Privacy", icon: "lock.shield")
                         
                         Text("By using our service, you acknowledge that:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -62,7 +62,7 @@ struct TermsSheet: View {
                     
                     // Limitations Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(icon: "exclamationmark.triangle", title: "Limitations of Liability")
+                        SectionTitle(title: "Limitations of Liability", icon: "exclamationmark.triangle")
                         
                         Text("We are not liable for:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -97,8 +97,8 @@ struct TermsSheet: View {
 }
 
 struct SectionTitle: View {
-    let icon: String
     let title: String
+    let icon: String
     
     var body: some View {
         HStack(spacing: 8) {

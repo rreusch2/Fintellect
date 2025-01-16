@@ -9,7 +9,7 @@ struct PrivacySheet: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Data Collection Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(icon: "tray.fill", title: "Data Collection")
+                        SectionTitle(title: "Data Collection", icon: "tray.fill")
                         
                         Text("Information We Collect:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -25,7 +25,7 @@ struct PrivacySheet: View {
                     
                     // Data Usage Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(icon: "chart.bar.fill", title: "Data Usage")
+                        SectionTitle(title: "Data Usage", icon: "chart.bar.fill")
                         
                         Text("We use your data to:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -53,7 +53,7 @@ struct PrivacySheet: View {
                     
                     // Data Security Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(icon: "lock.shield.fill", title: "Data Security")
+                        SectionTitle(title: "Data Security", icon: "lock.shield.fill")
                         
                         Text("We implement industry-standard security measures:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -68,7 +68,7 @@ struct PrivacySheet: View {
                     
                     // Plaid Integration Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(icon: "link.circle.fill", title: "Plaid Integration")
+                        SectionTitle(title: "Plaid Integration", icon: "link.circle.fill")
                         
                         Text("We use Plaid to securely connect to your financial institutions. Your banking credentials are never stored on our servers and are handled directly by Plaid.")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -76,7 +76,7 @@ struct PrivacySheet: View {
                     
                     // User Rights Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(icon: "person.text.rectangle.fill", title: "Your Rights")
+                        SectionTitle(title: "Your Rights", icon: "person.text.rectangle.fill")
                         
                         Text("You have the right to:")
                             .foregroundColor(Color(hex: "94A3B8"))

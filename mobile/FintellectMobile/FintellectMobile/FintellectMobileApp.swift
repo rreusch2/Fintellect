@@ -14,10 +14,7 @@ struct FintellectMobileApp: App {
     
     var body: some Scene {
         WindowGroup {
-            #if DEBUG
-            // Temporary test view for development
-            AuthTestView()
-            #else
+
             if authViewModel.isAuthenticated {
                 MainTabView()
                     .environmentObject(authViewModel)
@@ -28,7 +25,7 @@ struct FintellectMobileApp: App {
                 WelcomeView(hasSeenWelcome: $hasSeenWelcome)
                     .environmentObject(authViewModel)
             }
-            #endif
+        
         }
     }
 }

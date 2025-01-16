@@ -172,23 +172,47 @@ router.post('/login', async (req, res) => {
 
 // Refresh token endpoint
 router.post('/refresh', async (req, res) => {
-  console.log('[Mobile Auth] Token refresh attempt');
+  console.log('[Mobile Auth] Token refresh request');
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    console.log('[Mobile Auth] Refresh failed: No token provided');
-    return res.status(400).json({ error: 'No refresh token provided' });
+    console.log('[Mobile Auth] No refresh token provided');
+    return res.status(401).json({ error: 'No refresh token provided' });
   }
 
   try {
     const decoded = jwt.verify(refreshToken, JWT_SECRET) as { userId: number };
-    const accessToken = createAccessToken(decoded.userId);
+    console.log(`[Mobile Auth] Refresh token verified for user ${decoded.userId}`);
+    
+    // For demo user, create new access token
+    if (decoded.userId === 999999) {
+      const accessToken = createAccessToken(999999);
+      return res.json({ accessToken });
+    }
+    
+    // Verify user still exists
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, decoded.userId))
+      .limit(1);
+      
+    if (!user) {
+      console.log(`[Mobile Auth] User ${decoded.userId} not found during refresh`);
+      return res.status(401).json({ error: 'Invalid refresh token' });
+    }
 
-    console.log(`[Mobile Auth] Token refresh successful for user ${decoded.userId}`);
+    // Generate new access token
+    const accessToken = createAccessToken(user.id);
     res.json({ accessToken });
   } catch (error) {
-    console.log('[Mobile Auth] Token refresh failed: Invalid token');
-    res.status(401).json({ error: 'Invalid refresh token' });
+    if (error instanceof jwt.TokenExpiredError) {
+      console.log('[Mobile Auth] Refresh token expired');
+      return res.status(401).json({ error: 'Refresh token expired' });
+    }
+    
+    console.log('[Mobile Auth] Invalid refresh token:', error);
+    return res.status(401).json({ error: 'Invalid refresh token' });
   }
 });
 

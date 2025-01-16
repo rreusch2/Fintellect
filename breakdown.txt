@@ -1,0 +1,285 @@
+# Fintellect Authentication, Registration & Onboarding Flow Analysis
+
+## 1. Core Authentication Infrastructure (server/auth/)
+
+### Session Management
+```typescript
+// server/auth/index.ts
+const MemoryStore = createMemoryStore(session);
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  store: new MemoryStore({
+    checkPeriod: 86400000 // 24h cleanup
+  }),
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    sameSite: 'lax'
+  }
+}));
+```
+
+### User Serialization
+```typescript
+passport.serializeUser((user: any, done) => {
+  console.log('Serializing user:', user.id);
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id: number, done) => {
+  const user = await db.query.users.findFirst({
+    where: (users, { eq }) => eq(users.id, id)
+  });
+  done(null, user);
+});
+```
+
+## 2. Database Schema (db/schema.ts)
+
+### User Table Structure
+```typescript
+users = pgTable({
+  id: serial("id").primaryKey(),
+  username: text("username").unique().notNull(),
+  email: text("email"),
+  googleId: text("google_id"),
+  googleEmail: text("google_email"),
+  avatar: text("avatar"),
+  hasPlaidSetup: boolean("has_plaid_setup").default(false),
+  hasCompletedOnboarding: boolean("has_completed_onboarding").default(false),
+  consentVersion: text("consent_version"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+```
+
+### Plaid Integration Tables
+```typescript
+plaidItems = pgTable({
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  plaidAccessToken: text("plaid_access_token").notNull(),
+  plaidItemId: text("plaid_item_id").notNull(),
+  status: text("status").default("active"),
+  lastSync: timestamp("last_sync"),
+  error: jsonb("error")
+});
+```
+
+## 3. Authentication Flow
+
+### Registration Process
+1. Google OAuth2 Authentication:
+```typescript
+// server/auth/google.ts
+new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID!,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+  callbackURL: '/api/auth/google/callback'
+}, async (req, accessToken, refreshToken, profile, done) => {
+  // Check existing user
+  const existingUser = await findUserByGoogleId(profile.id);
+  if (existingUser) return done(null, existingUser);
+
+  // Create new user
+  const newUser = await createUserFromGoogle(profile);
+  return done(null, newUser);
+});
+```
+
+### Login Flow
+1. Session Creation
+2. User Authentication
+3. Redirect Handling
+
+### Security Middleware
+```typescript
+// server/middleware/secure.ts
+export function requireHTTPS(req, res, next) {
+  if (process.env.NODE_ENV !== 'production') return next();
+  
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    next();
+  } else {
+    res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+}
+```
+
+## 4. Onboarding Process
+
+### Steps
+1. Initial Registration
+2. Profile Setup
+3. Plaid Link Integration
+4. Goal Setting
+5. Completion
+
+### State Management
+```typescript
+// Onboarding progress tracking
+const updateOnboardingStep = async (userId: number, step: number) => {
+  await db.update(users)
+    .set({ onboardingStep: step })
+    .where(eq(users.id, userId));
+};
+```
+
+## 5. Plaid Integration Flow
+
+### Link Token Creation
+```typescript
+// server/api/plaid/sync.ts
+const createLinkToken = async (userId: number) => {
+  const configs = {
+    user: { client_user_id: userId.toString() },
+    client_name: 'Fintellect',
+    products: ['transactions'],
+    country_codes: ['US'],
+    language: 'en'
+  };
+  
+  return await plaidClient.linkTokenCreate(configs);
+};
+```
+
+### Account Synchronization
+```typescript
+export async function syncPlaidData(userId: number) {
+  // Get Plaid items
+  const items = await db
+    .select()
+    .from(plaidItems)
+    .where(eq(plaidItems.userId, userId));
+
+  for (const item of items) {
+    // Sync accounts
+    const accountsResponse = await plaidClient.accountsGet({
+      access_token: item.plaidAccessToken
+    });
+
+    // Update accounts
+    for (const account of accountsResponse.data.accounts) {
+      await upsertAccount(userId, item.id, account);
+    }
+
+    // Sync transactions
+    await syncTransactions(item.plaidAccessToken, userId);
+  }
+}
+```
+
+## 6. Frontend Integration (client/)
+
+### Protected Routes
+```typescript
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  return loading ? <LoadingSpinner /> 
+    : isAuthenticated ? children 
+    : <Navigate to="/auth" />;
+};
+```
+
+### Onboarding Flow
+```typescript
+const OnboardingFlow = () => {
+  const steps = [
+    <WelcomeStep />,
+    <PlaidLinkStep />,
+    <ProfileSetupStep />,
+    <GoalsSetupStep />,
+    <CompletionStep />
+  ];
+  
+  return <OnboardingProvider>{steps[currentStep]}</OnboardingProvider>;
+};
+```
+
+## 7. API Routes (server/routes/)
+
+### Authentication Routes
+```typescript
+router.get('/auth/google', passport.authenticate('google'));
+router.get('/auth/google/callback', passport.authenticate('google'), handleCallback);
+router.post('/auth/logout', handleLogout);
+router.get('/auth/session', getSession);
+```
+
+### Onboarding Routes
+```typescript
+router.get('/onboarding/status', getStatus);
+router.post('/onboarding/step/:step', updateStep);
+router.post('/onboarding/complete', completeOnboarding);
+```
+
+### Plaid Routes
+```typescript
+router.post('/plaid/link/token', createLinkToken);
+router.post('/plaid/item/public_token', exchangePublicToken);
+router.get('/plaid/accounts', getAccounts);
+```
+
+## 8. Error Handling
+
+### Authentication Errors
+```typescript
+// server/auth/errors.ts
+export class AuthError extends Error {
+  constructor(message: string, public code: string, public statusCode: number = 400) {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+```
+
+### Error Responses
+```typescript
+export const AUTH_ERRORS = {
+  GOOGLE_AUTH_FAILED: new AuthError(
+    'Google authentication failed',
+    'GOOGLE_AUTH_FAILED',
+    401
+  ),
+  USER_EXISTS: new AuthError(
+    'User already exists',
+    'USER_EXISTS',
+    409
+  )
+};
+```
+
+## 9. Security Measures
+
+### Session Protection
+- HTTPS enforcement
+- Secure cookie settings
+- CSRF protection
+- Rate limiting
+
+### Data Security
+- Password hashing
+- Token encryption
+- Secure headers
+
+## 10. Development vs Production
+
+### Environment Configuration
+```typescript
+// server/vite.ts
+export async function setupVite(app: Express, server: Server) {
+  if (process.env.NODE_ENV === "development") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true, hmr: { server } }
+    });
+    app.use(vite.middlewares);
+  } else {
+    app.use(express.static(publicPath));
+  }
+}
+```
+
+This comprehensive system ensures secure user authentication, smooth onboarding, and reliable Plaid integration while maintaining security best practices and proper separation of concerns.

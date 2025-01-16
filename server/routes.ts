@@ -17,6 +17,7 @@ import { PlaidService } from "./services/plaid";
 import plaidRouter from "./routes/plaid";
 import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent";
 import { financialTipAgent } from "./services/ai/agents/FinancialTipAgent";
+import mobileAuthRouter from './auth/mobile';
 
 
 const scryptAsync = promisify(scrypt);
@@ -31,6 +32,9 @@ const crypto = {
 export function registerRoutes(app: Express): Server {
   // Setup authentication middleware and routes
   setupAuth(app);
+
+  // Mount the mobile auth router
+  app.use("/api/auth/mobile", mobileAuthRouter);
 
   // Mount the Plaid router
   app.use("/api/plaid", plaidRouter);

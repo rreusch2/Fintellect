@@ -79,3 +79,38 @@ struct InsightCard: View {
         )
     }
 }
+
+// MARK: - Section Title
+struct SectionTitle: View {
+    let title: String
+    let icon: String
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .foregroundColor(Color(hex: "3B82F6"))
+            Text(title)
+                .font(.headline)
+                .foregroundColor(.white)
+        }
+    }
+}
+
+// MARK: - Bullet Point
+struct BulletPoint: View {
+    let text: String
+    
+    init(_ text: String) {
+        self.text = text
+    }
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("•")
+                .foregroundColor(Color(hex: "3B82F6"))
+            Text(text)
+                .foregroundColor(Color(hex: "94A3B8"))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}

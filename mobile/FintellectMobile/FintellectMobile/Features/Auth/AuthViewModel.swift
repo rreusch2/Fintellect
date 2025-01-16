@@ -14,6 +14,37 @@ class AuthViewModel: ObservableObject {
         }
     }
     
+    func register(username: String, email: String, password: String) async {
+        isLoading = true
+        error = nil
+        
+        do {
+            let credentials = [
+                "username": username.lowercased(),
+                "email": email.lowercased(),
+                "password": password
+            ]
+            
+            let response: Data = try await APIClient.shared.post("/api/auth/mobile/register", body: credentials)
+            
+            if let registerResponse = try? JSONDecoder().decode(RegisterResponse.self, from: response) {
+                // Store tokens
+                try KeychainManager.saveToken(registerResponse.tokens.accessToken, forKey: "accessToken")
+                try KeychainManager.saveToken(registerResponse.tokens.refreshToken, forKey: "refreshToken")
+                
+                // Update user state
+                self.currentUser = registerResponse.user
+                self.isAuthenticated = true
+                print("[Auth] Registration successful for user: \(registerResponse.user.username)")
+            }
+        } catch {
+            self.error = error.localizedDescription
+            print("[Auth] Registration error: \(error)")
+        }
+        
+        isLoading = false
+    }
+    
     func login(username: String, password: String) async {
         isLoading = true
         error = nil
@@ -112,4 +143,10 @@ struct RefreshResponse: Codable {
 struct Tokens: Codable {
     let accessToken: String
     let refreshToken: String
+}
+
+struct RegisterResponse: Codable {
+    let success: Bool
+    let user: User
+    let tokens: Tokens
 } 

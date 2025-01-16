@@ -4,8 +4,7 @@ struct RegisterView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var authViewModel: AuthViewModel
     
-    @State private var firstName = ""
-    @State private var lastName = ""
+    @State private var username = ""
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
@@ -13,8 +12,7 @@ struct RegisterView: View {
     @State private var animateBackground = false
     
     private var isFormValid: Bool {
-        !firstName.isEmpty &&
-        !lastName.isEmpty &&
+        !username.isEmpty &&
         !email.isEmpty &&
         !password.isEmpty &&
         !confirmPassword.isEmpty &&
@@ -77,31 +75,7 @@ struct RegisterView: View {
             }
             
             ScrollView {
-                VStack(spacing: 24) {
-                    // Back Button
-                    HStack {
-                        Button(action: {
-                            dismiss()
-                        }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 20, weight: .medium))
-                                Text("Back to Login")
-                                    .font(.system(size: 17, weight: .regular))
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color(hex: "3B82F6").opacity(0.2))
-                            .clipShape(Capsule())
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .opacity(appear[0] ? 1 : 0)
-                    .offset(y: appear[0] ? 0 : 20)
-                    
+                VStack(spacing: 24) {                    
                     // Title
                     VStack(spacing: 8) {
                         Text("Create Account")
@@ -119,11 +93,37 @@ struct RegisterView: View {
                     
                     // Form Fields
                     VStack(spacing: 16) {
-                        CustomTextField(text: $firstName, placeholder: "First Name", systemImage: "person")
-                        CustomTextField(text: $lastName, placeholder: "Last Name", systemImage: "person")
-                        CustomTextField(text: $email, placeholder: "Email", systemImage: "envelope")
-                        CustomTextField(text: $password, placeholder: "Password", systemImage: "lock", isSecure: true)
-                        CustomTextField(text: $confirmPassword, placeholder: "Confirm Password", systemImage: "lock.shield", isSecure: true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Username")
+                                .foregroundColor(Color(hex: "94A3B8"))
+                                .font(.caption)
+                                .padding(.leading, 4)
+                            CustomTextField(text: $username, placeholder: "Choose a username", systemImage: "person")
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Email Address")
+                                .foregroundColor(Color(hex: "94A3B8"))
+                                .font(.caption)
+                                .padding(.leading, 4)
+                            CustomTextField(text: $email, placeholder: "Enter your email", systemImage: "envelope")
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Password")
+                                .foregroundColor(Color(hex: "94A3B8"))
+                                .font(.caption)
+                                .padding(.leading, 4)
+                            CustomTextField(text: $password, placeholder: "Create a password", systemImage: "lock", isSecure: true)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Confirm Password")
+                                .foregroundColor(Color(hex: "94A3B8"))
+                                .font(.caption)
+                                .padding(.leading, 4)
+                            CustomTextField(text: $confirmPassword, placeholder: "Confirm your password", systemImage: "lock.shield", isSecure: true)
+                        }
                     }
                     .frame(maxWidth: min(UIScreen.main.bounds.width - 60, 360))
                     .padding(.horizontal, 20)
@@ -143,7 +143,7 @@ struct RegisterView: View {
                     Button(action: {
                         Task {
                             // Will implement registration later
-                            // await authViewModel.register(firstName: firstName, lastName: lastName, email: email, password: password)
+                            // await authViewModel.register(username: username, email: email, password: password)
                         }
                     }) {
                         HStack {

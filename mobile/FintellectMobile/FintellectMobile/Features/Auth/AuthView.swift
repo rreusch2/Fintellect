@@ -125,15 +125,27 @@ struct AuthView: View {
                         
                         // Form Fields
                         VStack(spacing: 16) {
-                            CustomTextField(text: $username, placeholder: "Username", systemImage: "person")
-                                .frame(maxWidth: min(UIScreen.main.bounds.width - 60, 360))
-                                .opacity(appear[2] ? 1 : 0)
-                                .offset(y: appear[2] ? 0 : 20)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Username")
+                                    .foregroundColor(Color(hex: "94A3B8"))
+                                    .font(.caption)
+                                    .padding(.leading, 4)
+                                CustomTextField(text: $username, placeholder: "Enter your username", systemImage: "person")
+                                    .frame(maxWidth: min(UIScreen.main.bounds.width - 60, 360))
+                            }
+                            .opacity(appear[2] ? 1 : 0)
+                            .offset(y: appear[2] ? 0 : 20)
                             
-                            CustomTextField(text: $password, placeholder: "Password", systemImage: "lock", isSecure: true)
-                                .frame(maxWidth: min(UIScreen.main.bounds.width - 60, 360))
-                                .opacity(appear[2] ? 1 : 0)
-                                .offset(y: appear[2] ? 0 : 20)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Password")
+                                    .foregroundColor(Color(hex: "94A3B8"))
+                                    .font(.caption)
+                                    .padding(.leading, 4)
+                                CustomTextField(text: $password, placeholder: "Enter your password", systemImage: "lock", isSecure: true)
+                                    .frame(maxWidth: min(UIScreen.main.bounds.width - 60, 360))
+                            }
+                            .opacity(appear[2] ? 1 : 0)
+                            .offset(y: appear[2] ? 0 : 20)
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 32)

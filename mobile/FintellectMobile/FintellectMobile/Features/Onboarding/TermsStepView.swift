@@ -88,27 +88,44 @@ struct TermsStepView: View {
             .opacity(appear[2] ? 1 : 0)
             .offset(y: appear[2] ? 0 : 20)
             
+            // Error Message
+            if let error = viewModel.error {
+                Text(error)
+                    .foregroundColor(.red)
+                    .font(.caption)
+                    .padding(.horizontal, 20)
+                    .opacity(appear[2] ? 1 : 0)
+            }
+            
             Spacer()
             
             // Continue Button
             Button(action: {
                 viewModel.nextStep()
             }) {
-                Text("Continue")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(hex: "3B82F6"), Color(hex: "2563EB")],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
+                HStack {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .padding(.trailing, 8)
+                    }
+                    Text("Continue")
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    LinearGradient(
+                        colors: [Color(hex: "3B82F6"), Color(hex: "2563EB")],
+                        startPoint: .leading,
+                        endPoint: .trailing
                     )
-                    .cornerRadius(14)
-                    .shadow(color: Color(hex: "3B82F6").opacity(0.3), radius: 8, x: 0, y: 4)
+                )
+                .foregroundColor(.white)
+                .cornerRadius(14)
+                .shadow(color: Color(hex: "3B82F6").opacity(0.3), radius: 8, x: 0, y: 4)
             }
+            .disabled(viewModel.isLoading)
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
             .opacity(appear[2] ? 1 : 0)
@@ -123,6 +140,11 @@ struct TermsStepView: View {
             }
             withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
                 appear[2] = true
+            }
+            
+            // Check onboarding status
+            Task {
+                await viewModel.checkStatus()
             }
         }
     }

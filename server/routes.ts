@@ -18,6 +18,7 @@ import plaidRouter from "./routes/plaid";
 import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent";
 import { financialTipAgent } from "./services/ai/agents/FinancialTipAgent";
 import mobileAuthRouter from './auth/mobile';
+import onboardingRouter from './routes/onboarding';
 
 
 const scryptAsync = promisify(scrypt);
@@ -43,6 +44,9 @@ export function registerRoutes(app: Express): Server {
 
   // Mount the Plaid router
   app.use("/api/plaid", plaidRouter);
+
+  // Mount onboarding routes
+  app.use('/api/onboarding', onboardingRouter);
 
   app.post("/api/register", async (req, res, next) => {
     try {

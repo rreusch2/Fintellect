@@ -47,4 +47,3 @@ struct LegalConsent: Codable {
     let privacyAccepted: Bool
     let acceptedAt: Date?
 } 
-} 

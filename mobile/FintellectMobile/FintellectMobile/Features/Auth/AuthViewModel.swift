@@ -8,8 +8,6 @@ class AuthViewModel: ObservableObject {
     @Published var error: String?
     @Published var currentUser: User?
     
-    private let apiClient = APIClient.shared
-    
     init() {
         Task {
             await checkAuthentication()
@@ -21,27 +19,19 @@ class AuthViewModel: ObservableObject {
         error = nil
         
         do {
-            // Check for demo user
-            if username.lowercased() == "demo" {
-                try await loginAsDemoUser()
-                return
+            let credentials = ["username": username.lowercased(), "password": password]
+            let response: Data = try await APIClient.shared.post("/api/auth/mobile/login", body: credentials)
+            
+            if let loginResponse = try? JSONDecoder().decode(LoginResponse.self, from: response) {
+                // Store tokens
+                try KeychainManager.saveToken(loginResponse.tokens.accessToken, forKey: "accessToken")
+                try KeychainManager.saveToken(loginResponse.tokens.refreshToken, forKey: "refreshToken")
+                
+                // Update user state
+                self.currentUser = loginResponse.user
+                self.isAuthenticated = true
+                print("[Auth] Login successful for user: \(loginResponse.user.username)")
             }
-            
-            let credentials = [
-                "username": username.lowercased(),
-                "password": password
-            ]
-            
-            let data = try await apiClient.post("/api/auth/mobile/login", body: credentials)
-            let loginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
-            
-            // Save tokens
-            try KeychainManager.saveToken(loginResponse.tokens.accessToken, forKey: "accessToken")
-            try KeychainManager.saveToken(loginResponse.tokens.refreshToken, forKey: "refreshToken")
-            
-            self.currentUser = loginResponse.user
-            self.isAuthenticated = true
-            
         } catch {
             self.error = error.localizedDescription
             print("[Auth] Login error: \(error)")
@@ -50,67 +40,76 @@ class AuthViewModel: ObservableObject {
         isLoading = false
     }
     
-    func register(username: String, email: String, password: String) async {
-        isLoading = true
-        error = nil
-        
-        do {
-            let credentials = [
-                "username": username.lowercased(),
-                "email": email.lowercased(),
-                "password": password
-            ]
-            
-            let data = try await apiClient.post("/api/auth/mobile/register", body: credentials)
-            let registerResponse = try JSONDecoder().decode(RegisterResponse.self, from: data)
-            
-            // After successful registration, attempt to login
-            await login(username: username, password: password)
-            
-        } catch {
-            self.error = error.localizedDescription
-            print("[Auth] Registration error: \(error)")
-        }
-        
-        isLoading = false
-    }
-    
-    func loginAsDemoUser() async throws {
-        let data = try await apiClient.post("/api/auth/mobile/login", body: ["username": "demo", "password": "demo"])
-        let loginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
-        
-        try KeychainManager.saveToken(loginResponse.tokens.accessToken, forKey: "accessToken")
-        try KeychainManager.saveToken(loginResponse.tokens.refreshToken, forKey: "refreshToken")
-        
-        self.currentUser = loginResponse.user
-        self.isAuthenticated = true
-    }
-    
-    private func checkAuthentication() async {
-        guard let accessToken = try? KeychainManager.getToken(forKey: "accessToken") else {
-            self.isAuthenticated = false
-            return
-        }
-        
-        // Verify token and refresh if needed
-        do {
-            let data = try await apiClient.get("/api/auth/mobile/verify")
-            let user = try JSONDecoder().decode(User.self, from: data)
-            self.currentUser = user
-            self.isAuthenticated = true
-        } catch {
-            print("[Auth] Token verification failed: \(error)")
-            self.isAuthenticated = false
-            // Clear invalid tokens
-            try? KeychainManager.deleteToken(forKey: "accessToken")
-            try? KeychainManager.deleteToken(forKey: "refreshToken")
+    func loginAsDemoUser() {
+        print("[Auth] Demo user login")
+        Task {
+            await login(username: "demo", password: "demo")
         }
     }
     
     func logout() {
+        // Clear tokens
         try? KeychainManager.deleteToken(forKey: "accessToken")
         try? KeychainManager.deleteToken(forKey: "refreshToken")
-        self.currentUser = nil
-        self.isAuthenticated = false
+        
+        // Reset state
+        isAuthenticated = false
+        currentUser = nil
+        print("[Auth] User logged out")
     }
+    
+    func checkAuthentication() async {
+        guard let accessToken = try? KeychainManager.getToken(forKey: "accessToken") else {
+            print("[Auth] No access token found")
+            return
+        }
+        
+        do {
+            let response: Data = try await APIClient.shared.get("/api/auth/mobile/verify")
+            if let user = try? JSONDecoder().decode(User.self, from: response) {
+                self.currentUser = user
+                self.isAuthenticated = true
+                print("[Auth] Authentication verified for user: \(user.username)")
+            }
+        } catch {
+            print("[Auth] Token verification failed: \(error)")
+            // If verification fails, try refreshing the token
+            await refreshTokenIfNeeded()
+        }
+    }
+    
+    private func refreshTokenIfNeeded() async {
+        guard let refreshToken = try? KeychainManager.getToken(forKey: "refreshToken") else {
+            print("[Auth] No refresh token found")
+            return
+        }
+        
+        do {
+            let response: Data = try await APIClient.shared.post("/api/auth/mobile/refresh", body: ["refreshToken": refreshToken])
+            if let refreshResponse = try? JSONDecoder().decode(RefreshResponse.self, from: response) {
+                try KeychainManager.saveToken(refreshResponse.accessToken, forKey: "accessToken")
+                print("[Auth] Access token refreshed successfully")
+                await checkAuthentication()
+            }
+        } catch {
+            print("[Auth] Token refresh failed: \(error)")
+            logout()
+        }
+    }
+}
+
+// Response Models
+struct LoginResponse: Codable {
+    let message: String
+    let user: User
+    let tokens: Tokens
+}
+
+struct RefreshResponse: Codable {
+    let accessToken: String
+}
+
+struct Tokens: Codable {
+    let accessToken: String
+    let refreshToken: String
 } 

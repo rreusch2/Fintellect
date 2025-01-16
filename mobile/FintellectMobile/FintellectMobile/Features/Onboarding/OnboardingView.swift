@@ -1,5 +1,47 @@
 import SwiftUI
 
+enum OnboardingStep: Int, CaseIterable {
+    case terms = 0
+    case bankConnection = 1
+    
+    var title: String {
+        switch self {
+        case .terms:
+            return "Terms & Privacy"
+        case .bankConnection:
+            return "Connect Bank"
+        }
+    }
+}
+
+class OnboardingViewModel: ObservableObject {
+    @Published var currentStep: OnboardingStep = .terms
+    @Published var hasAcceptedTerms = false
+    @Published var hasAcceptedPrivacy = false
+    @Published var showTermsSheet = false
+    @Published var showPrivacySheet = false
+    @Published var showBankConnectionSheet = false
+    
+    func nextStep() {
+        if let currentIndex = OnboardingStep.allCases.firstIndex(of: currentStep),
+           currentIndex + 1 < OnboardingStep.allCases.count {
+            withAnimation {
+                currentStep = OnboardingStep.allCases[currentIndex + 1]
+            }
+        } else {
+            // Complete onboarding
+            completeOnboarding()
+        }
+    }
+    
+    func completeOnboarding() {
+        // TODO: Implement backend integration
+        // For now, we'll just set a local flag
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
+    }
+}
+
 struct OnboardingView: View {
     @StateObject private var viewModel = OnboardingViewModel()
     @Environment(\.dismiss) private var dismiss

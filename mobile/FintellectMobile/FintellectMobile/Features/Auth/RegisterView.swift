@@ -143,27 +143,17 @@ struct RegisterView: View {
                         
                         // Create Account Button
                         Button(action: {
-                            Task {
-                                print("[Register] Attempting registration with username: \(username)")
-                                await authViewModel.register(
-                                    username: username,
-                                    email: email,
-                                    password: password
-                                )
-                                if authViewModel.isAuthenticated {
-                                    print("[Register] Registration successful, showing onboarding")
-                                    showOnboarding = true
-                                }
-                            }
+                            // For now, just show onboarding
+                            showOnboarding = true
                         }) {
                             HStack {
                                 if authViewModel.isLoading {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .padding(.trailing, 8)
+                                } else {
+                                    Text("Create Account")
+                                        .font(.headline)
                                 }
-                                Text("Create Account")
-                                    .font(.headline)
                             }
                             .frame(maxWidth: min(UIScreen.main.bounds.width - 60, 360))
                             .padding(.vertical, 16)

@@ -41,6 +41,3 @@ xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 DerivedData/
 .build/
-
-# SSL Certificates
-server/certs/*.pem

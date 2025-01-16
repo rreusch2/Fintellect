@@ -58,7 +58,9 @@ class AuthViewModel: ObservableObject {
                 print("[Auth] Raw response: \(jsonString)")
             }
             
-            if let loginResponse = try? JSONDecoder().decode(LoginResponse.self, from: response) {
+            let decoder = JSONDecoder()
+            do {
+                let loginResponse = try decoder.decode(LoginResponse.self, from: response)
                 // Store tokens
                 try KeychainManager.saveToken(loginResponse.tokens.accessToken, forKey: "accessToken")
                 try KeychainManager.saveToken(loginResponse.tokens.refreshToken, forKey: "refreshToken")
@@ -67,12 +69,13 @@ class AuthViewModel: ObservableObject {
                 self.currentUser = loginResponse.user
                 self.isAuthenticated = true
                 print("[Auth] Login successful for user: \(loginResponse.user.username)")
-            } else {
+            } catch {
+                print("[Auth] Detailed decoding error: \(error)")
                 // Try to decode error response
                 if let errorResponse = try? JSONDecoder().decode([String: String].self, from: response) {
                     throw APIError.serverError(errorResponse["message"] ?? "Unknown error")
                 }
-                throw APIError.decodingError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode login response"]))
+                throw APIError.decodingError(error)
             }
         } catch {
             self.error = error.localizedDescription

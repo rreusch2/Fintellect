@@ -6,7 +6,7 @@ struct User: Codable {
     let hasPlaidSetup: Bool
     let hasCompletedOnboarding: Bool
     let monthlyIncome: Int?
-    let onboardingStep: String?
+    let onboardingStep: Int?
     
     enum CodingKeys: String, CodingKey {
         case id

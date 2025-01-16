@@ -9,9 +9,13 @@ type RequestResult = {
   message: string;
 };
 
-interface LoginData extends Omit<InsertUser, 'id'> {
+interface LoginData {
+  username: string;
+  password: string;
   rememberMe?: boolean;
 }
+
+interface RegisterData extends Omit<InsertUser, 'id'> {}
 
 const defaultFetchOptions = {
   credentials: 'include' as const,

@@ -9,7 +9,9 @@ struct TermsSheet: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Agreement Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(title: "Agreement to Terms", icon: "doc.text")
+                        Text("Agreement to Terms")
+                            .font(.headline)
+                            .foregroundColor(.white)
                         
                         Text("By accessing or using our service, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service.")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -17,7 +19,9 @@ struct TermsSheet: View {
                     
                     // AI Services Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(title: "AI Financial Services", icon: "brain")
+                        Text("AI Financial Services")
+                            .font(.headline)
+                            .foregroundColor(.white)
                         
                         Text("Our AI-powered insights and recommendations are for informational purposes only and do not constitute financial advice. Always consult with qualified financial professionals for important financial decisions.")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -32,7 +36,9 @@ struct TermsSheet: View {
                     
                     // User Accounts Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(title: "User Accounts", icon: "person.fill")
+                        Text("User Accounts")
+                            .font(.headline)
+                            .foregroundColor(.white)
                         
                         Text("You are responsible for:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -47,7 +53,9 @@ struct TermsSheet: View {
                     
                     // Financial Data Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(title: "Financial Data & Privacy", icon: "lock.shield")
+                        Text("Financial Data & Privacy")
+                            .font(.headline)
+                            .foregroundColor(.white)
                         
                         Text("By using our service, you acknowledge that:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -59,47 +67,41 @@ struct TermsSheet: View {
                             BulletPoint("You can revoke access to your financial data at any time")
                         }
                     }
-                    
-                    // Limitations Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(title: "Limitations of Liability", icon: "exclamationmark.triangle")
-                        
-                        Text("We are not liable for:")
-                            .foregroundColor(Color(hex: "94A3B8"))
-                        
-                        VStack(alignment: .leading, spacing: 8) {
-                            BulletPoint("Financial losses resulting from using our services")
-                            BulletPoint("Accuracy of third-party data or AI predictions")
-                            BulletPoint("Service interruptions or data unavailability")
-                            BulletPoint("Actions taken based on AI recommendations")
-                        }
-                    }
                 }
                 .padding(20)
             }
             .background(Color(hex: "0F172A"))
+            .navigationTitle("Terms of Service")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Terms of Service")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(Color(hex: "3B82F6"))
                 }
             }
         }
     }
 }
 
-// Preview
-struct TermsSheet_Previews: PreviewProvider {
-    static var previews: some View {
-        TermsSheet()
-            .preferredColorScheme(.dark)
+struct BulletPoint: View {
+    let text: String
+    
+    init(_ text: String) {
+        self.text = text
     }
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("•")
+                .foregroundColor(Color(hex: "3B82F6"))
+            
+            Text(text)
+                .foregroundColor(Color(hex: "94A3B8"))
+        }
+    }
+}
+
+#Preview {
+    TermsSheet()
 } 

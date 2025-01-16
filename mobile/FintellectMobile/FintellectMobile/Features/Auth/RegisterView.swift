@@ -143,15 +143,8 @@ struct RegisterView: View {
                         
                         // Create Account Button
                         Button(action: {
-                            // For testing, directly show onboarding
+                            // For now, just show onboarding
                             showOnboarding = true
-                            
-                            // Later, this will be:
-                            // Task {
-                            //     if await authViewModel.register(username: username, email: email, password: password) {
-                            //         showOnboarding = true
-                            //     }
-                            // }
                         }) {
                             HStack {
                                 if authViewModel.isLoading {
@@ -195,21 +188,20 @@ struct RegisterView: View {
                     .padding(.vertical, 20)
                 }
             }
-            .navigationDestination(isPresented: $showOnboarding) {
-                OnboardingContainerView()
-                    .navigationBarBackButtonHidden()
+            .fullScreenCover(isPresented: $showOnboarding) {
+                OnboardingView()
             }
-        }
-        .onAppear {
-            animateBackground = true
-            withAnimation(.easeOut(duration: 0.3)) {
-                appear[0] = true
-            }
-            withAnimation(.easeOut(duration: 0.3).delay(0.1)) {
-                appear[1] = true
-            }
-            withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
-                appear[2] = true
+            .onAppear {
+                animateBackground = true
+                withAnimation(.easeOut(duration: 0.3)) {
+                    appear[0] = true
+                }
+                withAnimation(.easeOut(duration: 0.3).delay(0.1)) {
+                    appear[1] = true
+                }
+                withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
+                    appear[2] = true
+                }
             }
         }
     }

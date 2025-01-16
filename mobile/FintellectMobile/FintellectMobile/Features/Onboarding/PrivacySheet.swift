@@ -9,7 +9,9 @@ struct PrivacySheet: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Data Collection Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(title: "Data Collection", icon: "tray.fill")
+                        Text("Data Collection")
+                            .font(.headline)
+                            .foregroundColor(.white)
                         
                         Text("Information We Collect:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -25,7 +27,9 @@ struct PrivacySheet: View {
                     
                     // Data Usage Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(title: "Data Usage", icon: "chart.bar.fill")
+                        Text("Data Usage")
+                            .font(.headline)
+                            .foregroundColor(.white)
                         
                         Text("We use your data to:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -37,23 +41,18 @@ struct PrivacySheet: View {
                             BulletPoint("Ensure security and prevent fraud")
                         }
                         
-                        // Important Notice
-                        HStack(spacing: 12) {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundColor(Color(hex: "3B82F6"))
-                            
-                            Text("We never sell your personal data to third parties. Your financial information is used solely for providing our services.")
-                                .font(.caption)
-                                .foregroundColor(Color(hex: "94A3B8"))
-                        }
-                        .padding()
-                        .background(Color(hex: "1E293B"))
-                        .cornerRadius(12)
+                        Text("Important Notice: We never sell your personal data to third parties. Your financial information is used solely for providing our services.")
+                            .foregroundColor(Color(hex: "94A3B8"))
+                            .padding()
+                            .background(Color(hex: "1E293B"))
+                            .cornerRadius(12)
                     }
                     
                     // Data Security Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(title: "Data Security", icon: "lock.shield.fill")
+                        Text("Data Security")
+                            .font(.headline)
+                            .foregroundColor(.white)
                         
                         Text("We implement industry-standard security measures:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -68,7 +67,9 @@ struct PrivacySheet: View {
                     
                     // Plaid Integration Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(title: "Plaid Integration", icon: "link.circle.fill")
+                        Text("Plaid Integration")
+                            .font(.headline)
+                            .foregroundColor(.white)
                         
                         Text("We use Plaid to securely connect to your financial institutions. Your banking credentials are never stored on our servers and are handled directly by Plaid.")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -76,7 +77,9 @@ struct PrivacySheet: View {
                     
                     // User Rights Section
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(title: "Your Rights", icon: "person.text.rectangle.fill")
+                        Text("Your Rights and Choices")
+                            .font(.headline)
+                            .foregroundColor(.white)
                         
                         Text("You have the right to:")
                             .foregroundColor(Color(hex: "94A3B8"))
@@ -90,7 +93,6 @@ struct PrivacySheet: View {
                         }
                         
                         Text("Contact us at privacy@fintellect.com to exercise these rights.")
-                            .font(.caption)
                             .foregroundColor(Color(hex: "94A3B8"))
                             .padding(.top, 8)
                     }
@@ -98,28 +100,19 @@ struct PrivacySheet: View {
                 .padding(20)
             }
             .background(Color(hex: "0F172A"))
+            .navigationTitle("Privacy Policy")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Privacy Policy")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(Color(hex: "3B82F6"))
                 }
             }
         }
     }
 }
 
-// Preview
-struct PrivacySheet_Previews: PreviewProvider {
-    static var previews: some View {
-        PrivacySheet()
-            .preferredColorScheme(.dark)
-    }
+#Preview {
+    PrivacySheet()
 } 

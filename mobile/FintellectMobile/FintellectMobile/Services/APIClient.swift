@@ -7,14 +7,32 @@ class APIClient {
     
     private init() {
         #if DEBUG
-        self.baseURL = "http://127.0.0.1:5001"
-        #else
-        self.baseURL = "https://api.fintellect.app" // Production URL
-        #endif
+        // For MacinCloud, we need to use the actual IP address
+        if let serverURL = ProcessInfo.processInfo.environment["SERVER_URL"] {
+            self.baseURL = serverURL
+        } else {
+            // Default to MacinCloud server
+            self.baseURL = "https://216.39.74.172:5001"
+        }
+        print("[API] Using server URL: \(self.baseURL)")
         
+        // Allow self-signed certificates in debug mode
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
-        self.session = URLSession(configuration: config)
+        
+        let trustAllCerts = true // Set to false if you want to enforce certificate validation
+        if trustAllCerts {
+            let trustAllDelegate = TrustAllSessionDelegate()
+            self.session = URLSession(configuration: config, delegate: trustAllDelegate, delegateQueue: nil)
+            print("[API] Warning: Certificate validation disabled for development")
+        } else {
+            self.session = URLSession(configuration: config)
+        }
+        #else
+        self.baseURL = "https://api.fintellect.app" // Production URL
+        self.session = URLSession(configuration: .default)
+        #endif
+        
         print("[API] Initialized with base URL: \(baseURL)")
     }
     
@@ -91,10 +109,32 @@ class APIClient {
     }
 }
 
+// MARK: - SSL Certificate Handling for Development
+class TrustAllSessionDelegate: NSObject, URLSessionDelegate {
+    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, 
+                   completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        print("[API] Received SSL challenge")
+        
+        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
+            if let serverTrust = challenge.protectionSpace.serverTrust {
+                let credential = URLCredential(trust: serverTrust)
+                print("[API] Accepting server certificate for development")
+                completionHandler(.useCredential, credential)
+                return
+            }
+        }
+        
+        // If we get here, use the default handling
+        completionHandler(.performDefaultHandling, nil)
+    }
+}
+
 enum APIError: Error {
     case invalidResponse
     case serverError(String)
     case decodingError(Error)
+    case networkError(Error)
+    case invalidURL
 }
 
 extension APIError: LocalizedError {
@@ -106,6 +146,10 @@ extension APIError: LocalizedError {
             return message
         case .decodingError(let error):
             return "Failed to decode response: \(error.localizedDescription)"
+        case .networkError(let error):
+            return "Network error: \(error.localizedDescription)"
+        case .invalidURL:
+            return "Invalid server URL"
         }
     }
 } 

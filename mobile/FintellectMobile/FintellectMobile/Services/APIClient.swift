@@ -1,56 +1,55 @@
 import Foundation
 
-enum APIError: Error {
-    case invalidURL
-    case networkError(Error)
-    case invalidResponse
-    case decodingError(Error)
-    case unauthorized
-    case serverError(String)
-    case tokenExpired
-}
-
 class APIClient {
     static let shared = APIClient()
-    
-    #if DEBUG
-    private let baseURL = URL(string: "http://localhost:5001")!
-    #else
-    private let baseURL = URL(string: "https://your-production-url.com")!
-    #endif
-    
+    private let baseURL: String
     private let session: URLSession
-    private let decoder: JSONDecoder
-    private let encoder: JSONEncoder
     
     private init() {
-        let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = 30
-        configuration.timeoutIntervalForResource = 300
-        
         #if DEBUG
-        configuration.urlCache = nil
-        configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        self.baseURL = "http://localhost:5001"
+        #else
+        self.baseURL = "https://api.fintellect.app" // Production URL
         #endif
         
-        self.session = URLSession(configuration: configuration)
-        
-        self.decoder = JSONDecoder()
-        self.decoder.keyDecodingStrategy = .convertFromSnakeCase
-        
-        self.encoder = JSONEncoder()
-        self.encoder.keyEncodingStrategy = .convertToSnakeCase
-        
-        print("[API] Initialized with base URL: \(baseURL.absoluteString)")
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        self.session = URLSession(configuration: config)
+        print("[API] Initialized with base URL: \(baseURL)")
     }
     
-    private func addAuthHeader(_ request: inout URLRequest) {
-        if let token = KeychainManager.getToken(forKey: "accessToken") {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    func get(_ path: String) async throws -> Data {
+        var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!)
+        request.httpMethod = "GET"
+        
+        // Add auth header if token exists
+        if let token = try? KeychainManager.getToken(forKey: "accessToken") {
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
+        
+        return try await performRequest(request)
     }
     
-    private func handleResponse<T: Decodable>(_ data: Data, _ response: URLResponse) throws -> T {
+    func post(_ path: String, body: [String: Any]) async throws -> Data {
+        var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Add auth header if token exists
+        if let token = try? KeychainManager.getToken(forKey: "accessToken") {
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        // Convert body to JSON data
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        print("[API] POST request to: \(path)")
+        return try await performRequest(request)
+    }
+    
+    private func performRequest(_ request: URLRequest) async throws -> Data {
+        let (data, response) = try await session.data(for: request)
+        
         guard let httpResponse = response as? HTTPURLResponse else {
             print("[API] Invalid response type")
             throw APIError.invalidResponse
@@ -58,115 +57,36 @@ class APIClient {
         
         print("[API] Response status code: \(httpResponse.statusCode)")
         
-        switch httpResponse.statusCode {
-        case 200...299:
-            do {
-                return try decoder.decode(T.self, from: data)
-            } catch {
-                print("[API] Decoding error:", error)
-                throw APIError.decodingError(error)
+        // Handle error responses
+        if httpResponse.statusCode >= 400 {
+            if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = errorJson["error"] as? String {
+                print("[API] Error response: \(errorMessage)")
+                throw APIError.serverError(errorMessage)
+            } else {
+                throw APIError.serverError("Unknown server error")
             }
-        case 401:
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let error = json["error"] as? String,
-               error == "Token expired" {
-                print("[API] Token expired")
-                throw APIError.tokenExpired
-            }
-            print("[API] Unauthorized")
-            throw APIError.unauthorized
-        default:
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let error = json["error"] as? String {
-                print("[API] Server error:", error)
-                throw APIError.serverError(error)
-            }
-            print("[API] Unknown server error")
-            throw APIError.serverError("Unknown error occurred")
         }
+        
+        return data
     }
-    
-    func get<T: Decodable>(_ endpoint: String) async throws -> T {
-        print("[API] GET request to:", endpoint)
-        
-        let url = baseURL.appendingPathComponent(endpoint)
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        addAuthHeader(&request)
-        
-        do {
-            let (data, response) = try await session.data(for: request)
-            return try handleResponse(data, response)
-        } catch let error as APIError {
-            throw error
-        } catch {
-            print("[API] Network error:", error)
-            throw APIError.networkError(error)
-        }
-    }
-    
-    func post<T: Decodable, E: Encodable>(_ endpoint: String, body: E) async throws -> T {
-        print("[API] POST request to:", endpoint)
-        
-        let url = baseURL.appendingPathComponent(endpoint)
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        addAuthHeader(&request)
-        
-        do {
-            request.httpBody = try encoder.encode(body)
-            
-            let (data, response) = try await session.data(for: request)
-            return try handleResponse(data, response)
-        } catch let error as APIError {
-            throw error
-        } catch {
-            print("[API] Network error:", error)
-            throw APIError.networkError(error)
-        }
-    }
-    
-    func put<T: Decodable, E: Encodable>(_ endpoint: String, body: E) async throws -> T {
-        print("[API] PUT request to:", endpoint)
-        
-        let url = baseURL.appendingPathComponent(endpoint)
-        var request = URLRequest(url: url)
-        request.httpMethod = "PUT"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        addAuthHeader(&request)
-        
-        do {
-            request.httpBody = try encoder.encode(body)
-            
-            let (data, response) = try await session.data(for: request)
-            return try handleResponse(data, response)
-        } catch let error as APIError {
-            throw error
-        } catch {
-            print("[API] Network error:", error)
-            throw APIError.networkError(error)
-        }
-    }
-    
-    func delete<T: Decodable>(_ endpoint: String) async throws -> T {
-        print("[API] DELETE request to:", endpoint)
-        
-        let url = baseURL.appendingPathComponent(endpoint)
-        var request = URLRequest(url: url)
-        request.httpMethod = "DELETE"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        addAuthHeader(&request)
-        
-        do {
-            let (data, response) = try await session.data(for: request)
-            return try handleResponse(data, response)
-        } catch let error as APIError {
-            throw error
-        } catch {
-            print("[API] Network error:", error)
-            throw APIError.networkError(error)
+}
+
+enum APIError: Error {
+    case invalidResponse
+    case serverError(String)
+    case decodingError(Error)
+}
+
+extension APIError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            return "Invalid server response"
+        case .serverError(let message):
+            return message
+        case .decodingError(let error):
+            return "Failed to decode response: \(error.localizedDescription)"
         }
     }
 } 

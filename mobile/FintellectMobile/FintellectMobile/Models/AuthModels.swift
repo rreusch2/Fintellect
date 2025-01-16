@@ -1,53 +1,50 @@
 import Foundation
 
-// MARK: - User
-struct User: Codable {
-    let id: Int
+// MARK: - User Model
+struct User: Codable, Identifiable {
+    let id: String
+    let email: String?
     let username: String
-    let hasCompletedOnboarding: Bool
     let hasPlaidSetup: Bool
-    let monthlyIncome: Int?
-    let onboardingStep: Int?
-    let consentVersion: String?
+    let hasCompletedOnboarding: Bool
+    let monthlyIncome: Double?
+    let createdAt: Date?
+    let updatedAt: Date?
 }
 
-// MARK: - Tokens
+// MARK: - Authentication Response Models
+struct LoginResponse: Codable {
+    let message: String
+    let user: User
+    let tokens: Tokens
+}
+
+struct RegisterResponse: Codable {
+    let message: String
+    let user: User
+}
+
+struct RefreshResponse: Codable {
+    let message: String
+    let accessToken: String
+}
+
 struct Tokens: Codable {
     let accessToken: String
     let refreshToken: String
 }
 
-// MARK: - LoginResponse
-struct LoginResponse: Codable {
-    let message: String?
-    let user: User
-    let tokens: Tokens?
-}
-
-// MARK: - RegisterResponse
-struct RegisterResponse: Codable {
-    let user: User
-    // Registration only returns the user object
-    // We'll do a separate login call to get tokens
-}
-
-// MARK: - RefreshResponse
-struct RefreshResponse: Codable {
-    let accessToken: String
-}
-
-// MARK: - OnboardingStatus
+// MARK: - Onboarding Models
 struct OnboardingStatus: Codable {
-    let onboardingStep: Int
-    let hasCompletedOnboarding: Bool
-    let legalConsent: LegalConsent?
-    let consentVersion: String?
+    let currentStep: String
+    let isComplete: Bool
+    let hasAcceptedTerms: Bool
+    let hasAcceptedPrivacy: Bool
 }
 
-// MARK: - LegalConsent
 struct LegalConsent: Codable {
     let termsAccepted: Bool
     let privacyAccepted: Bool
-    let acceptedAt: String
-    let version: String
+    let acceptedAt: Date?
+} 
 } 

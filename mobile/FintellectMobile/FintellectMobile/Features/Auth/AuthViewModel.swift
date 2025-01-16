@@ -117,8 +117,8 @@ class AuthViewModel: ObservableObject {
         isLoading = false
     }
     
-    // Demo mode helper
-    private func loginAsDemoUser() {
+    // Demo mode helper - removed private modifier
+    func loginAsDemoUser() {
         currentUser = User(
             id: 1,
             username: "DemoUser",

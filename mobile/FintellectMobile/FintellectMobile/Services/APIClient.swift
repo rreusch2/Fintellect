@@ -14,7 +14,7 @@ class APIClient {
     static let shared = APIClient()
     
     #if DEBUG
-    private let baseURL = URL(string: "http://localhost:5001")!
+    private let baseURL = URL(string: "http://192.168.1.98:5001")!
     #else
     private let baseURL = URL(string: "https://your-production-url.com")! // Update with your production URL
     #endif

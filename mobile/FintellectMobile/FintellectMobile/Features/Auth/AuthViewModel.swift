@@ -28,12 +28,21 @@ class AuthViewModel: ObservableObject {
             print("[Auth] Attempting registration for user: \(username)")
             let response: Data = try await APIClient.shared.post("/api/register", body: credentials)
             
-            if let registerResponse = try? JSONDecoder().decode(RegisterResponse.self, from: response) {
+            // Print the raw response for debugging
+            if let responseString = String(data: response, encoding: .utf8) {
+                print("[Auth] Raw response: \(responseString)")
+            }
+            
+            do {
+                let registerResponse = try JSONDecoder().decode(RegisterResponse.self, from: response)
+                print("[Auth] Successfully decoded response: \(registerResponse.user.username)")
+                
                 // After successful registration, attempt login
                 print("[Auth] Registration successful, attempting login")
                 await login(username: username, password: password)
-            } else {
-                throw APIError.decodingError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode registration response"]))
+            } catch let decodingError {
+                print("[Auth] Decoding error details: \(decodingError)")
+                throw APIError.decodingError(decodingError)
             }
         } catch let error as APIError {
             self.error = error.localizedDescription
@@ -137,6 +146,13 @@ class AuthViewModel: ObservableObject {
 }
 
 // Response Models
+struct User: Codable {
+    let id: Int
+    let username: String
+    let hasCompletedOnboarding: Bool
+    let hasPlaidSetup: Bool
+}
+
 struct LoginResponse: Codable {
     let user: User
     let tokens: Tokens?

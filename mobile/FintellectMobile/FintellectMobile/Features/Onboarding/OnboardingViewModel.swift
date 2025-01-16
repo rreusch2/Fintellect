@@ -1,13 +1,28 @@
 import Foundation
 import SwiftUI
 
+enum OnboardingStep: Int, CaseIterable {
+    case terms = 1
+    case bankConnection = 2
+    
+    var title: String {
+        switch self {
+        case .terms:
+            return "Terms & Privacy"
+        case .bankConnection:
+            return "Connect Bank"
+        }
+    }
+}
+
 @MainActor
 class OnboardingViewModel: ObservableObject {
-    @Published var currentStep = 1
+    @Published var currentStep = OnboardingStep.terms
     @Published var hasAcceptedTerms = false
     @Published var hasAcceptedPrivacy = false
     @Published var showTermsSheet = false
     @Published var showPrivacySheet = false
+    @Published var showBankConnectionSheet = false
     @Published var error: String?
     @Published var isLoading = false
     
@@ -33,8 +48,6 @@ class OnboardingViewModel: ObservableObject {
             self.error = error.localizedDescription
             print("[Onboarding] Terms acceptance error:", error)
             return false
-        } finally {
-            isLoading = false
         }
     }
     
@@ -43,7 +56,9 @@ class OnboardingViewModel: ObservableObject {
         do {
             let response: Data = try await APIClient.shared.get("/api/onboarding/status")
             if let status = try? JSONDecoder().decode(OnboardingStatus.self, from: response) {
-                currentStep = status.onboardingStep
+                if let step = OnboardingStep(rawValue: status.onboardingStep) {
+                    currentStep = step
+                }
                 
                 if let consent = status.legalConsent {
                     hasAcceptedTerms = consent.termsAccepted
@@ -58,18 +73,23 @@ class OnboardingViewModel: ObservableObject {
     func nextStep() {
         Task {
             switch currentStep {
-            case 1: // Terms step
-                if await acceptTerms() {
+            case .terms:
+                let success = await acceptTerms()
+                if success {
                     withAnimation {
-                        currentStep += 1
+                        currentStep = .bankConnection
                     }
                 }
-            default:
-                withAnimation {
-                    currentStep += 1
-                }
+            case .bankConnection:
+                completeOnboarding()
             }
         }
+    }
+    
+    private func completeOnboarding() {
+        // TODO: Implement backend integration
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
     }
 }
 

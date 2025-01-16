@@ -14,15 +14,18 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    func register(username: String, password: String) async {
+    func register(username: String, password: String, email: String) async {
         isLoading = true
         error = nil
         
         do {
             let credentials = [
                 "username": username.lowercased(),
-                "password": password
+                "password": password,
+                "email": email.lowercased()
             ]
+            
+            print("[Auth] Attempting registration for user: \(username)")
             let response: Data = try await APIClient.shared.post("/api/register", body: credentials)
             
             if let registerResponse = try? JSONDecoder().decode(LoginResponse.self, from: response) {
@@ -34,9 +37,14 @@ class AuthViewModel: ObservableObject {
                 self.currentUser = registerResponse.user
                 self.isAuthenticated = true
                 print("[Auth] Registration successful for user: \(registerResponse.user.username)")
+            } else {
+                throw APIError.decodingError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode registration response"]))
             }
-        } catch {
+        } catch let error as APIError {
             self.error = error.localizedDescription
+            print("[Auth] Registration API error: \(error)")
+        } catch {
+            self.error = "Registration failed: \(error.localizedDescription)"
             print("[Auth] Registration error: \(error)")
         }
         

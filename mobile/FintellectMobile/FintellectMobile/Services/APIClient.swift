@@ -44,31 +44,50 @@ class APIClient {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         print("[API] POST request to: \(path)")
+        if let bodyString = String(data: request.httpBody!, encoding: .utf8) {
+            print("[API] Request body: \(bodyString)")
+        }
+        
         return try await performRequest(request)
     }
     
     private func performRequest(_ request: URLRequest) async throws -> Data {
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            print("[API] Invalid response type")
-            throw APIError.invalidResponse
-        }
-        
-        print("[API] Response status code: \(httpResponse.statusCode)")
-        
-        // Handle error responses
-        if httpResponse.statusCode >= 400 {
-            if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let errorMessage = errorJson["error"] as? String {
-                print("[API] Error response: \(errorMessage)")
-                throw APIError.serverError(errorMessage)
-            } else {
-                throw APIError.serverError("Unknown server error")
+        do {
+            let (data, response) = try await session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("[API] Invalid response type")
+                throw APIError.invalidResponse
             }
+            
+            print("[API] Response status code: \(httpResponse.statusCode)")
+            
+            // Log response body for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("[API] Response body: \(responseString)")
+            }
+            
+            // Handle error responses
+            if httpResponse.statusCode >= 400 {
+                if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let errorMessage = errorJson["error"] as? String ?? errorJson["message"] as? String ?? "Unknown server error"
+                    print("[API] Error response: \(errorMessage)")
+                    throw APIError.serverError(errorMessage)
+                } else if let errorText = String(data: data, encoding: .utf8) {
+                    print("[API] Error text: \(errorText)")
+                    throw APIError.serverError(errorText)
+                } else {
+                    throw APIError.serverError("Unknown server error")
+                }
+            }
+            
+            return data
+        } catch let error as APIError {
+            throw error
+        } catch {
+            print("[API] Network error: \(error)")
+            throw APIError.serverError("Network error: \(error.localizedDescription)")
         }
-        
-        return data
     }
 }
 

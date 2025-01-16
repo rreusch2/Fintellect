@@ -55,14 +55,20 @@ class AuthViewModel: ObservableObject {
             let response: Data = try await APIClient.shared.post("/api/auth/mobile/login", body: credentials)
             
             if let loginResponse = try? JSONDecoder().decode(LoginResponse.self, from: response) {
-                // Store tokens
-                try KeychainManager.saveToken(loginResponse.tokens?.accessToken, forKey: "accessToken")
-                try KeychainManager.saveToken(loginResponse.tokens?.refreshToken, forKey: "refreshToken")
-                
-                // Update user state
-                self.currentUser = loginResponse.user
-                self.isAuthenticated = true
-                print("[Auth] Login successful for user: \(loginResponse.user.username)")
+                // Store tokens if they exist
+                if let tokens = loginResponse.tokens {
+                    try KeychainManager.saveToken(tokens.accessToken, forKey: "accessToken")
+                    try KeychainManager.saveToken(tokens.refreshToken, forKey: "refreshToken")
+                    
+                    // Update user state
+                    self.currentUser = loginResponse.user
+                    self.isAuthenticated = true
+                    print("[Auth] Login successful for user: \(loginResponse.user.username)")
+                } else {
+                    throw APIError.serverError("No authentication tokens received")
+                }
+            } else {
+                throw APIError.decodingError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode login response"]))
             }
         } catch {
             self.error = error.localizedDescription

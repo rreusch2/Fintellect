@@ -54,7 +54,9 @@ class OnboardingViewModel: ObservableObject {
         if let currentIndex = OnboardingStep.allCases.firstIndex(of: currentStep),
            currentIndex + 1 < OnboardingStep.allCases.count {
             withAnimation {
-                currentStep = OnboardingStep.allCases[currentIndex + 1]
+                let nextStep = OnboardingStep.allCases[currentIndex + 1]
+                print("[Onboarding] Moving from step \(currentStep.title) to \(nextStep.title)")
+                currentStep = nextStep
             }
         } else {
             // Complete onboarding

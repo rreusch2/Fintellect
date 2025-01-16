@@ -12,7 +12,13 @@ enum APIError: Error {
 
 class APIClient {
     static let shared = APIClient()
-    private let baseURL = URL(string: "http://192.168.1.98:5001")!
+    
+    #if DEBUG
+    private let baseURL = URL(string: "http://localhost:5001")!
+    #else
+    private let baseURL = URL(string: "https://your-production-url.com")! // Update with your production URL
+    #endif
+    
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
@@ -20,6 +26,7 @@ class APIClient {
     private init() {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 300 // Increase timeout for slow connections
         self.session = URLSession(configuration: configuration)
         
         self.decoder = JSONDecoder()
@@ -27,6 +34,8 @@ class APIClient {
         
         self.encoder = JSONEncoder()
         self.encoder.keyEncodingStrategy = .convertToSnakeCase
+        
+        print("[API] Initialized with base URL: \(baseURL.absoluteString)")
     }
     
     private func addAuthHeader(_ request: inout URLRequest) {

@@ -65,3 +65,19 @@ Implementation Strategy:
 - Phase 2: Gemini API integration for core features
 - Phase 3: Advanced features and document analysis
 - Phase 4: Subscription model implementation
+
+Mobile Authentication Implementation (2024-01-16):
+- Implemented JWT-based authentication for mobile app while maintaining session-based auth for web app
+- Token Configuration:
+  - Access Token: 15 minutes expiry
+  - Refresh Token: 7 days expiry
+  - Tokens stored securely in iOS Keychain
+- Features:
+  - Automatic token refresh
+  - Secure token storage
+  - Demo user support
+  - Token verification endpoint
+- Next Steps:
+  - Implement protected routes for main features
+  - Add Plaid integration endpoints
+  - Set up user profile endpoints

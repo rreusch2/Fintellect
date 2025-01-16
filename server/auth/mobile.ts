@@ -33,6 +33,65 @@ const verifyPassword = async (suppliedPassword: string, storedPassword: string) 
   return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
 };
 
+// Verify token and get user data
+router.get('/verify', async (req, res) => {
+  console.log('[Mobile Auth] Token verification request');
+  
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.log('[Mobile Auth] No Bearer token found');
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    console.log(`[Mobile Auth] Token verified for user ${decoded.userId}`);
+    
+    // For demo user, return mock data
+    if (decoded.userId === 999999) {
+      return res.json({
+        id: 999999,
+        username: 'DemoUser',
+        hasPlaidSetup: true,
+        hasCompletedOnboarding: true,
+        monthlyIncome: 500000,
+        onboardingStep: null
+      });
+    }
+    
+    // Get user data
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, decoded.userId))
+      .limit(1);
+      
+    if (!user) {
+      console.log(`[Mobile Auth] User ${decoded.userId} not found`);
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      hasPlaidSetup: user.hasPlaidSetup,
+      hasCompletedOnboarding: user.hasCompletedOnboarding,
+      monthlyIncome: user.monthlyIncome,
+      onboardingStep: user.onboardingStep
+    });
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      console.log('[Mobile Auth] Token expired');
+      return res.status(401).json({ error: 'Token expired' });
+    }
+    
+    console.log('[Mobile Auth] Invalid token:', error);
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
 // Mobile login endpoint
 router.post('/login', async (req, res) => {
   console.log('[Mobile Auth] Login attempt');

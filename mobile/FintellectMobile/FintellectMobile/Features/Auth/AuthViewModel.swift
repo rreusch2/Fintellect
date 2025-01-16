@@ -53,6 +53,11 @@ class AuthViewModel: ObservableObject {
             let credentials = ["username": username.lowercased(), "password": password]
             let response: Data = try await APIClient.shared.post("/api/auth/mobile/login", body: credentials)
             
+            // Print response for debugging
+            if let jsonString = String(data: response, encoding: .utf8) {
+                print("[Auth] Raw response: \(jsonString)")
+            }
+            
             if let loginResponse = try? JSONDecoder().decode(LoginResponse.self, from: response) {
                 // Store tokens
                 try KeychainManager.saveToken(loginResponse.tokens.accessToken, forKey: "accessToken")
@@ -65,6 +70,10 @@ class AuthViewModel: ObservableObject {
                 }
                 print("[Auth] Login successful for user: \(loginResponse.user.username)")
             } else {
+                // Try to decode error response
+                if let errorResponse = try? JSONDecoder().decode([String: String].self, from: response) {
+                    throw APIError.serverError(errorResponse["message"] ?? "Unknown error")
+                }
                 throw APIError.decodingError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode login response"]))
             }
         } catch {
@@ -141,14 +150,10 @@ class AuthViewModel: ObservableObject {
 struct LoginResponse: Codable {
     let message: String
     let user: User
-    let tokens: Tokens
+    let tokens: AuthTokens
 }
 
-struct RefreshResponse: Codable {
-    let accessToken: String
-}
-
-struct Tokens: Codable {
+struct AuthTokens: Codable {
     let accessToken: String
     let refreshToken: String
 }
@@ -156,5 +161,9 @@ struct Tokens: Codable {
 struct RegisterResponse: Codable {
     let success: Bool
     let user: User
-    let tokens: Tokens
+    let tokens: AuthTokens
+}
+
+struct RefreshResponse: Codable {
+    let accessToken: String
 } 

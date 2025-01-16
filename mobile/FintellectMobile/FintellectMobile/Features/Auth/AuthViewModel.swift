@@ -1,52 +1,77 @@
 import Foundation
-import SwiftUI
 
-final class AuthViewModel: ObservableObject {
-    @Published var currentUser: User?
+@MainActor
+class AuthViewModel: ObservableObject {
     @Published var isAuthenticated = false
+    @Published var currentUser: User?
     @Published var isLoading = false
     @Published var error: String?
     
-    init() {
-        // Initialize with demo data for now
-        self.currentUser = User(
-            id: "1",
-            username: "Demo User",
-            email: "demo@example.com",
-            hasPlaidSetup: false
+    // Add development bypass
+    func loginAsDemoUser() {
+        currentUser = User(
+            id: 1,
+            username: "DemoUser",
+            hasPlaidSetup: true,
+            hasCompletedOnboarding: true,
+            monthlyIncome: 500000, // Stored in cents
+            onboardingStep: nil
         )
-        self.isAuthenticated = true
+        isAuthenticated = true
     }
     
-    func login(username: String, password: String) {
+    // Keep existing login method for later
+    func login(username: String, password: String) async {
+        #if DEBUG
+        // In debug builds, use demo login
+        loginAsDemoUser()
+        return
+        #endif
+        
+        // Original login code
         isLoading = true
         error = nil
         
-        // Simulate network delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            // TODO: Replace with actual API call when integrating backend
-            self.currentUser = User(
-                id: "1",
-                username: username,
-                email: "\(username)@example.com",
-                hasPlaidSetup: false
-            )
-            self.isAuthenticated = true
-            self.isLoading = false
+        do {
+            let credentials = ["username": username, "password": password]
+            let response: LoginResponse = try await APIClient.shared.post("/api/login", body: credentials)
+            currentUser = response.user
+            isAuthenticated = true
+        } catch {
+            self.error = error.localizedDescription
         }
+        
+        isLoading = false
     }
     
-    func logout() {
+    func logout() async {
         isLoading = true
-        // TODO: Add actual logout logic here when integrating with backend
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.currentUser = nil
-            self.isAuthenticated = false
-            self.isLoading = false
+        
+        #if DEBUG
+        // In debug builds, just clear the state
+        isAuthenticated = false
+        currentUser = nil
+        isLoading = false
+        return
+        #endif
+        
+        do {
+            let _: EmptyResponse = try await APIClient.shared.post("/api/logout", body: EmptyBody())
+            isAuthenticated = false
+            currentUser = nil
+        } catch {
+            self.error = error.localizedDescription
         }
+        
+        isLoading = false
     }
-    
-    func updateUser(_ user: User) {
-        self.currentUser = user
-    }
-} 
+}
+
+// Response types
+struct LoginResponse: Codable {
+    let message: String
+    let user: User
+}
+
+struct EmptyResponse: Codable {}
+struct EmptyBody: Codable {} 

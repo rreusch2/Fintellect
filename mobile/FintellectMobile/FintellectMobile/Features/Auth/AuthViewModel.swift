@@ -64,10 +64,8 @@ class AuthViewModel: ObservableObject {
                 try KeychainManager.saveToken(loginResponse.tokens.refreshToken, forKey: "refreshToken")
                 
                 // Update user state
-                DispatchQueue.main.async {
-                    self.currentUser = loginResponse.user
-                    self.isAuthenticated = true
-                }
+                self.currentUser = loginResponse.user
+                self.isAuthenticated = true
                 print("[Auth] Login successful for user: \(loginResponse.user.username)")
             } else {
                 // Try to decode error response
@@ -77,15 +75,11 @@ class AuthViewModel: ObservableObject {
                 throw APIError.decodingError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode login response"]))
             }
         } catch {
-            DispatchQueue.main.async {
-                self.error = error.localizedDescription
-            }
+            self.error = error.localizedDescription
             print("[Auth] Login error: \(error)")
         }
         
-        DispatchQueue.main.async {
-            self.isLoading = false
-        }
+        isLoading = false
     }
     
     func loginAsDemoUser() {

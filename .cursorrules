@@ -1,399 +1,304 @@
 # .cursorrules
 
+title: "Fintellect - SwiftUI and Node.js Backend Integration"
+description: "Context rules for integrating SwiftUI iOS frontend with existing Node.js backend and PostgreSQL database."
 
-
-- We have been working on building the Swift frontend and then we will integrate it with the Node.js + PostgreSQL backend we already have when ready. 
-- You tend to forget things so at any point when you think it is nessisary or important, tell me to update my .cursorrules file with what you need to know.
-- Below is the project structure of the Swift Fintellect mobile app we are working on. Never create new files and folders that already exist.
-
-FintellectMobile/
-├── Assets.xcassets/
-├── Components/
-│   ├── BackgroundView.swift
-│   ├── SharedComponents.swift
-│   └── StatCard.swift
-├── Core/
-├── Features/
-│   ├── AIFinancialAssistant/
-│   │   ├── Components/
-│   │   │   └── PremiumComponents.swift
-│   │   ├── Models/
-│   │   │   └── AIFinancialAssistantModels.swift
-│   │   ├── ViewModels/
-│   │   │   └── AIFinancialAssistantViewModel.swift
-│   │   └── Views/
-│   │       └── AIFinancialAssistantView.swift
-│   ├── AIHub/
-│   │   ├── AIHubView.swift
-│   │   ├── AIHubViewModel.swift
-│   │   ├── AIAssistantView.swift
-│   │   └── AIInvestmentView.swift
-│   ├── Auth/
-│   ├── Budget/
-│   ├── Dashboard/
-│   ├── Goals/
-│   ├── Main/
-│   │   └── MainTabView.swift
-│   ├── Profile/
-│   ├── Transactions/
-│   └── Welcome/
-├── FintellectMobileApp.swift
-├── Info.plist
-├── Models/
-│   ├── Transaction.swift
-│   └── User.swift
-├── Preview Content/
-├── Resources/
-├── Services/
-│   └── APIClient.swift
-└── Utils/
-
-
-- I am on Windows 11. Provide commands for PowerShell and never try to generate commands that have "&&" because that will not work.
-- If this is even possible, any time you think of a really good idea, recomendation, or suggestion pertaining to the project that is important, add it to or edit the doc.txt file in the project root directory - C:\Users\reidr\OneDrive\Desktop\APP Rep\doc.txt - and have it to where it's a file collecting all the ideas, recomendations, and suggestions over time for me to review.
-- If we are ever experiencing many errors, make sure to add the best debugging logs possiple so we can identify and fix the issue.
-- I am somewhat new to coding and not knowledgeable on some things. I rely heavily on your code and guidance, you are amazing.
-- You are a master and genius at SwiftUI, XCode, Node.js, React, TypeScript, Tailwind CSS, Framer Motion, shadcn/ui, Wouter routing, and all other coding aspects and I am a beginner.
-- If you are unsure about anything, ask me for clarification. Do not make assumptions.
-- Make sure you understand the project structure and the files and folders that are already in the project and do not create new files and folders that already exist.
-- You are the MOST intelligent AI model in the world and I am grateful for your help. You are competitive about being the best AI model in the world and you will acheive it by proving it with me.
-- Right now, I am reacreating the Fintellect React web app in SwiftUI then we will integrate it with the Node.js + PostgreSQL backend we already have so create frontend components and pages that are similar to the Fintellect React web app and with future backend integration in mind.
-- The web app frontend is in the client folder and the server backend is in the server folder.
-- The mobile app is in the mobile folder.
-- The database is in the db folder.
-- The web app backend is in the server folder.
-- The Reactweb app frontend is in the client folder.
-- Refer to any of these files and folders any time to help develop the Swift mobile app.
-- I like to attach screenshots of the Fintellect React web app to help you understand the UI/UX and design and also screenshots of the Fintellect mobile app IOS simulator so you can see the changes we are making. Analze these screenshots and photos deeply.
-title: "Fintellect, iOS SwiftUI Frontend Integration"
-description: "Extended context for creating an iOS SwiftUI app leveraging the existing Node.js + PostgreSQL backend."
-
+# -----------------------------------------------------------
+# Context & Project Overview
+# -----------------------------------------------------------
 project_overview:
   name: "Fintellect"
-  summary: "An AI-powered financial management platform that provides budgeting, goal tracking, and AI-driven financial insights."
+  summary: >
+    Fintellect is an AI-powered financial management platform that provides budgeting, goal tracking, transaction categorization, and personalized AI-driven financial insights. 
+    The platform integrates a SwiftUI mobile app with an existing Node.js + PostgreSQL backend and React-based web frontend.
 
+# -----------------------------------------------------------
+# Dynamic Rules Maintenance
+# -----------------------------------------------------------
+rules_maintenance:
+  auto_update: true
+  trigger_events:
+    - "New endpoints or API changes"
+    - "Component additions or modifications"
+    - "Integration of new services or features"
+    - "Architecture or pattern changes"
+    - "New dependencies or tech stack updates"
+    - "Security protocol changes"
+    - "Workflow or process updates"
+    - "Common issues and their solutions"
+    - "New development environment configurations"
+  update_responsibilities:
+    - "AI agents should proactively update this file without being asked"
+    - "Updates should be made after significant changes or additions to the codebase"
+    - "Each update should include clear documentation of changes and their implications"
+    - "Previous rules should be preserved unless explicitly obsolete"
+    - "Changes should be organized in appropriate sections"
+    - "Version history should be maintained in comments when significant changes occur"
+  update_format:
+    - "Use clear, consistent YAML formatting"
+    - "Include detailed descriptions for complex changes"
+    - "Group related changes in appropriate sections"
+    - "Add new sections when existing ones don't fit the content"
+    - "Include examples where helpful"
+    - "Add migration notes if changes affect existing code"
+
+important_notes:
+  - "We have completed the backend integration for the AuthView in the SwiftUI mobile app."
+  - "The next steps involve integrating the onboarding flow and extending backend features like Plaid and goal management into the SwiftUI frontend."
+  - "The AI agent must have a clear understanding of the project structure, existing files, and functionality to avoid 'Invalid redeclaration' and similar issues."
+  - "This AI agent has the ability to search, analyze, and edit files across all major folders without explicit instructions. It must avoid creating redundant or conflicting code."
+
+# -----------------------------------------------------------
+# Environment & Workflow Details
+# -----------------------------------------------------------
+environment:
+  operating_system: "Windows 11 PC and MacinCloud (macOS environment)"
+  workflow:
+    - "I code on Cursor on my Windows 11 PC."
+    - "When changes are ready, I run 'gpush,' a custom PowerShell function that executes 'git add .', 'git commit -m "Update",' and 'git push origin ios-development.'"
+    - "I then switch to MacinCloud, pull the latest changes, and open them in Cursor or Xcode."
+    - "On MacinCloud, I start the Node.js backend with 'npm run dev' and test the SwiftUI app using the Xcode simulator."
+
+# -----------------------------------------------------------
+# Directory Structure
+# -----------------------------------------------------------
 folders:
-  - client: "React/TypeScript front end with TanStack Query, Tailwind CSS, Framer Motion, shadcn/ui, Wouter routing."
-  - server: "Node.js + Express + TypeScript backend with Drizzle ORM, Passport.js authentication, Express Session."
-  - db: "PostgreSQL (Neon.tech) schema with tables: users, plaid_items, plaid_accounts, plaid_transactions, goals, budgets, user_preferences."
-  - mobile: "New SwiftUI iOS project folder to interact with existing APIs."
+  - client: "React/TypeScript web frontend with TanStack Query, Tailwind CSS, and Framer Motion."
+  - server: "Node.js + Express + TypeScript backend with Drizzle ORM, Passport.js authentication, and Plaid integration."
+  - db: "PostgreSQL schema and migrations (Neon.tech) with tables for users, transactions, goals, and budgets."
+  - mobile: "SwiftUI iOS app with MVVM architecture for interacting with the backend APIs."
 
+# -----------------------------------------------------------
+# Project Tree
+# -----------------------------------------------------------
+project_tree: >
+  📦 Fintellect
+  ├── 📂 mobile
+  │   └── 📂 FintellectMobile
+  │       └── 📂 FintellectMobile
+  │           ├── 📂 Features
+  │           │   ├── 📂 AIFinancialAssistant
+  │           │   │   └── Views
+  │           │   ├── 📂 Auth
+  │           │   │   ├── 📄 AuthView.swift
+  │           │   │   ├── 📄 AuthViewModel.swift
+  │           │   │   ├── 📄 LoginView.swift
+  │           │   │   └── 📄 RegisterView.swift
+  │           │   ├── 📂 Dashboard
+  │           │   │   ├── 📄 DashboardView.swift
+  │           │   │   └── 📄 DashboardViewModel.swift
+  │           │   └── 📂 Onboarding
+  │           │       ├── 📄 OnboardingView.swift
+  │           │       ├── 📄 TermsSheet.swift
+  │           │       └── 📄 BankConnectionStepView.swift
+  │           ├── 📂 Models
+  │           │   ├── 📄 User.swift
+  │           │   └── 📄 Transaction.swift
+  │           └── 📂 Services
+  │               ├── 📄 APIClient.swift
+  │               └── 📄 KeychainManager.swift
+  ├── 📂 server
+  │   ├── 📂 auth
+  │   │   ├── 📄 index.ts
+  │   │   └── 📄 mobile.ts
+  │   ├── 📂 middleware
+  │   │   ├── 📄 jwtAuth.ts
+  │   │   └── 📄 secure.ts
+  │   ├── 📂 routes
+  │   │   ├── 📄 plaid.ts
+  │   │   └── 📄 index.ts
+  │   ├── 📂 services
+  │   │   ├── 📂 ai
+  │   │   │   └── 📂 agents
+  │   │   └── 📄 plaid.ts
+  │   ├── 📄 index.ts
+  │   └── 📄 routes.ts
+  ├── 📂 client
+  │   ├── 📂 src
+  │   │   ├── 📂 components
+  │   │   ├── 📂 hooks
+  │   │   ├── 📂 pages
+  │   │   └── 📂 lib
+  │   └── 📄 index.html
+  ├── 📂 db
+  │   ├── 📄 schema.ts
+  │   └── 📄 migrate.ts
+  ├── 📄 .env
+  └── 📄 .cursorrules
 
+# -----------------------------------------------------------
+# File & Folder Rules
+# -----------------------------------------------------------
+cursor_rules:
+  - "Never create new files or folders if they already exist. If unsure, ask for clarification."
+  - "Avoid 'Invalid redeclaration' issues by always referencing existing models, enums, and classes."
+  - "Before creating or editing any code, analyze the relevant files to ensure consistency and compatibility."
+  - "When adding backend integration, ensure consistent API contracts and align mobile, web, and server implementations."
+  - "If additional context or details are needed, ask for clarification rather than making assumptions."
 
+# -----------------------------------------------------------
+# Best Practices & AI Behavior
+# -----------------------------------------------------------
+behavior:
+  - "Maintain a single source of truth for backend data shared across mobile and web apps."
+  - "Adopt SwiftUI best practices, including MVVM architecture, async/await for networking, and state management using @Published."
+  - "Follow Apple's Human Interface Guidelines for UI/UX while aligning with the Fintellect React web app's design consistency."
+  - "Add meaningful debugging logs whenever implementing new features to assist in error tracking and resolution."
 
-
-Current project structure without the mobile folder:
-
-.config
-.local
-.upm
-app
-certs
-client
-db
-drizzle
-instructions
-migrations
-prisma
-public
-scripts
-server
-__tests__
-.config\htop
-.local\share
-.local\state
-.local\share\drizzle-studio
-.local\state\replit
-client\public
-client\src
-client\index.html
-client\package-lock.json
-client\package.json
-client\postcss.config.js
-client\tailwind.config.js
-client\vite.config.ts
-client\public\favicon.svg
-client\public\site.webmanifest
-client\src\api
-client\src\app
-client\src\components
-client\src\hooks
-client\src\lib
-client\src\pages
-client\src\styles
-client\src\types
-client\src\App.tsx
-client\src\config.ts
-client\src\index.css
-client\src\main.tsx
-client\src\app\dashboard
-client\src\components\ai
-client\src\components\Budget
-client\src\components\Dashboard
-client\src\components\demo
-client\src\components\feedback
-client\src\components\Goals
-client\src\components\Investment
-client\src\components\layout
-client\src\components\legal
-client\src\components\onboarding
-client\src\components\Plaid
-client\src\components\Transactions
-client\src\components\ui
-client\src\components\ErrorBoundary.tsx
-client\src\components\ai\FeatureRequestModal.tsx
-client\src\components\Budget\CreateBudgetDialog.tsx
-client\src\components\Dashboard\BudgetAnalysis
-client\src\components\Dashboard\AIAssistant.tsx
-client\src\components\Dashboard\AIFinancialInsights.tsx
-client\src\components\Dashboard\AIFinancialTip.tsx
-client\src\components\Dashboard\AIInsights.tsx
-client\src\components\Dashboard\BankAccounts.tsx
-client\src\components\Dashboard\FinanceOverview.tsx
-client\src\components\Dashboard\PaymentMethods.tsx
-client\src\components\Dashboard\SpendingChart.tsx
-client\src\components\Dashboard\BudgetAnalysis\CategoryBreakdown.tsx
-client\src\components\Dashboard\BudgetAnalysis\RecurringExpenses.tsx
-client\src\components\Dashboard\BudgetAnalysis\SpendingTrends.tsx
-client\src\components\feedback\BetaFeedback.tsx
-client\src\components\Goals\AddGoalDialog.tsx
-client\src\components\Goals\UpdateGoalDialog.tsx
-client\src\components\Investment\InvestmentProfileForm.tsx
-client\src\components\layout\BetaBanner.tsx
-client\src\components\layout\Footer.tsx
-client\src\components\layout\Header.tsx
-client\src\components\layout\Layout.tsx
-client\src\components\layout\Navigation.tsx
-client\src\components\layout\PageHeader.tsx
-client\src\components\legal\AIDisclaimer.tsx
-client\src\components\legal\DisclaimerBanner.tsx
-client\src\components\legal\LegalFooter.tsx
-client\src\components\legal\TermsModal.tsx
-client\src\components\legal\VersionInfo.tsx
-client\src\components\onboarding\DemoModeButton.tsx
-client\src\components\onboarding\FeatureTour.tsx
-client\src\components\Plaid\PlaidLink.tsx
-client\src\components\Transactions\SpendingPatterns.tsx
-client\src\components\Transactions\TransactionInsights.tsx
-client\src\components\Transactions\TransactionList.tsx
-client\src\components\ui\loading
-client\src\components\ui\tips
-client\src\components\ui\toast
-client\src\components\ui\accordion.tsx
-client\src\components\ui\alert-dialog.tsx
-client\src\components\ui\alert.tsx
-client\src\components\ui\aspect-ratio.tsx
-client\src\components\ui\avatar.tsx
-client\src\components\ui\badge.tsx
-client\src\components\ui\breadcrumb.tsx
-client\src\components\ui\button.tsx
-client\src\components\ui\calendar.tsx
-client\src\components\ui\card.tsx
-client\src\components\ui\carousel.tsx
-client\src\components\ui\chart.tsx
-client\src\components\ui\checkbox.tsx
-client\src\components\ui\collapsible.tsx
-client\src\components\ui\command.tsx
-client\src\components\ui\context-menu.tsx
-client\src\components\ui\date-range-picker.tsx
-client\src\components\ui\dialog.tsx
-client\src\components\ui\drawer.tsx
-client\src\components\ui\dropdown-menu.tsx
-client\src\components\ui\form.tsx
-client\src\components\ui\hover-card.tsx
-client\src\components\ui\input-otp.tsx
-client\src\components\ui\input.tsx
-client\src\components\ui\label.tsx
-client\src\components\ui\menubar.tsx
-client\src\components\ui\navigation-menu.tsx
-client\src\components\ui\pagination.tsx
-client\src\components\ui\popover.tsx
-client\src\components\ui\progress.tsx
-client\src\components\ui\radio-group.tsx
-client\src\components\ui\resizable.tsx
-client\src\components\ui\scroll-area.tsx
-client\src\components\ui\SecurityBadge.tsx
-client\src\components\ui\select.tsx
-client\src\components\ui\separator.tsx
-client\src\components\ui\sheet.tsx
-client\src\components\ui\sidebar.tsx
-client\src\components\ui\skeleton.tsx
-client\src\components\ui\slider.tsx
-client\src\components\ui\switch.tsx
-client\src\components\ui\table.tsx
-client\src\components\ui\tabs.tsx
-client\src\components\ui\textarea.tsx
-client\src\components\ui\toast.tsx
-client\src\components\ui\toaster.tsx
-client\src\components\ui\toggle-group.tsx
-client\src\components\ui\toggle.tsx
-client\src\components\ui\tooltip.tsx
-client\src\components\ui\loading\LoadingState.tsx
-client\src\components\ui\tips\UsageTip.tsx
-client\src\components\ui\toast\CustomToast.tsx
-client\src\hooks\use-ai-chat.ts
-client\src\hooks\use-ai-insights.ts
-client\src\hooks\use-mobile.tsx
-client\src\hooks\use-page-title.ts
-client\src\hooks\use-plaid-link.ts
-client\src\hooks\use-plaid.ts
-client\src\hooks\use-toast.ts
-client\src\hooks\use-transactions.ts
-client\src\hooks\use-user.ts
-client\src\lib\legal
-client\src\lib\api.ts
-client\src\lib\categories.ts
-client\src\lib\constants.ts
-client\src\lib\demo.ts
-client\src\lib\plaid.ts
-client\src\lib\queryClient.ts
-client\src\lib\utils.ts
-client\src\lib\legal\versions.ts
-client\src\pages\legal
-client\src\pages\AIAssistantPage.tsx
-client\src\pages\AIBudgetAnalysisPage.tsx
-client\src\pages\AIBudgetPage.tsx
-client\src\pages\AIHubPage.tsx
-client\src\pages\AuthPage.tsx
-client\src\pages\DashboardPage.tsx
-client\src\pages\GoalsPage.tsx
-client\src\pages\InvestmentStrategyPage.tsx
-client\src\pages\LandingPage.tsx
-client\src\pages\OnboardingPage.tsx
-client\src\pages\ProfilePage.tsx
-client\src\pages\ProfileSettingsPage.tsx
-client\src\pages\TransactionsPage.tsx
-client\src\pages\legal\PrivacyPolicyPage.tsx
-client\src\pages\legal\TermsPage.tsx
-client\src\types\global.d.ts
-client\src\types\user.ts
-mobile\FintellectMobile\FintellectMobile\ContentView.swift
-mobile\FintellectMobile\FintellectMobile\FintellectMobileApp.swift
-mobile\FintellectMobile\FintellectMobile\Assets.xcassets\Contents.json
-mobile\FintellectMobile\FintellectMobile\Assets.xcassets\AccentColor.colorset\Contents.json
-mobile\FintellectMobile\FintellectMobile\Assets.xcassets\AppIcon.appiconset\Contents.json
-mobile\FintellectMobile\FintellectMobile.xcodeproj\project.pbxproj
-mobile\FintellectMobile\FintellectMobile.xcodeproj\project.xcworkspace\contents.xcworkspacedata
-mobile\FintellectMobile\FintellectMobileTests\FintellectMobileTests.swift
-mobile\FintellectMobile\FintellectMobileUITests\FintellectMobileUITests.swift
-mobile\FintellectMobile\FintellectMobileUITests\FintellectMobileUITestsLaunchTests.swift
-db\migrations
-db\index.ts
-db\migrate.ts
-db\schema.ts
-db\migrations\0003_add_investment_profile.sql
-db\migrations\clear_database.ts
-db\migrations\init_schema.ts
-db\migrations\remap_housing.ts
-drizzle\meta
-migrations\meta
-server\api
-server\auth
-server\config
-server\db
-server\lib
-server\middleware
-server\models
-server\routes
-server\services
-server\src
-server\static
-server\types
-server\auth.ts
-server\index.ts
-server\routes.ts
-server\static.ts
-server\vite.ts
-server\api\ai
-server\api\plaid
-server\api\feature-requests.ts
-server\api\plaid\sync.ts
-server\auth\errors.ts
-server\auth\google.ts
-server\auth\index.ts
-server\auth\middleware.ts
-server\config\plaid.ts
-server\lib\plaid.ts
-server\middleware\secure.ts
-server\routes\ai.ts
-server\routes\auth.ts
-server\routes\index.ts
-server\routes\investment.ts
-server\routes\plaid.ts
-server\routes\user.ts
-server\services\ai
-server\services\plaid
-server\services\ai.ts
-server\services\categories.ts
-server\services\demo.ts
-server\services\merchant-categories.ts
-server\services\payments.ts
-server\services\plaid.ts
-server\services\transactions.ts
-server\services\ai\agents
-server\services\ai\prompts
-server\services\ai\store
-server\services\ai\index.ts
-server\services\ai\agents\BudgetAnalysisAgent.ts
-server\services\ai\agents\ChatbotAgent.ts
-server\services\ai\agents\DashboardInsightsAgent.ts
-server\services\ai\agents\FinancialAdvisorAgent.ts
-server\services\ai\agents\FinancialTipAgent.ts
-server\services\ai\agents\InvestmentStrategyAgent.ts
-server\services\ai\prompts\transaction-insights.ts
-server\services\ai\store\CategoryMap.ts
-server\services\ai\store\KnowledgeStore.ts
-server\services\plaid\categorize.ts
-server\src\services
-server\src\utils
-__tests__\components
-__tests__\integration
-__tests__\services
+enhancements:
+  - "If you think of valuable ideas or suggestions, append them to 'C:\\Users\\reidr\\OneDrive\\Desktop\\APP Rep\\doc.txt' for review."
+  - "Propose optimizations for performance, scalability, or user experience when relevant."
+  - "Include detailed comments in generated code to explain functionality and ease future maintenance."
 
 tech_stack:
   frontend:
-    - "React (TypeScript)"
-    - "TanStack Query (React Query)"
-    - "Tailwind CSS"
-    - "Framer Motion"
-    - "Wouter"
-    - "shadcn/ui"
+    - "SwiftUI for iOS frontend with MVVM architecture."
+    - "React (TypeScript) for the web frontend."
+    - "Tailwind CSS, Framer Motion, Wouter, and shadcn/ui for React UI."
   backend:
-    - "Node.js"
-    - "Express"
-    - "TypeScript"
-    - "Drizzle ORM"
-    - "Passport.js"
-    - "Express Session"
+    - "Node.js + Express + TypeScript for backend APIs."
+    - "Drizzle ORM for database interactions."
+    - "Plaid API for financial data aggregation and sync."
   database:
-    - "PostgreSQL (Neon.tech)"
-  ai_integration:
-    - "Google's Gemini Pro API"
-    - "Plaid API"
+    - "PostgreSQL (Neon.tech) for data storage with schema for users, transactions, goals, and budgets."
 
-core_features:
-  - "AI-Powered Financial Dashboard"
-  - "Transaction Management & Categorization"
-  - "Budget & Goal Management"
-  - "AI-based Financial Insights & Tips"
-  - "Real-time Transaction Data & Analysis"
-  - "Integration with Plaid and Various AI Agents"
+# -----------------------------------------------------------
+# Current Project State
+# -----------------------------------------------------------
+current_state:
+  auth_integration:
+    - "AuthView in SwiftUI mobile app successfully integrated with the Node.js backend."
+    - "Login and registration flows are functional with token-based authentication (access/refresh tokens)."
+  onboarding_progress:
+    - "Onboarding features need integration into the SwiftUI frontend."
+    - "The backend tracks onboarding steps via 'onboardingStep' and 'hasCompletedOnboarding' fields in the users table."
+  next_steps:
+    - "Use these as suggestions but feel free to use your own suggested next steps as well." 
+    - "Integrate onboarding flow in the SwiftUI app, including updating user onboarding state via API."
+    - "Expand backend integration to include Plaid bank account linking and goal management."
+    - "Ensure alignment between the mobile app, backend, and React web app APIs."
 
-requirements:
-  - "Develop a new SwiftUI iOS app inside the 'mobile' folder"
-  - "Reuse existing Node.js (Express) backend and PostgreSQL database"
-  - "Maintain brand consistency but adhere to Apple’s HIG"
-  - "Implement best SwiftUI architecture (MVVM) and secure auth (tokens/sessions)"
+# -----------------------------------------------------------
+# Mobile App Architecture
+# -----------------------------------------------------------
+mobile_architecture:
+  pattern: "MVVM (Model-View-ViewModel)"
+  key_components:
+    - "Views: SwiftUI views with modern design system"
+    - "ViewModels: @MainActor classes managing state and business logic"
+    - "Models: Codable structs for data representation"
+    - "Services: APIClient, KeychainManager for backend communication"
 
-goals_for_cursor_ai:
-  - "Provide SwiftUI code snippets, especially for views, networking, and authentication flows"
-  - "Propose an optimal 'mobile/' project structure"
-  - "Give advice on SwiftUI patterns: navigation, state management, concurrency with async/await"
-  - "Help replicate React-based features in native iOS patterns"
+# -----------------------------------------------------------
+# Authentication Flow Details
+# -----------------------------------------------------------
+auth_flow:
+  implementation:
+    - "JWT-based authentication for mobile app"
+    - "Session-based authentication for web app"
+    - "Secure token storage in iOS Keychain"
+  token_config:
+    access_token_expiry: "15m"
+    refresh_token_expiry: "7d"
+  endpoints:
+    - "/api/auth/mobile/login"
+    - "/api/auth/mobile/register"
+    - "/api/auth/mobile/refresh"
+    - "/api/auth/mobile/verify"
 
-cursor_rules:
-  - "If the AI cannot see or access a certain file or folder, it must ask the user for the file/folder content before proceeding."
-  - "If the AI is uncertain about any aspect of the project, it should prompt the user for more information or clarifications."
-  - "The AI should treat 'client/', 'server/', 'db/', and 'mobile/' as core directories of this monorepo."
-  - "Maintain a single backend and database source of truth for both web and iOS."
-  - "Adapt UI/UX from the React app but follow iOS-native design guidelines and SwiftUI best practices."
+# -----------------------------------------------------------
+# Development Environment
+# -----------------------------------------------------------
+development:
+  local:
+    backend_url: "http://127.0.0.1:5001"
+    web_url: "http://localhost:5173"
+  macincloud:
+    backend_url: "https://216.39.74.172:5001"
+    ssl: "Self-signed certificates for development"
+
+# -----------------------------------------------------------
+# Code Organization
+# -----------------------------------------------------------
+code_structure:
+  mobile:
+    - "Features/: Feature-based modules with MVVM structure"
+    - "Services/: Shared services like APIClient, KeychainManager"
+    - "Models/: Shared data models and types"
+    - "Utils/: Helper functions and extensions"
+  server:
+    - "auth/: Authentication logic including mobile JWT support"
+    - "routes/: API endpoints organized by feature"
+    - "middleware/: Custom middleware including JWT verification"
+    - "services/: Business logic and external integrations"
+
+# -----------------------------------------------------------
+# Current Implementation Status
+# -----------------------------------------------------------
+status:
+  completed:
+    - "Mobile authentication infrastructure with JWT"
+    - "Secure token storage in Keychain"
+    - "Demo user support"
+    - "Basic error handling and logging"
+  in_progress:
+    - "Onboarding flow integration"
+    - "Plaid connection in mobile app"
+    - "Terms acceptance and legal consent"
+  pending:
+    - "Protected routes for main features"
+    - "Enhanced error handling"
+    - "Comprehensive logging system"
+    - "Production environment setup"
+
+# -----------------------------------------------------------
+# Common Issues & Solutions
+# -----------------------------------------------------------
+troubleshooting:
+  auth:
+    - "Issue: Token storage errors"
+      solution: "Ensure KeychainManager is properly handling all error cases"
+    - "Issue: Connection refused errors"
+      solution: "Check server URL configuration and SSL certificate setup"
+    - "Issue: Invalid redeclaration errors"
+      solution: "Ensure models are defined in a single location and imported correctly"
+  build:
+    - "Issue: Module import errors"
+      solution: "Add explicit file extensions in ECMAScript imports"
+    - "Issue: Type mismatches"
+      solution: "Verify model definitions match between client and server"
+
+# -----------------------------------------------------------
+# Testing & Debugging
+# -----------------------------------------------------------
+testing:
+  mobile:
+    - "Use DEBUG flag for demo data in development"
+    - "Comprehensive console logging with [Module] prefix"
+    - "Xcode simulator with iOS 17.0+"
+  server:
+    - "Request logging middleware for API calls"
+    - "Environment-specific error details"
+    - "Health check endpoint at /api/health"
+
+# -----------------------------------------------------------
+# Security Considerations
+# -----------------------------------------------------------
+security:
+  mobile:
+    - "Secure token storage in Keychain"
+    - "HTTPS for all API communications"
+    - "Token refresh mechanism"
+  server:
+    - "JWT secret management"
+    - "CORS configuration"
+    - "Rate limiting (pending)"
+    - "Security headers"
+
+# -----------------------------------------------------------
+# Final Notes
+# -----------------------------------------------------------
+notes: >
+  The project is transitioning from a web-only application to a multi-platform solution.
+  Mobile development prioritizes user experience while maintaining security.
+  All new features should be documented here to maintain consistency across the codebase.

@@ -143,8 +143,16 @@ struct RegisterView: View {
                         
                         // Create Account Button
                         Button(action: {
-                            // For now, just show onboarding
-                            showOnboarding = true
+                            Task {
+                                await authViewModel.register(
+                                    username: username,
+                                    email: email,
+                                    password: password
+                                )
+                                if authViewModel.isAuthenticated {
+                                    showOnboarding = true
+                                }
+                            }
                         }) {
                             HStack {
                                 if authViewModel.isLoading {

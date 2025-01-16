@@ -60,7 +60,8 @@ class AuthViewModel: ObservableObject {
     
     func login(username: String, password: String) async {
         #if DEBUG
-        if username == "demo" {
+        if username.lowercased() == "demo" {
+            print("[Auth] Demo user login")
             loginAsDemoUser()
             return
         }
@@ -70,7 +71,7 @@ class AuthViewModel: ObservableObject {
         error = nil
         
         do {
-            let credentials = ["username": username, "password": password]
+            let credentials = ["username": username.lowercased(), "password": password]
             let response: LoginResponse = try await APIClient.shared.post("/api/auth/mobile/login", body: credentials)
             
             print("[Auth] Login successful")

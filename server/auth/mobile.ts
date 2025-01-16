@@ -38,6 +38,31 @@ router.post('/login', async (req, res) => {
   console.log('[Mobile Auth] Login attempt');
   const { username, password } = req.body;
 
+  // Handle demo user case
+  if (username.toLowerCase() === 'demo') {
+    console.log('[Mobile Auth] Demo user login');
+    const demoUser = {
+      id: 999999,
+      username: 'DemoUser',
+      hasPlaidSetup: true,
+      hasCompletedOnboarding: true,
+      monthlyIncome: 500000,
+      onboardingStep: null
+    };
+
+    const accessToken = createAccessToken(demoUser.id);
+    const refreshToken = createRefreshToken(demoUser.id);
+
+    return res.json({
+      message: 'Login successful',
+      user: demoUser,
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    });
+  }
+
   try {
     // Find user
     const [user] = await db

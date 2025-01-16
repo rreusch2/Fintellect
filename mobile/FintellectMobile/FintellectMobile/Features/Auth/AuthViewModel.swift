@@ -27,12 +27,8 @@ class AuthViewModel: ObservableObject {
             
             if let registerResponse = try? JSONDecoder().decode(LoginResponse.self, from: response) {
                 // Store tokens in keychain
-                if let token = registerResponse.tokens.accessToken {
-                    try KeychainManager.saveToken(token, forKey: "accessToken")
-                }
-                if let refreshToken = registerResponse.tokens.refreshToken {
-                    try KeychainManager.saveToken(refreshToken, forKey: "refreshToken")
-                }
+                try KeychainManager.saveToken(registerResponse.tokens.accessToken, forKey: "accessToken")
+                try KeychainManager.saveToken(registerResponse.tokens.refreshToken, forKey: "refreshToken")
                 
                 // Update user state
                 self.currentUser = registerResponse.user

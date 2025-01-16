@@ -28,15 +28,10 @@ class AuthViewModel: ObservableObject {
             print("[Auth] Attempting registration for user: \(username)")
             let response: Data = try await APIClient.shared.post("/api/register", body: credentials)
             
-            if let registerResponse = try? JSONDecoder().decode(LoginResponse.self, from: response) {
-                // Store tokens in keychain
-                try KeychainManager.saveToken(registerResponse.tokens.accessToken, forKey: "accessToken")
-                try KeychainManager.saveToken(registerResponse.tokens.refreshToken, forKey: "refreshToken")
-                
-                // Update user state
-                self.currentUser = registerResponse.user
-                self.isAuthenticated = true
-                print("[Auth] Registration successful for user: \(registerResponse.user.username)")
+            if let registerResponse = try? JSONDecoder().decode(RegisterResponse.self, from: response) {
+                // After successful registration, attempt login
+                print("[Auth] Registration successful, attempting login")
+                await login(username: username, password: password)
             } else {
                 throw APIError.decodingError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode registration response"]))
             }
@@ -61,8 +56,8 @@ class AuthViewModel: ObservableObject {
             
             if let loginResponse = try? JSONDecoder().decode(LoginResponse.self, from: response) {
                 // Store tokens
-                try KeychainManager.saveToken(loginResponse.tokens.accessToken, forKey: "accessToken")
-                try KeychainManager.saveToken(loginResponse.tokens.refreshToken, forKey: "refreshToken")
+                try KeychainManager.saveToken(loginResponse.tokens?.accessToken, forKey: "accessToken")
+                try KeychainManager.saveToken(loginResponse.tokens?.refreshToken, forKey: "refreshToken")
                 
                 // Update user state
                 self.currentUser = loginResponse.user
@@ -137,9 +132,13 @@ class AuthViewModel: ObservableObject {
 
 // Response Models
 struct LoginResponse: Codable {
-    let message: String
     let user: User
-    let tokens: Tokens
+    let tokens: Tokens?
+    let message: String?
+}
+
+struct RegisterResponse: Codable {
+    let user: User
 }
 
 struct RefreshResponse: Codable {

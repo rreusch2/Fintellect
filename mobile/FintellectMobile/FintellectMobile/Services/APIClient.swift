@@ -14,9 +14,9 @@ class APIClient {
     static let shared = APIClient()
     
     #if DEBUG
-    private let baseURL = URL(string: "http://192.168.1.98:5001")!
+    private let baseURL = URL(string: "http://localhost:5001")!
     #else
-    private let baseURL = URL(string: "https://your-production-url.com")! // Update with your production URL
+    private let baseURL = URL(string: "https://your-production-url.com")!
     #endif
     
     private let session: URLSession
@@ -26,7 +26,13 @@ class APIClient {
     private init() {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
-        configuration.timeoutIntervalForResource = 300 // Increase timeout for slow connections
+        configuration.timeoutIntervalForResource = 300
+        
+        #if DEBUG
+        configuration.urlCache = nil
+        configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        #endif
+        
         self.session = URLSession(configuration: configuration)
         
         self.decoder = JSONDecoder()

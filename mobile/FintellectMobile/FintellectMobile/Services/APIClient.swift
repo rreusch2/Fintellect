@@ -7,20 +7,25 @@ class APIClient {
     
     private init() {
         #if DEBUG
-        self.baseURL = "http://127.0.0.1:5001"
+        self.baseURL = "https://216.39.74.173:5001"  // MacinCloud IP
         #else
         self.baseURL = "https://api.fintellect.app" // Production URL
         #endif
         
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
-        self.session = URLSession(configuration: config)
+        
+        // Allow self-signed certificates for development
+        let session = URLSession(configuration: config, delegate: URLSessionDelegateHandler(), delegateQueue: nil)
+        self.session = session
+        
         print("[API] Initialized with base URL: \(baseURL)")
     }
     
     func get(_ path: String) async throws -> Data {
         var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!)
         request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
         
         // Add auth header if token exists
         if let token = try? KeychainManager.getToken(forKey: "accessToken") {
@@ -34,6 +39,7 @@ class APIClient {
         var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
         
         // Add auth header if token exists
         if let token = try? KeychainManager.getToken(forKey: "accessToken") {
@@ -88,5 +94,21 @@ extension APIError: LocalizedError {
         case .decodingError(let error):
             return "Failed to decode response: \(error.localizedDescription)"
         }
+    }
+}
+
+class URLSessionDelegateHandler: NSObject, URLSessionDelegate {
+    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        // Accept all certificates in debug mode
+        #if DEBUG
+        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
+            if let serverTrust = challenge.protectionSpace.serverTrust {
+                let credential = URLCredential(trust: serverTrust)
+                completionHandler(.useCredential, credential)
+                return
+            }
+        }
+        #endif
+        completionHandler(.performDefaultHandling, nil)
     }
 } 

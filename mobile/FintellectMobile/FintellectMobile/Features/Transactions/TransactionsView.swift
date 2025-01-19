@@ -41,95 +41,139 @@ struct TransactionsView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Stats Section
-                VStack(spacing: 16) {
-                    HStack(spacing: 16) {
-                        StatCard(
-                            title: "Total Spending",
-                            value: viewModel.totalSpending.formatted(.currency(code: "USD")),
-                            icon: "dollarsign.circle.fill",
-                            color: .blue
-                        )
-                        
-                        if let topCategory = viewModel.topCategory {
-                            StatCard(
-                                title: "Top Category",
-                                value: topCategory.displayName,
-                                icon: topCategory.icon,
-                                color: topCategory.color
-                            )
-                        }
-                    }
-                    
-                    HStack(spacing: 16) {
-                        StatCard(
-                            title: "Average Transaction",
-                            value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
-                            icon: "chart.bar.fill",
-                            color: .purple
-                        )
-                        
-                        StatCard(
-                            title: "Total Transactions",
-                            value: "\(viewModel.transactions.count)",
-                            icon: "list.bullet.rectangle.fill",
-                            color: .orange
-                        )
-                    }
-                }
-                .padding()
-                .background(Color(.systemBackground))
+            ZStack {
+                Color(hex: "0F172A").ignoresSafeArea() // Dark background
                 
-                // Category Filter
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        CategoryFilterButton(
-                            title: "All",
-                            isSelected: selectedCategory == nil,
-                            color: .gray
-                        ) {
-                            selectedCategory = nil
-                        }
-                        
-                        ForEach(categories, id: \.self) { category in
-                            CategoryFilterButton(
-                                title: category.displayName,
-                                isSelected: selectedCategory == category,
-                                color: category.color
-                            ) {
-                                selectedCategory = category
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Stats Cards - Moved up and adjusted spacing
+                        VStack(spacing: 12) {
+                            HStack(spacing: 12) {
+                                StatCard(
+                                    title: "Total Spending",
+                                    value: viewModel.totalSpending.formatted(.currency(code: "USD")),
+                                    icon: "dollarsign.circle.fill",
+                                    color: .blue
+                                )
+                                
+                                if let topCategory = viewModel.topCategory {
+                                    StatCard(
+                                        title: "Top Category",
+                                        value: topCategory.displayName,
+                                        icon: topCategory.icon,
+                                        color: topCategory.color
+                                    )
+                                }
+                            }
+                            
+                            HStack(spacing: 12) {
+                                StatCard(
+                                    title: "Average Transaction",
+                                    value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
+                                    icon: "chart.bar.fill",
+                                    color: .purple
+                                )
+                                
+                                StatCard(
+                                    title: "Total Transactions",
+                                    value: "\(viewModel.transactions.count)",
+                                    icon: "list.bullet.rectangle.fill",
+                                    color: .orange
+                                )
                             }
                         }
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(.vertical, 8)
-                .background(Color(.systemBackground))
-                
-                // Transactions List
-                if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = viewModel.error {
-                    ErrorView(error: error) {
-                        Task {
-                            await viewModel.fetchTransactions()
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        
+                        // Filter Section
+                        VStack(spacing: 12) {
+                            // Transaction Limit Picker
+                            Menu {
+                                ForEach([10, 25, 50, 100], id: \.self) { limit in
+                                    Button(action: {
+                                        selectedLimit = limit
+                                    }) {
+                                        HStack {
+                                            Text("Show \(limit) transactions")
+                                            if selectedLimit == limit {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "line.3.horizontal.decrease")
+                                    Text("Show \(selectedLimit) transactions")
+                                    Image(systemName: "chevron.down")
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color(hex: "1E293B"))
+                                .cornerRadius(8)
+                            }
+                            
+                            // Category Filter
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    CategoryFilterButton(
+                                        title: "All",
+                                        isSelected: selectedCategory == nil,
+                                        color: Color(hex: "3B82F6")
+                                    ) {
+                                        selectedCategory = nil
+                                    }
+                                    
+                                    ForEach(categories, id: \.self) { category in
+                                        CategoryFilterButton(
+                                            title: category.displayName,
+                                            isSelected: selectedCategory == category,
+                                            color: category.color
+                                        ) {
+                                            selectedCategory = category
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        
+                        // Transactions List
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                        } else if let error = viewModel.error {
+                            ErrorView(error: error) {
+                                Task {
+                                    await viewModel.fetchTransactions()
+                                }
+                            }
+                        } else if viewModel.transactions.isEmpty {
+                            EmptyStateView()
+                        } else {
+                            LazyVStack(spacing: 12) {
+                                ForEach(filteredTransactions) { transaction in
+                                    TransactionRow(transaction: transaction)
+                                        .background(Color(hex: "1E293B"))
+                                        .cornerRadius(12)
+                                }
+                            }
+                            .padding(.horizontal)
                         }
                     }
-                } else if viewModel.transactions.isEmpty {
-                    EmptyStateView()
-                } else {
-                    List(filteredTransactions) { transaction in
-                        TransactionRow(transaction: transaction)
-                    }
-                    .listStyle(.plain)
-                    .refreshable {
-                        await viewModel.fetchTransactions()
-                    }
+                    .padding(.bottom, 16)
+                }
+                .refreshable {
+                    await viewModel.fetchTransactions()
                 }
             }
             .navigationTitle("Transactions")
+            .navigationBarTitleDisplayMode(.large)
+            .foregroundColor(.white)
         }
     }
 }
@@ -452,14 +496,45 @@ struct CategoryFilterButton: View {
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .white : .gray)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(isSelected ? color : Color(.systemGray6))
+                        .fill(isSelected ? color : Color(hex: "1E293B"))
                 )
         }
+    }
+}
+
+// MARK: - StatCard
+struct StatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(color)
+                Spacer()
+            }
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
+            
+            Text(value)
+                .font(.headline)
+                .foregroundColor(.white)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color(hex: "1E293B"))
+        .cornerRadius(12)
     }
 }
 

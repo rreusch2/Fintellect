@@ -117,6 +117,7 @@ class OnboardingViewModel: ObservableObject {
 struct OnboardingView: View {
     @EnvironmentObject private var authViewModel: AuthViewModel
     @StateObject private var viewModel: OnboardingViewModel
+    @Environment(\.dismiss) var dismiss
     
     init() {
         // Initialize viewModel with authViewModel from environment
@@ -152,6 +153,10 @@ struct OnboardingView: View {
             if let error = viewModel.error {
                 Text(error)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OnboardingCompleted"))) { _ in
+            print("[Onboarding] Received completion notification, dismissing")
+            dismiss()
         }
     }
 }

@@ -42,44 +42,52 @@ struct TransactionsView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(hex: "0F172A").ignoresSafeArea() // Dark background
+                BackgroundView()
                 
                 ScrollView {
                     VStack(spacing: 16) {
                         // Stats Cards - Moved up and adjusted spacing
                         VStack(spacing: 12) {
                             HStack(spacing: 12) {
-                                StatCard(
-                                    title: "Total Spending",
-                                    value: viewModel.totalSpending.formatted(.currency(code: "USD")),
-                                    icon: "dollarsign.circle.fill",
-                                    color: .blue
-                                )
+                                CardView {
+                                    StatCard(
+                                        title: "Total Spending",
+                                        value: viewModel.totalSpending.formatted(.currency(code: "USD")),
+                                        icon: "dollarsign.circle.fill",
+                                        color: .blue
+                                    )
+                                }
                                 
                                 if let topCategory = viewModel.topCategory {
-                                    StatCard(
-                                        title: "Top Category",
-                                        value: topCategory.displayName,
-                                        icon: topCategory.icon,
-                                        color: topCategory.color
-                                    )
+                                    CardView {
+                                        StatCard(
+                                            title: "Top Category",
+                                            value: topCategory.displayName,
+                                            icon: topCategory.icon,
+                                            color: topCategory.color
+                                        )
+                                    }
                                 }
                             }
                             
                             HStack(spacing: 12) {
-                                StatCard(
-                                    title: "Average Transaction",
-                                    value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
-                                    icon: "chart.bar.fill",
-                                    color: .purple
-                                )
+                                CardView {
+                                    StatCard(
+                                        title: "Average Transaction",
+                                        value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
+                                        icon: "chart.bar.fill",
+                                        color: .purple
+                                    )
+                                }
                                 
-                                StatCard(
-                                    title: "Total Transactions",
-                                    value: "\(viewModel.transactions.count)",
-                                    icon: "list.bullet.rectangle.fill",
-                                    color: .orange
-                                )
+                                CardView {
+                                    StatCard(
+                                        title: "Total Transactions",
+                                        value: "\(viewModel.transactions.count)",
+                                        icon: "list.bullet.rectangle.fill",
+                                        color: .orange
+                                    )
+                                }
                             }
                         }
                         .padding(.horizontal)
@@ -118,19 +126,19 @@ struct TransactionsView: View {
                             // Category Filter
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
-                                    CategoryFilterButton(
+                                    InsightButton(
                                         title: "All",
-                                        isSelected: selectedCategory == nil,
-                                        color: Color(hex: "3B82F6")
+                                        systemImage: "list.bullet",
+                                        isSelected: selectedCategory == nil
                                     ) {
                                         selectedCategory = nil
                                     }
                                     
                                     ForEach(categories, id: \.self) { category in
-                                        CategoryFilterButton(
+                                        InsightButton(
                                             title: category.displayName,
-                                            isSelected: selectedCategory == category,
-                                            color: category.color
+                                            systemImage: category.icon,
+                                            isSelected: selectedCategory == category
                                         ) {
                                             selectedCategory = category
                                         }
@@ -157,9 +165,9 @@ struct TransactionsView: View {
                         } else {
                             LazyVStack(spacing: 12) {
                                 ForEach(filteredTransactions) { transaction in
-                                    TransactionRow(transaction: transaction)
-                                        .background(Color(hex: "1E293B"))
-                                        .cornerRadius(12)
+                                    CardView {
+                                        TransactionRow(transaction: transaction)
+                                    }
                                 }
                             }
                             .padding(.horizontal)

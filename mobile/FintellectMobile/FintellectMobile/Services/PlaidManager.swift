@@ -1,6 +1,6 @@
 import Foundation
 import LinkKit
-import UIKit
+import SwiftUI
 
 extension UIApplication {
     var keyWindow: UIWindow? {
@@ -23,6 +23,7 @@ class PlaidManager: ObservableObject {
     
     @Published var isLoading = false
     @Published var error: String?
+    private var handler: Handler?
     
     private init() {}
     
@@ -37,32 +38,34 @@ class PlaidManager: ObservableObject {
                let linkToken = json["link_token"] as? String {
                 print("[Plaid] Link token created successfully")
                 
-                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                    let configuration = LinkConfiguration(
-                        linkToken: linkToken,
+                let result = try await withCheckedThrowingContinuation { continuation in
+                    // Create the Plaid Link token configuration
+                    let config = LinkTokenConfiguration(
+                        token: linkToken,
                         onSuccess: { success in
-                            print("[Plaid] Link success - public token: \(success.publicToken)")
-                            Task { [weak self] in
-                                await self?.exchangePublicToken(publicToken: success.publicToken)
-                            }
-                            continuation.resume()
+                            continuation.resume(returning: success.publicToken)
                         },
-                        onExit: { error in
-                            if let error = error {
-                                print("[Plaid] Link exit with error: \(error)")
+                        onExit: { exit in
+                            if let error = exit.error {
                                 continuation.resume(throwing: error)
                             } else {
-                                print("[Plaid] Link exit without error")
                                 continuation.resume(throwing: NSError(domain: "Plaid", code: -1, userInfo: [NSLocalizedDescriptionKey: "User exited"]))
                             }
                         }
                     )
                     
-                    if let rootViewController = UIApplication.shared.windows.first?.rootViewController {
-                        let linkViewController = LinkViewController(configuration: configuration)
-                        rootViewController.present(linkViewController, animated: true)
+                    // Create and present the Plaid Link view
+                    let plaidView = PlaidLinkView(configuration: config)
+                    let hostingController = UIHostingController(rootView: plaidView)
+                    
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let rootViewController = windowScene.windows.first?.rootViewController {
+                        rootViewController.present(hostingController, animated: true)
                     }
                 }
+                
+                // Handle success
+                await exchangePublicToken(publicToken: result)
             }
         } catch {
             print("[Plaid] Error: \(error)")

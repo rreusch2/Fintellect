@@ -21,20 +21,22 @@ struct TransactionSummary: Codable {
     #if DEBUG
     static var demoData: TransactionSummary {
         TransactionSummary(
-            totalBalance: 698876,  // $6,988.76
-            monthlySpending: 159597, // $1,595.97
-            monthlySavings: 89245,  // $892.45
-            monthOverMonthChange: -2.5,
+            totalBalance: 44766,  // $447.66
+            monthlySpending: 300000, // $3,000 total monthly spending
+            monthlySavings: 0,  // No savings detected yet
+            monthOverMonthChange: 0,
             categoryTotals: [
-                "UTILITIES": 59496,
-                "FOOD_AND_DRINK": 36618,
-                "SHOPPING": 31492,
-                "ENTERTAINMENT": 20000,
-                "OTHER": 12000
+                "FOOD_AND_DRINK": 88000,  // $880
+                "TRANSPORTATION": 19800,   // $198
+                "ENTERTAINMENT": 7500,     // $75
+                "GENERAL_MERCHANDISE": 90000, // $900
+                "LOAN_PAYMENTS": 17000,    // $170
+                "PERSONAL_CARE": 2600,     // $26
+                "GENERAL_SERVICES": 78100   // $781
             ],
             spendingTrends: SpendingTrends(
-                labels: ["Jan 2024", "Feb 2024", "Mar 2024"],
-                data: [145000, 159597, 155000]
+                labels: ["Previous", "Current"],
+                data: [280000, 300000]  // $2,800 vs $3,000
             ),
             hasPlaidConnection: true,
             status: nil,
@@ -89,16 +91,8 @@ class DashboardViewModel: ObservableObject {
         isLoading = true
         error = nil
         
-        #if DEBUG
-        // Use demo data in debug builds
-        let summary = TransactionSummary.demoData
-        updateDashboardData(with: summary)
-        isLoading = false
-        return
-        #endif
-        
         do {
-            // Fetch transaction summary
+            // Fetch transaction summary from the API
             let summaryData = try await APIClient.shared.get("/api/plaid/transactions/summary")
             if let summary = try? JSONDecoder().decode(TransactionSummary.self, from: summaryData) {
                 updateDashboardData(with: summary)
@@ -125,26 +119,47 @@ class DashboardViewModel: ObservableObject {
         monthlySavings = Double(summary.monthlySavings) / 100.0
         monthOverMonthChange = summary.monthOverMonthChange
         
-        // Calculate total spending for percentages
-        let totalSpending = Double(summary.monthlySpending)
+        // Filter and process category totals similar to web app
+        let filteredCategories = summary.categoryTotals.filter { category, amount in
+            amount > 0 &&
+            !["TRANSFER_IN", "TRANSFER_OUT", "OTHER", "UNCATEGORIZED"].contains(category) &&
+            !category.contains("TRANSFER")
+        }
         
-        // Map category totals to SpendingCategory objects
+        // Calculate total spending for percentages
+        let totalSpending = Double(filteredCategories.values.reduce(0, +))
+        
+        // Map category totals to SpendingCategory objects with consistent colors
         let categoryColors: [String: Color] = [
-            "UTILITIES": Color(hex: "3B82F6"),
-            "FOOD_AND_DRINK": Color(hex: "10B981"),
-            "SHOPPING": Color(hex: "8B5CF6"),
-            "ENTERTAINMENT": Color(hex: "F59E0B"),
-            "OTHER": Color(hex: "EC4899")
+            "FOOD_AND_DRINK": Color(hex: "3B82F6"),
+            "TRANSPORTATION": Color(hex: "10B981"),
+            "ENTERTAINMENT": Color(hex: "8B5CF6"),
+            "GENERAL_MERCHANDISE": Color(hex: "F59E0B"),
+            "LOAN_PAYMENTS": Color(hex: "EC4899"),
+            "PERSONAL_CARE": Color(hex: "6366F1"),
+            "GENERAL_SERVICES": Color(hex: "14B8A6"),
+            "TRAVEL": Color(hex: "EAB308"),
+            "INCOME": Color(hex: "22C55E")
         ]
         
-        spendingCategories = summary.categoryTotals.map { category, amount in
-            let percentage = totalSpending > 0 ? Double(amount) / totalSpending : 0
+        // Create spending categories sorted by amount
+        spendingCategories = filteredCategories.map { category, amount in
+            let percentage = totalSpending > 0 ? (Double(amount) / totalSpending * 100.0) : 0
             return SpendingCategory(
-                name: category.replacingOccurrences(of: "_", with: " ").capitalized,
+                name: formatCategoryName(category),
                 amount: Double(amount) / 100.0,
                 percentage: percentage,
-                color: categoryColors[category] ?? Color(hex: "EC4899")
+                color: categoryColors[category] ?? Color(hex: "94A3B8")
             )
         }.sorted { $0.amount > $1.amount }
+    }
+    
+    // Helper function to format category names like the web app
+    private func formatCategoryName(_ category: String) -> String {
+        category
+            .replacingOccurrences(of: "_", with: " ")
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst().lowercased() }
+            .joined(separator: " ")
     }
 } 

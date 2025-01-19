@@ -100,20 +100,10 @@ class TransactionsViewModel: ObservableObject {
 // MARK: - Models
 struct PlaidTransaction: Codable {
     let id: Int
+    let amount: Int
+    let category: String
+    let date: Date
     let description: String
     let merchantName: String?
-    let amount: Int
-    let date: Date
-    let category: String
     let accountId: String
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case description
-        case merchantName
-        case amount
-        case date
-        case category
-        case accountId
-    }
 } 

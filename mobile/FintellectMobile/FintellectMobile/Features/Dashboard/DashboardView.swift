@@ -487,31 +487,6 @@ struct EmptyInsightsView: View {
     }
 }
 
-struct CustomTextFieldStyle: TextFieldStyle {
-    func _body(configuration: TextField<Self._Label>) -> some View {
-        configuration
-            .font(.subheadline)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(hex: "1E293B"))
-            .cornerRadius(20)
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color(hex: "3B82F6").opacity(0.3), lineWidth: 1)
-            )
-    }
-}
-
-// Add this new button style for the press animation
-struct PressableButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .opacity(configuration.isPressed ? 0.9 : 1)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
-    }
-}
-
 #Preview {
     NavigationView {
         DashboardView()

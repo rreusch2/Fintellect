@@ -1,5 +1,6 @@
 import SwiftUI
 
+// MARK: - Card Views
 struct CardView<Content: View>: View {
     let content: Content
     
@@ -22,6 +23,7 @@ struct CardView<Content: View>: View {
     }
 }
 
+// MARK: - Buttons and Badges
 struct InsightButton: View {
     let title: String
     let systemImage: String
@@ -40,6 +42,32 @@ struct InsightButton: View {
             .foregroundColor(.white)
             .cornerRadius(20)
         }
+    }
+}
+
+struct PriorityBadge: View {
+    let type: String
+    
+    var color: Color {
+        switch type {
+        case "HIGH":
+            return Color(hex: "EF4444")
+        case "MEDIUM":
+            return Color(hex: "F59E0B")
+        default:
+            return Color(hex: "10B981")
+        }
+    }
+    
+    var body: some View {
+        Text(type)
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .foregroundColor(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.1))
+            .cornerRadius(8)
     }
 }
 
@@ -87,7 +115,6 @@ struct InsightCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header with Priority Badge
             HStack {
                 Text(insight.title)
                     .font(.subheadline)
@@ -100,7 +127,6 @@ struct InsightCard: View {
                 PriorityBadge(type: insight.type)
             }
             
-            // Description
             Text(insight.description)
                 .font(.caption)
                 .foregroundColor(Color(hex: "94A3B8"))
@@ -117,33 +143,6 @@ struct InsightCard: View {
     }
 }
 
-// MARK: - Priority Badge
-struct PriorityBadge: View {
-    let type: String
-    
-    var color: Color {
-        switch type {
-        case "HIGH":
-            return Color(hex: "EF4444")
-        case "MEDIUM":
-            return Color(hex: "F59E0B")
-        default:
-            return Color(hex: "10B981")
-        }
-    }
-    
-    var body: some View {
-        Text(type)
-            .font(.caption2)
-            .fontWeight(.semibold)
-            .foregroundColor(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.1))
-            .cornerRadius(8)
-    }
-}
-
 // MARK: - Background View
 struct BackgroundView: View {
     var body: some View {
@@ -152,7 +151,32 @@ struct BackgroundView: View {
     }
 }
 
-// MARK: - Color Extension
+// MARK: - Styles
+struct CustomTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .font(.subheadline)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(hex: "1E293B"))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color(hex: "3B82F6").opacity(0.3), lineWidth: 1)
+            )
+    }
+}
+
+struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Extensions
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -177,5 +201,26 @@ extension Color {
             blue:  Double(b) / 255,
             opacity: Double(a) / 255
         )
+    }
+}
+
+// MARK: - View Extensions
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+}
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+    
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
     }
 }

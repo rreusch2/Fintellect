@@ -45,10 +45,16 @@ class TransactionsViewModel: ObservableObject {
             print("[Transactions] Fetching transactions")
             let data = try await APIClient.shared.get("/api/plaid/transactions")
             
+            // Debug: Print raw JSON
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("[Transactions] Raw JSON response:", jsonString)
+            }
+            
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             
-            if let plaidTransactions = try? decoder.decode([PlaidTransaction].self, from: data) {
+            do {
+                let plaidTransactions = try decoder.decode([PlaidTransaction].self, from: data)
                 print("[Transactions] Successfully decoded \(plaidTransactions.count) transactions")
                 self.transactions = plaidTransactions.map { plaidTx in
                     Transaction(
@@ -59,7 +65,8 @@ class TransactionsViewModel: ObservableObject {
                         category: mapPlaidCategory(plaidTx.category)
                     )
                 }
-            } else {
+            } catch let decodingError {
+                print("[Transactions] Decoding error details:", decodingError)
                 throw APIError.decodingError(NSError(domain: "TransactionsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode transactions"]))
             }
         } catch {

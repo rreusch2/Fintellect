@@ -14,7 +14,7 @@ class APIClient {
         
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
-        self.session = URLSession(configuration: config)  // Use standard session since we're using HTTP
+        self.session = URLSession(configuration: config)
         
         print("[API] Initialized with base URL: \(baseURL)")
     }
@@ -29,7 +29,7 @@ class APIClient {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
-        return try await performRequest(request)
+        return try await performRequest(request, shouldRetry: true)
     }
     
     func post(_ path: String, body: [String: Any]) async throws -> Data {
@@ -47,10 +47,10 @@ class APIClient {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         print("[API] POST request to: \(path)")
-        return try await performRequest(request)
+        return try await performRequest(request, shouldRetry: true)
     }
     
-    private func performRequest(_ request: URLRequest) async throws -> Data {
+    private func performRequest(_ request: URLRequest, shouldRetry: Bool = true) async throws -> Data {
         let (data, response) = try await session.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -59,6 +59,19 @@ class APIClient {
         }
         
         print("[API] Response status code: \(httpResponse.statusCode)")
+        
+        // Handle 401 Unauthorized - Try to refresh token
+        if httpResponse.statusCode == 401 && shouldRetry {
+            print("[API] Unauthorized - attempting token refresh")
+            if let newToken = try? await refreshToken() {
+                // Update the request with new token
+                var newRequest = request
+                newRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
+                
+                // Retry the request with new token
+                return try await performRequest(newRequest, shouldRetry: false)
+            }
+        }
         
         // Handle error responses
         if httpResponse.statusCode >= 400 {
@@ -72,6 +85,38 @@ class APIClient {
         }
         
         return data
+    }
+    
+    private func refreshToken() async throws -> String? {
+        guard let refreshToken = try? KeychainManager.getToken(forKey: "refreshToken") else {
+            print("[API] No refresh token found")
+            return nil
+        }
+        
+        print("[API] Attempting to refresh token")
+        
+        var request = URLRequest(url: URL(string: "\(baseURL)/api/auth/mobile/refresh")!)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["refreshToken": refreshToken]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let newAccessToken = json["accessToken"] as? String else {
+            print("[API] Token refresh failed")
+            return nil
+        }
+        
+        // Save new access token
+        KeychainManager.saveToken(newAccessToken, forKey: "accessToken")
+        print("[API] Token refreshed successfully")
+        
+        return newAccessToken
     }
 }
 

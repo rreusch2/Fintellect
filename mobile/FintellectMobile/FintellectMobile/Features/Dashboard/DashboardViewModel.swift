@@ -215,16 +215,16 @@ class DashboardViewModel: ObservableObject {
     }
     
     func sendMessage(_ message: String) async {
-        let userMessage = ChatMessage(content: message, isUser: true)
-        chatMessages.append(userMessage)
+        let promptMessage = ChatMessage(content: message, isUser: true, timestamp: Date())
+        chatMessages.append(promptMessage)
         isTyping = true
         
         do {
             let response = try await aiService.chat(message: message)
-            let aiMessage = ChatMessage(content: response.message, isUser: false)
+            let aiMessage = ChatMessage(content: response.message, isUser: false, timestamp: Date())
             chatMessages.append(aiMessage)
         } catch {
-            let errorMessage = ChatMessage(content: "I apologize, but I'm having trouble processing your request at the moment. Please try again later.", isUser: false)
+            let errorMessage = ChatMessage(content: "I apologize, but I'm having trouble processing your request. Please try again.", isUser: false, timestamp: Date())
             chatMessages.append(errorMessage)
         }
         

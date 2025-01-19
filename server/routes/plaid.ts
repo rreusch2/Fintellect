@@ -753,4 +753,43 @@ router.post("/create-link-token", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/transactions", async (req: Request, res: Response) => {
+  // Check for JWT auth first
+  if (!req.jwtPayload?.userId) {
+    // Fall back to session auth
+    if (!req.user?.id) {
+      console.log("[Plaid] Transactions request without authentication");
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+  }
+
+  const userId = req.jwtPayload?.userId || req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    // Get transactions with account details
+    const transactions = await db
+      .select({
+        id: plaidTransactions.id,
+        amount: plaidTransactions.amount,
+        category: plaidTransactions.category,
+        date: plaidTransactions.date,
+        description: plaidTransactions.description,
+        merchantName: plaidTransactions.merchantName,
+        accountId: plaidTransactions.accountId,
+      })
+      .from(plaidTransactions)
+      .where(eq(plaidTransactions.userId, userId))
+      .orderBy(desc(plaidTransactions.date))
+      .limit(50);
+
+    res.json(transactions);
+  } catch (error) {
+    console.error("[Plaid] Error fetching transactions:", error);
+    res.status(500).json({ error: "Failed to fetch transactions" });
+  }
+});
+
 export default router; 

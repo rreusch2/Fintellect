@@ -14,6 +14,7 @@ enum OnboardingStep: Int, CaseIterable {
     }
 }
 
+@MainActor
 class OnboardingViewModel: ObservableObject {
     @Published var currentStep: OnboardingStep = .terms
     @Published var hasAcceptedTerms = false
@@ -23,6 +24,12 @@ class OnboardingViewModel: ObservableObject {
     @Published var showBankConnectionSheet = false
     @Published var error: String?
     @Published var isLoading = false
+    
+    private let authViewModel: AuthViewModel
+    
+    init(authViewModel: AuthViewModel) {
+        self.authViewModel = authViewModel
+    }
     
     func acceptTerms() async {
         guard hasAcceptedTerms && hasAcceptedPrivacy else {
@@ -34,14 +41,27 @@ class OnboardingViewModel: ObservableObject {
         error = nil
         
         do {
-            let body = [
+            let body: [String: Any] = [
                 "acceptedTerms": true,
                 "acceptedPrivacy": true
             ]
             
-            let _: Data = try await APIClient.shared.post("/api/auth/mobile/accept-terms", body: body)
-            print("[Onboarding] Terms accepted successfully")
-            nextStep()
+            let response = try await APIClient.shared.post("/api/auth/mobile/accept-terms", body: body)
+            if let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
+               let userData = json["user"] as? [String: Any] {
+                // Update the user data
+                let updatedUser = User(
+                    id: userData["id"] as? Int ?? 0,
+                    username: userData["username"] as? String ?? "",
+                    hasPlaidSetup: userData["hasPlaidSetup"] as? Bool ?? false,
+                    hasCompletedOnboarding: userData["hasCompletedOnboarding"] as? Bool ?? false,
+                    monthlyIncome: userData["monthlyIncome"] as? Int,
+                    onboardingStep: userData["onboardingStep"] as? Int
+                )
+                authViewModel.currentUser = updatedUser
+                print("[Onboarding] Terms accepted successfully")
+                nextStep()
+            }
         } catch {
             self.error = error.localizedDescription
             print("[Onboarding] Error accepting terms: \(error)")
@@ -60,32 +80,48 @@ class OnboardingViewModel: ObservableObject {
             }
         } else {
             // Complete onboarding
-            completeOnboarding()
+            Task { await completeOnboarding() }
         }
     }
     
-    func completeOnboarding() {
-        Task {
-            isLoading = true
-            error = nil
-            
-            do {
-                let _: Data = try await APIClient.shared.post("/api/auth/mobile/complete-onboarding", body: [:])
+    func completeOnboarding() async {
+        isLoading = true
+        error = nil
+        
+        do {
+            let response = try await APIClient.shared.post("/api/auth/mobile/complete-onboarding", body: [:])
+            if let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
+               let userData = json["user"] as? [String: Any] {
+                // Update the user data
+                let updatedUser = User(
+                    id: userData["id"] as? Int ?? 0,
+                    username: userData["username"] as? String ?? "",
+                    hasPlaidSetup: userData["hasPlaidSetup"] as? Bool ?? false,
+                    hasCompletedOnboarding: userData["hasCompletedOnboarding"] as? Bool ?? true,
+                    monthlyIncome: userData["monthlyIncome"] as? Int,
+                    onboardingStep: userData["onboardingStep"] as? Int
+                )
+                authViewModel.currentUser = updatedUser
                 print("[Onboarding] Onboarding completed successfully")
                 NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
-            } catch {
-                self.error = error.localizedDescription
-                print("[Onboarding] Error completing onboarding: \(error)")
             }
-            
-            isLoading = false
+        } catch {
+            self.error = error.localizedDescription
+            print("[Onboarding] Error completing onboarding: \(error)")
         }
+        
+        isLoading = false
     }
 }
 
 struct OnboardingView: View {
-    @StateObject private var viewModel = OnboardingViewModel()
     @EnvironmentObject private var authViewModel: AuthViewModel
+    @StateObject private var viewModel: OnboardingViewModel
+    
+    init() {
+        // Initialize viewModel with authViewModel from environment
+        _viewModel = StateObject(wrappedValue: OnboardingViewModel(authViewModel: AuthViewModel.shared))
+    }
     
     var body: some View {
         ZStack {
@@ -95,7 +131,7 @@ struct OnboardingView: View {
             // Content
             Group {
                 switch viewModel.currentStep {
-                case 0:
+                case .terms:
                     TermsStepView(viewModel: viewModel)
                         .sheet(isPresented: $viewModel.showTermsSheet) {
                             TermsSheet()
@@ -103,10 +139,8 @@ struct OnboardingView: View {
                         .sheet(isPresented: $viewModel.showPrivacySheet) {
                             PrivacySheet()
                         }
-                case 1:
+                case .bankConnection:
                     BankConnectionStepView(viewModel: viewModel)
-                default:
-                    EmptyView()
                 }
             }
         }
@@ -124,4 +158,5 @@ struct OnboardingView: View {
 
 #Preview {
     OnboardingView()
+        .environmentObject(AuthViewModel.shared)
 } 

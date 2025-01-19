@@ -61,8 +61,8 @@ struct InsightCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: iconName)
-                    .foregroundColor(iconColor)
+                Image(systemName: insight.type.iconName)
+                    .foregroundColor(Color(hex: insight.type.color))
                 Text(insight.title)
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -78,24 +78,6 @@ struct InsightCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(hex: "1E293B"))
         .cornerRadius(12)
-    }
-    
-    private var iconName: String {
-        switch insight.type {
-        case .spending: return "chart.pie.fill"
-        case .saving: return "arrow.up.circle.fill"
-        case .budget: return "dollarsign.circle.fill"
-        case .subscription: return "repeat.circle.fill"
-        }
-    }
-    
-    private var iconColor: Color {
-        switch insight.type {
-        case .spending: return Color(hex: "3B82F6")
-        case .saving: return Color(hex: "10B981")
-        case .budget: return Color(hex: "F59E0B")
-        case .subscription: return Color(hex: "8B5CF6")
-        }
     }
 }
 

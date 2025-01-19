@@ -175,6 +175,6 @@ struct PlaidLinkResponse: Codable {
 #Preview {
     ZStack {
         Color(hex: "0F172A").ignoresSafeArea()
-        BankConnectionStepView(viewModel: OnboardingViewModel())
+        BankConnectionStepView(viewModel: OnboardingViewModel(authViewModel: AuthViewModel()))
     }
 } 

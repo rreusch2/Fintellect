@@ -120,7 +120,7 @@ struct OnboardingView: View {
     
     init() {
         // Initialize viewModel with authViewModel from environment
-        _viewModel = StateObject(wrappedValue: OnboardingViewModel(authViewModel: AuthViewModel.shared))
+        _viewModel = StateObject(wrappedValue: OnboardingViewModel(authViewModel: AuthViewModel()))
     }
     
     var body: some View {
@@ -158,5 +158,5 @@ struct OnboardingView: View {
 
 #Preview {
     OnboardingView()
-        .environmentObject(AuthViewModel.shared)
+        .environmentObject(AuthViewModel())
 } 

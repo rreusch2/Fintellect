@@ -158,6 +158,6 @@ struct CheckboxStyle: ToggleStyle {
 #Preview {
     ZStack {
         Color(hex: "0F172A").ignoresSafeArea()
-        TermsStepView(viewModel: OnboardingViewModel())
+        TermsStepView(viewModel: OnboardingViewModel(authViewModel: AuthViewModel()))
     }
 } 

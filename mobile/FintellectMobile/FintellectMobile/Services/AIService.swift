@@ -6,7 +6,7 @@ enum AIError: Error {
     case decodingError(Error)
 }
 
-class AIService {
+final class AIService {
     private let apiClient: APIClient
     
     init(apiClient: APIClient = .shared) {
@@ -15,38 +15,46 @@ class AIService {
     
     // MARK: - Dashboard Insights
     func fetchDashboardInsights() async throws -> [AIInsight] {
-        let response: [String: Any] = try await apiClient.get("/api/ai/insights")
-        guard let insights = try? JSONDecoder().decode([AIInsight].self, from: JSONSerialization.data(withJSONObject: response)) else {
-            throw AIError.decodingError(NSError(domain: "AIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode insights"]))
+        let data = try await apiClient.get("/api/ai/insights")
+        do {
+            return try JSONDecoder().decode([AIInsight].self, from: data)
+        } catch {
+            throw AIError.decodingError(error)
         }
-        return insights
     }
     
     // MARK: - Chat
     func sendChatMessage(_ message: String) async throws -> String {
-        let response: [String: Any] = try await apiClient.post("/api/ai/chat", body: ["message": message])
-        guard let aiResponse = response["message"] as? String else {
-            throw AIError.invalidResponse
+        let data = try await apiClient.post("/api/ai/chat", body: ["message": message])
+        do {
+            let response = try JSONDecoder().decode([String: String].self, from: data)
+            guard let aiResponse = response["message"] else {
+                throw AIError.invalidResponse
+            }
+            return aiResponse
+        } catch {
+            throw AIError.decodingError(error)
         }
-        return aiResponse
     }
     
     // MARK: - Financial Tips
     func fetchFinancialTips() async throws -> [FinancialTip] {
-        let response: [String: Any] = try await apiClient.get("/api/ai/savings-tips")
-        guard let tips = try? JSONDecoder().decode([FinancialTip].self, from: JSONSerialization.data(withJSONObject: response)) else {
-            throw AIError.decodingError(NSError(domain: "AIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode tips"]))
+        let data = try await apiClient.get("/api/ai/savings-tips")
+        do {
+            return try JSONDecoder().decode([FinancialTip].self, from: data)
+        } catch {
+            throw AIError.decodingError(error)
         }
-        return tips
     }
     
     // MARK: - Budget Analysis
     func fetchBudgetAnalysis() async throws -> BudgetAnalysis {
-        let response: [String: Any] = try await apiClient.get("/api/ai/budget-analysis")
-        guard let analysis = try? JSONDecoder().decode(BudgetAnalysis.self, from: JSONSerialization.data(withJSONObject: response)) else {
-            throw AIError.decodingError(NSError(domain: "AIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode budget analysis"]))
+        let data = try await apiClient.get("/api/ai/budget-analysis")
+        do {
+            return try JSONDecoder().decode(BudgetAnalysis.self, from: data)
+        } catch {
+            throw AIError.decodingError(error)
         }
-        return analysis
     }
 }
 

@@ -59,6 +59,7 @@ struct BankConnectionStepView: View {
             VStack(spacing: 16) {
                 // Connect Bank Button
                 Button(action: {
+                    print("[Plaid] Connect Bank Button tapped")
                     Task {
                         await plaidManager.createAndPresentLink()
                     }
@@ -89,6 +90,7 @@ struct BankConnectionStepView: View {
                 
                 // Skip Button
                 Button(action: {
+                    print("[Onboarding] Skip button tapped")
                     Task {
                         await viewModel.completeOnboarding()
                     }

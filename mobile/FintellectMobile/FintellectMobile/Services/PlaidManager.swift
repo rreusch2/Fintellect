@@ -29,11 +29,13 @@ class PlaidManager: ObservableObject {
     private init() {}
     
     func createAndPresentLink() async {
+        print("[Plaid] Starting createAndPresentLink")
         isLoading = true
         error = nil
         
         do {
             // Get link token from our backend
+            print("[Plaid] Requesting link token from backend")
             let response = try await APIClient.shared.post("/api/plaid/create-link-token", body: [:])
             if let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
                let linkToken = json["link_token"] as? String {
@@ -46,6 +48,7 @@ class PlaidManager: ObservableObject {
                         await self?.exchangePublicToken(publicToken: success.publicToken)
                     }
                     self?.isPresentingLink = false
+                    self?.isLoading = false
                 }
                 
                 // Add exit handler
@@ -67,14 +70,20 @@ class PlaidManager: ObservableObject {
                 }
                 
                 // Create the handler
+                print("[Plaid] Creating Plaid handler")
                 let result = Plaid.create(linkConfiguration)
                 switch result {
                 case .success(let handler):
+                    print("[Plaid] Handler created successfully")
                     linkController = LinkController(handler: handler)
                     isPresentingLink = true
                 case .failure(let error):
+                    print("[Plaid] Handler creation failed: \(error)")
                     throw error
                 }
+            } else {
+                print("[Plaid] Failed to parse link token from response")
+                throw NSError(domain: "Plaid", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get link token"])
             }
         } catch {
             print("[Plaid] Error: \(error)")

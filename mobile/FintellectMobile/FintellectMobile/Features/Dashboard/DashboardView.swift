@@ -31,7 +31,10 @@ struct DashboardView: View {
                 BalanceOverviewSection(balance: viewModel.totalBalance)
                 MonthlyStatsSection(spending: viewModel.monthlySpending, savings: viewModel.monthlySavings)
                 AIAssistantSection(viewModel: viewModel)
-                SpendingDistributionSection(monthlySpending: viewModel.monthlySpending)
+                SpendingDistributionSection(
+                    monthlySpending: viewModel.monthlySpending,
+                    categories: viewModel.spendingCategories
+                )
                 AIInsightsSection(insights: viewModel.aiInsights)
             }
             .padding(.vertical, 24)
@@ -270,17 +273,8 @@ struct ChatAreaView: View {
 // MARK: - Spending Distribution Section
 struct SpendingDistributionSection: View {
     let monthlySpending: Double
+    let categories: [SpendingCategory]
     @State private var selectedCategory: SpendingCategory? = nil
-    
-    private var categories: [SpendingCategory] {
-        [
-            .init(name: "Utilities", amount: 594.96, percentage: 0.373, color: Color(hex: "3B82F6")),
-            .init(name: "Food & Drink", amount: 366.18, percentage: 0.229, color: Color(hex: "10B981")),
-            .init(name: "Shopping", amount: 314.92, percentage: 0.198, color: Color(hex: "8B5CF6")),
-            .init(name: "Entertainment", amount: 200.00, percentage: 0.125, color: Color(hex: "F59E0B")),
-            .init(name: "Other", amount: 120.00, percentage: 0.075, color: Color(hex: "EC4899"))
-        ]
-    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {

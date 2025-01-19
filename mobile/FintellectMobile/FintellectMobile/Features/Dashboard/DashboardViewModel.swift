@@ -6,19 +6,16 @@ struct TransactionSummary: Codable {
     let totalBalance: Int
     let monthlySpending: Int
     let monthlySavings: Int
-    let transactions: [Transaction]
-    let totalTransactions: Int
-    let totalAmount: Double
-    let averageAmount: Double
+    let monthOverMonthChange: Double
+    let categoryTotals: [String: Int]
+    let spendingTrends: SpendingTrends
+    let hasPlaidConnection: Bool
+    let status: String?
+    let message: String?
     
-    enum CodingKeys: String, CodingKey {
-        case totalBalance = "total_balance"
-        case monthlySpending = "monthly_spending"
-        case monthlySavings = "monthly_savings"
-        case transactions
-        case totalTransactions = "total_transactions"
-        case totalAmount = "total_amount"
-        case averageAmount = "average_amount"
+    struct SpendingTrends: Codable {
+        let labels: [String]
+        let data: [Int]
     }
     
     #if DEBUG
@@ -27,10 +24,21 @@ struct TransactionSummary: Codable {
             totalBalance: 698876,  // $6,988.76
             monthlySpending: 159597, // $1,595.97
             monthlySavings: 89245,  // $892.45
-            transactions: Transaction.demoTransactions,
-            totalTransactions: 5,
-            totalAmount: 407.79,
-            averageAmount: 81.56
+            monthOverMonthChange: -2.5,
+            categoryTotals: [
+                "UTILITIES": 59496,
+                "FOOD_AND_DRINK": 36618,
+                "SHOPPING": 31492,
+                "ENTERTAINMENT": 20000,
+                "OTHER": 12000
+            ],
+            spendingTrends: SpendingTrends(
+                labels: ["Jan 2024", "Feb 2024", "Mar 2024"],
+                data: [145000, 159597, 155000]
+            ),
+            hasPlaidConnection: true,
+            status: nil,
+            message: nil
         )
     }
     #endif
@@ -71,7 +79,8 @@ class DashboardViewModel: ObservableObject {
     @Published var totalBalance: Double = 0
     @Published var monthlySpending: Double = 0
     @Published var monthlySavings: Double = 0
-    @Published var recentTransactions: [Transaction] = []
+    @Published var monthOverMonthChange: Double = 0
+    @Published var spendingCategories: [SpendingCategory] = []
     @Published var aiInsights: [AIInsight] = []
     @Published var isLoading = false
     @Published var error: String?
@@ -83,11 +92,7 @@ class DashboardViewModel: ObservableObject {
         #if DEBUG
         // Use demo data in debug builds
         let summary = TransactionSummary.demoData
-        totalBalance = Double(summary.totalBalance) / 100.0
-        monthlySpending = Double(summary.monthlySpending) / 100.0
-        monthlySavings = Double(summary.monthlySavings) / 100.0
-        recentTransactions = summary.transactions
-        aiInsights = AIInsight.demoInsights
+        updateDashboardData(with: summary)
         isLoading = false
         return
         #endif
@@ -96,10 +101,7 @@ class DashboardViewModel: ObservableObject {
             // Fetch transaction summary
             let summaryData = try await APIClient.shared.get("/api/plaid/transactions/summary")
             if let summary = try? JSONDecoder().decode(TransactionSummary.self, from: summaryData) {
-                totalBalance = Double(summary.totalBalance) / 100.0
-                monthlySpending = Double(summary.monthlySpending) / 100.0
-                monthlySavings = Double(summary.monthlySavings) / 100.0
-                recentTransactions = summary.transactions
+                updateDashboardData(with: summary)
             }
             
             // Fetch AI insights
@@ -114,5 +116,35 @@ class DashboardViewModel: ObservableObject {
         }
         
         isLoading = false
+    }
+    
+    private func updateDashboardData(with summary: TransactionSummary) {
+        // Convert amounts from cents to dollars
+        totalBalance = Double(summary.totalBalance) / 100.0
+        monthlySpending = Double(summary.monthlySpending) / 100.0
+        monthlySavings = Double(summary.monthlySavings) / 100.0
+        monthOverMonthChange = summary.monthOverMonthChange
+        
+        // Calculate total spending for percentages
+        let totalSpending = Double(summary.monthlySpending)
+        
+        // Map category totals to SpendingCategory objects
+        let categoryColors: [String: Color] = [
+            "UTILITIES": Color(hex: "3B82F6"),
+            "FOOD_AND_DRINK": Color(hex: "10B981"),
+            "SHOPPING": Color(hex: "8B5CF6"),
+            "ENTERTAINMENT": Color(hex: "F59E0B"),
+            "OTHER": Color(hex: "EC4899")
+        ]
+        
+        spendingCategories = summary.categoryTotals.map { category, amount in
+            let percentage = totalSpending > 0 ? Double(amount) / totalSpending : 0
+            return SpendingCategory(
+                name: category.replacingOccurrences(of: "_", with: " ").capitalized,
+                amount: Double(amount) / 100.0,
+                percentage: percentage,
+                color: categoryColors[category] ?? Color(hex: "EC4899")
+            )
+        }.sorted { $0.amount > $1.amount }
     }
 } 

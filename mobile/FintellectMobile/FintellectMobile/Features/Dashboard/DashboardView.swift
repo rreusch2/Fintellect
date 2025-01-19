@@ -550,12 +550,6 @@ struct EmptyInsightsView: View {
     }
 }
 
-struct ChatMessage: Identifiable {
-    let id = UUID()
-    let content: String
-    let isUser: Bool
-}
-
 struct CustomTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration

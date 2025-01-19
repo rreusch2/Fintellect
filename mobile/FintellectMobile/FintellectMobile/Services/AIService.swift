@@ -19,22 +19,27 @@ enum AIEndpoint {
 
 actor AIServiceClient {
     private let apiClient: APIClient
+    private let decoder: JSONDecoder
     
     init(apiClient: APIClient = .shared) {
         self.apiClient = apiClient
+        self.decoder = JSONDecoder()
     }
     
     func chat(message: String) async throws -> AIResponse {
         let body = ["message": message]
-        return try await apiClient.post(AIEndpoint.chat.path, body: body)
+        let data = try await apiClient.post(AIEndpoint.chat.path, body: body)
+        return try decoder.decode(AIResponse.self, from: data)
     }
     
     func getDashboardInsights() async throws -> [AIInsight] {
-        return try await apiClient.get(AIEndpoint.insights.path)
+        let data = try await apiClient.get(AIEndpoint.insights.path)
+        return try decoder.decode([AIInsight].self, from: data)
     }
     
     func getSavingsTips() async throws -> [AIResponse] {
-        return try await apiClient.get(AIEndpoint.savingsTips.path)
+        let data = try await apiClient.get(AIEndpoint.savingsTips.path)
+        return try decoder.decode([AIResponse].self, from: data)
     }
 }
 

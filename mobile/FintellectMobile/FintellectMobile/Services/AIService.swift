@@ -17,7 +17,7 @@ enum AIEndpoint {
     }
 }
 
-actor AIService {
+actor AIServiceClient {
     private let apiClient: APIClient
     
     init(apiClient: APIClient = .shared) {

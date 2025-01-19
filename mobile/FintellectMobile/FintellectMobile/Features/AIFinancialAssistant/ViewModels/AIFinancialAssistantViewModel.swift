@@ -2,7 +2,7 @@ import SwiftUI
 
 @MainActor
 class AIFinancialAssistantViewModel: ObservableObject {
-    private let aiService: AIService
+    private let aiService: AIServiceClient
     @Published var chatMessages: [PremiumChatMessage] = []
     @Published var workflows: [AIWorkflow] = []
     @Published var proactiveInsights: [ProactiveInsight] = []
@@ -11,7 +11,7 @@ class AIFinancialAssistantViewModel: ObservableObject {
     @Published var isTyping = false
     @Published var currentMessage = ""
     
-    init(aiService: AIService = AIService()) {
+    init(aiService: AIServiceClient = AIServiceClient()) {
         self.aiService = aiService
         setupInitialData()
     }

@@ -86,12 +86,12 @@ class DashboardViewModel: ObservableObject {
     @Published var aiInsights: [AIInsight] = []
     @Published var isLoading = false
     @Published var error: String?
-    private let aiService: AIService
+    private let aiService: AIServiceClient
     @Published var isLoadingInsights = false
     @Published var chatMessages: [ChatMessage] = []
     @Published var isTyping = false
     
-    init(aiService: AIService = AIService()) {
+    init(aiService: AIServiceClient = AIServiceClient()) {
         self.aiService = aiService
         Task {
             await fetchAIInsights()

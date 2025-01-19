@@ -37,11 +37,15 @@ class PlaidManager: ObservableObject {
                let linkToken = json["link_token"] as? String {
                 print("[Plaid] Link token created successfully")
                 
-                let result = try await withCheckedThrowingContinuation { continuation in
-                    let handler = Plaid.create(linkToken) { linkSuccess in
-                        continuation.resume(returning: linkSuccess.publicToken)
-                    } onExit: { error in
-                        if let error = error {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
+                    let configuration = LinkTokenConfiguration(token: linkToken)
+                    
+                    let handler = Plaid.create(configuration)
+                    handler.onSuccess = { success in
+                        continuation.resume(returning: success.publicToken)
+                    }
+                    handler.onExit = { exit in
+                        if let error = exit.error {
                             continuation.resume(throwing: error)
                         } else {
                             continuation.resume(throwing: NSError(domain: "Plaid", code: -1, userInfo: [NSLocalizedDescriptionKey: "User exited"]))
@@ -49,13 +53,9 @@ class PlaidManager: ObservableObject {
                     }
                     
                     if let viewController = UIApplication.shared.keyWindow?.rootViewController {
-                        handler.open(presentUsing: .viewController(viewController))
+                        handler.present(from: viewController)
                     }
                 }
-                
-                // Handle success
-                print("[Plaid] Link success - public token: \(result)")
-                await exchangePublicToken(publicToken: result)
             }
         } catch {
             print("[Plaid] Error: \(error)")

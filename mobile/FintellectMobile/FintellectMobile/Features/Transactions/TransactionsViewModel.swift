@@ -45,12 +45,15 @@ class TransactionsViewModel: ObservableObject {
             print("[Transactions] Fetching transactions")
             let data = try await APIClient.shared.get("/api/plaid/transactions")
             
-            if let transactionsData = try? JSONDecoder().decode([PlaidTransaction].self, from: data) {
-                print("[Transactions] Successfully decoded \(transactionsData.count) transactions")
-                self.transactions = transactionsData.map { plaidTx in
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            
+            if let plaidTransactions = try? decoder.decode([PlaidTransaction].self, from: data) {
+                print("[Transactions] Successfully decoded \(plaidTransactions.count) transactions")
+                self.transactions = plaidTransactions.map { plaidTx in
                     Transaction(
                         id: plaidTx.id,
-                        name: plaidTx.merchantName ?? plaidTx.name,
+                        name: plaidTx.merchantName ?? plaidTx.description,
                         amount: Double(plaidTx.amount) / 100.0,
                         date: plaidTx.date,
                         category: mapPlaidCategory(plaidTx.category)
@@ -96,19 +99,21 @@ class TransactionsViewModel: ObservableObject {
 
 // MARK: - Models
 struct PlaidTransaction: Codable {
-    let id: String
-    let name: String
+    let id: Int
+    let description: String
     let merchantName: String?
     let amount: Int
     let date: Date
     let category: String
+    let accountId: String
     
     enum CodingKeys: String, CodingKey {
-        case id = "plaidTransactionId"
-        case name
+        case id
+        case description
         case merchantName
         case amount
         case date
         case category
+        case accountId
     }
 } 

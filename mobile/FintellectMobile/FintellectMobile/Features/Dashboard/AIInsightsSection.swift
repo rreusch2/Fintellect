@@ -1,7 +1,6 @@
 import SwiftUI
-@_exported import FintellectMobile.AIInsightModels
 
-struct AIInsight: Identifiable {
+struct DashboardAIInsight: Identifiable {
     let id = UUID()
     let title: String
     let description: String
@@ -13,6 +12,24 @@ struct AIInsight: Identifiable {
         case saving
         case budget
         case subscription
+        
+        var iconName: String {
+            switch self {
+            case .spending: return "chart.pie.fill"
+            case .saving: return "arrow.up.circle.fill"
+            case .budget: return "dollarsign.circle.fill"
+            case .subscription: return "repeat.circle.fill"
+            }
+        }
+        
+        var color: String {
+            switch self {
+            case .spending: return "3B82F6"
+            case .saving: return "10B981"
+            case .budget: return "F59E0B"
+            case .subscription: return "8B5CF6"
+            }
+        }
     }
 }
 
@@ -57,7 +74,7 @@ struct AIInsightsSection: View {
 }
 
 struct InsightCard: View {
-    let insight: AIInsight
+    let insight: DashboardAIInsight
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -84,7 +101,7 @@ struct InsightCard: View {
 
 @MainActor
 class AIInsightsViewModel: ObservableObject {
-    @Published var insights: [AIInsight] = []
+    @Published var insights: [DashboardAIInsight] = []
     @Published var isLoading = false
     
     private let aiService: AIServiceClient
@@ -99,7 +116,7 @@ class AIInsightsViewModel: ObservableObject {
         do {
             let dashboardInsights = try await aiService.getDashboardInsights()
             insights = dashboardInsights.map { insight in
-                AIInsight(
+                DashboardAIInsight(
                     title: insight.title,
                     description: insight.description,
                     type: mapInsightType(from: insight.type),
@@ -114,7 +131,7 @@ class AIInsightsViewModel: ObservableObject {
         isLoading = false
     }
     
-    private func mapInsightType(from type: String) -> AIInsight.InsightType {
+    private func mapInsightType(from type: String) -> DashboardAIInsight.InsightType {
         switch type.lowercased() {
         case "spending": return .spending
         case "saving": return .saving

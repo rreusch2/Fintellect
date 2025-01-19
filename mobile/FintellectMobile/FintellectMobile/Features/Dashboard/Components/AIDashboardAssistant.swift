@@ -1,5 +1,4 @@
 import SwiftUI
-@_exported import FintellectMobile.ChatModels
 
 // MARK: - Models
 struct QuickAction: Identifiable {
@@ -47,13 +46,13 @@ struct QuickAction: Identifiable {
     ]
 }
 
-struct ChatMessage: Identifiable, Equatable {
+struct DashboardChatMessage: Identifiable, Equatable {
     let id = UUID()
     let content: String
     let isUser: Bool
     let timestamp: Date
     
-    static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {
+    static func == (lhs: DashboardChatMessage, rhs: DashboardChatMessage) -> Bool {
         lhs.id == rhs.id &&
         lhs.content == rhs.content &&
         lhs.isUser == rhs.isUser &&
@@ -64,7 +63,7 @@ struct ChatMessage: Identifiable, Equatable {
 // MARK: - View Model
 @MainActor
 class AIDashboardAssistantViewModel: ObservableObject {
-    @Published var messages: [ChatMessage] = []
+    @Published var messages: [DashboardChatMessage] = []
     @Published var currentMessage = ""
     @Published var isLoading = false
     @Published var isExpanded = false
@@ -78,17 +77,17 @@ class AIDashboardAssistantViewModel: ObservableObject {
     func sendMessage(_ message: String) async {
         guard !message.isEmpty else { return }
         
-        let userMessage = ChatMessage(content: message, isUser: true, timestamp: Date())
+        let userMessage = DashboardChatMessage(content: message, isUser: true, timestamp: Date())
         messages.append(userMessage)
         currentMessage = ""
         isLoading = true
         
         do {
             let response = try await aiService.chat(message: message)
-            let aiMessage = ChatMessage(content: response.message, isUser: false, timestamp: Date())
+            let aiMessage = DashboardChatMessage(content: response.message, isUser: false, timestamp: Date())
             messages.append(aiMessage)
         } catch {
-            let errorMessage = ChatMessage(
+            let errorMessage = DashboardChatMessage(
                 content: "I apologize, but I'm having trouble processing your request. Please try again.",
                 isUser: false,
                 timestamp: Date()
@@ -265,7 +264,7 @@ struct ChatArea: View {
 
 // MARK: - Chat Bubble
 struct ChatBubble: View {
-    let message: ChatMessage
+    let message: DashboardChatMessage
     
     var body: some View {
         HStack {

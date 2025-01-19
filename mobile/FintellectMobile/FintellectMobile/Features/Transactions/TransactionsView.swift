@@ -45,32 +45,31 @@ struct TransactionsView: View {
                 BackgroundView()
                 
                 ScrollView {
-                    VStack(spacing: 16) {
-                        // Stats Cards - Moved up and adjusted spacing
-                        VStack(spacing: 12) {
-                            HStack(spacing: 12) {
+                    VStack(spacing: 20) {
+                        // Stats Cards Section
+                        VStack(spacing: 16) {
+                            HStack(spacing: 16) {
                                 CardView {
                                     StatCard(
                                         title: "Total Spending",
                                         value: viewModel.totalSpending.formatted(.currency(code: "USD")),
-                                        icon: "dollarsign.circle.fill",
-                                        color: .blue
+                                        icon: "dollarsign.circle.fill"
                                     )
                                 }
+                                .frame(maxWidth: .infinity)
                                 
-                                if let topCategory = viewModel.topCategory {
-                                    CardView {
-                                        StatCard(
-                                            title: "Top Category",
-                                            value: topCategory.displayName,
-                                            icon: topCategory.icon,
-                                            color: topCategory.color
-                                        )
-                                    }
+                                CardView {
+                                    StatCard(
+                                        title: "Top Category",
+                                        value: viewModel.topCategory?.displayName ?? "None",
+                                        icon: viewModel.topCategory?.icon ?? "tag.fill",
+                                        color: viewModel.topCategory?.color ?? .gray
+                                    )
                                 }
+                                .frame(maxWidth: .infinity)
                             }
                             
-                            HStack(spacing: 12) {
+                            HStack(spacing: 16) {
                                 CardView {
                                     StatCard(
                                         title: "Average Transaction",
@@ -79,6 +78,7 @@ struct TransactionsView: View {
                                         color: .purple
                                     )
                                 }
+                                .frame(maxWidth: .infinity)
                                 
                                 CardView {
                                     StatCard(
@@ -88,10 +88,10 @@ struct TransactionsView: View {
                                         color: .orange
                                     )
                                 }
+                                .frame(maxWidth: .infinity)
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.top, 8)
                         
                         // Filter Section
                         VStack(spacing: 12) {
@@ -147,7 +147,7 @@ struct TransactionsView: View {
                                 .padding(.horizontal)
                             }
                         }
-                        .padding(.vertical, 8)
+                        .padding(.horizontal)
                         
                         // Transactions List
                         if viewModel.isLoading {
@@ -160,8 +160,10 @@ struct TransactionsView: View {
                                     await viewModel.fetchTransactions()
                                 }
                             }
+                            .padding(.horizontal)
                         } else if viewModel.transactions.isEmpty {
                             EmptyStateView()
+                                .padding(.horizontal)
                         } else {
                             LazyVStack(spacing: 12) {
                                 ForEach(filteredTransactions) { transaction in
@@ -173,7 +175,7 @@ struct TransactionsView: View {
                             .padding(.horizontal)
                         }
                     }
-                    .padding(.bottom, 16)
+                    .padding(.vertical)
                 }
                 .refreshable {
                     await viewModel.fetchTransactions()
@@ -181,7 +183,8 @@ struct TransactionsView: View {
             }
             .navigationTitle("Transactions")
             .navigationBarTitleDisplayMode(.large)
-            .foregroundColor(.white)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
 }
@@ -326,11 +329,11 @@ struct TransactionRow: View {
     let transaction: Transaction
     
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
             Image(systemName: transaction.category.icon)
-                .font(.title2)
+                .font(.title3)
                 .foregroundColor(transaction.category.color)
-                .frame(width: 40, height: 40)
+                .frame(width: 36, height: 36)
                 .background(transaction.category.color.opacity(0.1))
                 .clipShape(Circle())
             
@@ -338,10 +341,11 @@ struct TransactionRow: View {
                 Text(transaction.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
+                    .foregroundColor(.white)
                 
                 Text(transaction.category.displayName)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.gray)
             }
             
             Spacer()
@@ -350,14 +354,15 @@ struct TransactionRow: View {
                 Text(transaction.formattedAmount)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(transaction.isExpense ? .primary : .green)
+                    .foregroundColor(transaction.isExpense ? Color(hex: "EF4444") : Color(hex: "22C55E"))
                 
                 Text(transaction.formattedDate)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.gray)
             }
         }
         .padding(.vertical, 8)
+        .padding(.horizontal, 12)
     }
 }
 

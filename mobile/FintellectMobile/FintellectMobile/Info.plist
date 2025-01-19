@@ -19,5 +19,9 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>plaid-oauth</string>
+	</array>
 </dict>
 </plist>

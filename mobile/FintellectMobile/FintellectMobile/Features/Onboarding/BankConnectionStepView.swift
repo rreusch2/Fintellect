@@ -2,8 +2,8 @@ import SwiftUI
 
 struct BankConnectionStepView: View {
     @ObservedObject var viewModel: OnboardingViewModel
+    @StateObject private var plaidManager = PlaidManager.shared
     @State private var appear = [false, false, false]
-    @State private var isConnecting = false
     
     var body: some View {
         VStack(spacing: 24) {
@@ -60,11 +60,11 @@ struct BankConnectionStepView: View {
                 // Connect Bank Button
                 Button(action: {
                     Task {
-                        await connectBank()
+                        await plaidManager.createAndPresentLink()
                     }
                 }) {
                     HStack {
-                        if isConnecting {
+                        if plaidManager.isLoading {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         } else {
@@ -85,7 +85,7 @@ struct BankConnectionStepView: View {
                     .cornerRadius(14)
                     .shadow(color: Color(hex: "3B82F6").opacity(0.3), radius: 8, x: 0, y: 4)
                 }
-                .disabled(isConnecting || viewModel.isLoading)
+                .disabled(plaidManager.isLoading || viewModel.isLoading)
                 
                 // Skip Button
                 Button(action: {
@@ -104,7 +104,7 @@ struct BankConnectionStepView: View {
                         }
                     }
                 }
-                .disabled(isConnecting || viewModel.isLoading)
+                .disabled(plaidManager.isLoading || viewModel.isLoading)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
@@ -122,26 +122,20 @@ struct BankConnectionStepView: View {
                 appear[2] = true
             }
         }
-    }
-    
-    private func connectBank() async {
-        isConnecting = true
-        
-        do {
-            // Get Plaid link token
-            let response: Data = try await APIClient.shared.post("/api/plaid/create-link-token", body: [:])
-            if let linkResponse = try? JSONDecoder().decode(PlaidLinkResponse.self, from: response) {
-                print("[Plaid] Link token created: \(linkResponse.linkToken)")
-                // TODO: Open Plaid Link using the token
-                // For now, we'll just complete onboarding
+        .alert("Error", isPresented: .constant(plaidManager.error != nil)) {
+            Button("OK") {
+                plaidManager.error = nil
+            }
+        } message: {
+            if let error = plaidManager.error {
+                Text(error)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PlaidAccountLinked"))) { _ in
+            Task {
                 await viewModel.completeOnboarding()
             }
-        } catch {
-            print("[Plaid] Error creating link token: \(error)")
-            viewModel.error = "Failed to connect bank account. Please try again."
         }
-        
-        isConnecting = false
     }
 }
 
@@ -161,14 +155,6 @@ struct SecurityFeatureRow: View {
             
             Spacer()
         }
-    }
-}
-
-struct PlaidLinkResponse: Codable {
-    let linkToken: String
-    
-    enum CodingKeys: String, CodingKey {
-        case linkToken = "link_token"
     }
 }
 

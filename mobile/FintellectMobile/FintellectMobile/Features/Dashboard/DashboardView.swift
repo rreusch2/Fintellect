@@ -306,7 +306,7 @@ struct ChartView: View {
         Chart {
             ForEach(categories) { category in
                 SectorMark(
-                    angle: .value("Spending", category.percentage),
+                    angle: .value("Spending", category.percentage / 100.0),
                     innerRadius: .ratio(0.6),
                     angularInset: 1.5
                 )
@@ -369,7 +369,7 @@ struct SpendingLegend: View {
                         
                         Spacer()
                         
-                        Text(category.percentage.formatted(.percent.precision(.fractionLength(1))))
+                        Text("\(category.percentage, specifier: "%.1f")%")
                             .font(.footnote)
                             .foregroundColor(.gray)
                     }

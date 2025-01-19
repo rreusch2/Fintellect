@@ -24,7 +24,7 @@ class PlaidManager: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     @Published var isPresentingLink = false
-    private var linkController: LinkController?
+    var linkController: LinkController?
     
     private init() {}
     

@@ -45,13 +45,26 @@ class TransactionsViewModel: ObservableObject {
             print("[Transactions] Fetching transactions")
             let data = try await APIClient.shared.get("/api/plaid/transactions")
             
-            // Debug: Print raw JSON
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("[Transactions] Raw JSON response:", jsonString)
-            }
-            
             let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+            dateFormatter.timeZone = TimeZone(abbreviation: "UTC")
+            decoder.dateDecodingStrategy = .custom { decoder in
+                let container = try decoder.singleValueContainer()
+                let dateString = try container.decode(String.self)
+                
+                if let date = dateFormatter.date(from: dateString) {
+                    return date
+                }
+                
+                // Try without milliseconds if the first attempt fails
+                dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+                if let date = dateFormatter.date(from: dateString) {
+                    return date
+                }
+                
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateString)")
+            }
             
             do {
                 let plaidTransactions = try decoder.decode([PlaidTransaction].self, from: data)

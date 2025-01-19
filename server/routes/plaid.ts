@@ -352,9 +352,67 @@ router.get("/transactions/summary", async (req: AuthenticatedRequest, res: Respo
   }
 });
 
-router.post("/sync", async (req: AuthenticatedRequest, res: Response) => {
+router.post("/sync", async (req: Request, res: Response) => {
+  // Check for JWT auth first
+  if (req.jwtPayload?.userId) {
+    console.log(`[Plaid] Syncing data for JWT user ${req.jwtPayload.userId}`);
+    const userId = req.jwtPayload.userId;
+    
+    try {
+      // Get all Plaid items for the user
+      const userPlaidItems = await db
+        .select()
+        .from(plaidItems)
+        .where(eq(plaidItems.userId, userId));
+
+      if (userPlaidItems.length === 0) {
+        return res.status(404).json({ error: "No Plaid connection found" });
+      }
+
+      const results = [];
+      
+      // Sync each Plaid item
+      for (const item of userPlaidItems) {
+        try {
+          // First sync accounts to get latest balances
+          await PlaidService.syncAccounts(item.id, item.plaidAccessToken, userId);
+          
+          // Then sync transactions
+          const syncResult = await PlaidService.syncTransactions(item.id, item.plaidAccessToken, userId);
+          results.push({
+            institutionName: item.plaidInstitutionName,
+            ...syncResult
+          });
+        } catch (error) {
+          console.error(`Error syncing item ${item.plaidInstitutionName}:`, error);
+          results.push({
+            institutionName: item.plaidInstitutionName,
+            status: 'error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      console.log("[Plaid] Sync results:", results);
+      res.json({ 
+        success: true,
+        results
+      });
+      return;
+    } catch (error) {
+      console.error("[Plaid] Error syncing data:", error);
+      res.status(500).json({ 
+        error: "Failed to sync data",
+        details: process.env.NODE_ENV === "development" ? error : undefined
+      });
+      return;
+    }
+  }
+
+  // Fall back to session auth for web requests
   if (!req.user?.id) {
-    return res.status(401).send("Not authenticated");
+    console.log("[Plaid] Sync attempt without authentication");
+    return res.status(401).json({ error: "Not logged in" });
   }
 
   try {

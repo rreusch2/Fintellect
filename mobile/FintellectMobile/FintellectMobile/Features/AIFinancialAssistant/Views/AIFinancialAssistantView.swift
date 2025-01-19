@@ -1,5 +1,178 @@
 import SwiftUI
 
+// MARK: - Chat Message
+struct ChatMessage: Identifiable, Equatable {
+    let id = UUID()
+    let content: String
+    let isUser: Bool
+    let timestamp: Date
+}
+
+// MARK: - Quick Action
+struct QuickAction: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+    let description: String
+    let icon: String
+    
+    static let actions = [
+        QuickAction(
+            title: "Analyze Spending",
+            message: "Can you analyze my spending patterns and suggest areas where I could save money?",
+            description: "Review spending patterns and find savings",
+            icon: "chart.pie.fill"
+        ),
+        QuickAction(
+            title: "Budget Help",
+            message: "Can you help me create a budget based on my spending patterns?",
+            description: "Create a personalized budget plan",
+            icon: "dollarsign.circle.fill"
+        ),
+        QuickAction(
+            title: "Savings Tips",
+            message: "What are some personalized tips to help me save more money?",
+            description: "Get personalized savings advice",
+            icon: "arrow.up.circle.fill"
+        ),
+        QuickAction(
+            title: "Recurring Charges",
+            message: "Can you identify my recurring charges and suggest which ones I might want to cancel or reduce?",
+            description: "Optimize your subscriptions",
+            icon: "repeat.circle.fill"
+        )
+    ]
+}
+
+// MARK: - Quick Action Button
+struct QuickActionButton: View {
+    let action: QuickAction
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Image(systemName: action.icon)
+                        .foregroundColor(Color(hex: "3B82F6"))
+                    Text(action.title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                }
+                
+                Text(action.description)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .lineLimit(2)
+            }
+            .frame(width: 200)
+            .padding(12)
+            .background(Color(hex: "1E293B"))
+            .cornerRadius(12)
+        }
+    }
+}
+
+// MARK: - Chat Input
+struct ChatInput: View {
+    @Binding var currentMessage: String
+    var onSend: (String) async -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            TextField("Ask about your finances...", text: $currentMessage)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+            
+            Button {
+                let message = currentMessage
+                currentMessage = ""
+                Task {
+                    await onSend(message)
+                }
+            } label: {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(currentMessage.isEmpty ? .gray : Color(hex: "3B82F6"))
+            }
+            .disabled(currentMessage.isEmpty)
+        }
+    }
+}
+
+// MARK: - Chat Bubble
+struct ChatBubble: View {
+    let message: ChatMessage
+    
+    var body: some View {
+        HStack {
+            if message.isUser {
+                Spacer()
+            }
+            
+            Text(message.content)
+                .padding(12)
+                .foregroundColor(.white)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B"))
+                )
+                .frame(maxWidth: 280, alignment: message.isUser ? .trailing : .leading)
+            
+            if !message.isUser {
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 8)
+    }
+}
+
+// MARK: - Chat Area
+struct ChatArea: View {
+    @ObservedObject var viewModel: AIDashboardAssistantViewModel
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            ScrollView {
+                ScrollViewReader { proxy in
+                    LazyVStack(spacing: 12) {
+                        ForEach(viewModel.messages) { message in
+                            ChatBubble(message: message)
+                                .id(message.id)
+                        }
+                        
+                        if viewModel.isLoading {
+                            HStack(spacing: 4) {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Thinking...")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .onChange(of: viewModel.messages) { messages in
+                        if let lastMessage = messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxHeight: viewModel.isExpanded ? .infinity : 200)
+            
+            ChatInput(currentMessage: $viewModel.currentMessage) { message in
+                await viewModel.sendMessage(message)
+            }
+        }
+    }
+}
+
+// MARK: - AI Financial Assistant View
 struct AIFinancialAssistantView: View {
     @StateObject private var viewModel = AIDashboardAssistantViewModel()
     @Environment(\.colorScheme) var colorScheme
@@ -267,33 +440,6 @@ struct ChatContent: View {
     }
 }
 
-// MARK: - Chat Input
-struct ChatInput: View {
-    @Binding var currentMessage: String
-    var onSend: (String) async -> Void
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            TextField("Ask about your finances...", text: $currentMessage)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .disabled(currentMessage.isEmpty)
-            
-            Button {
-                let message = currentMessage
-                currentMessage = "" // Clear input immediately
-                Task {
-                    await onSend(message)
-                }
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundColor(Color(hex: "3B82F6"))
-            }
-            .disabled(currentMessage.isEmpty)
-        }
-    }
-}
-
 // MARK: - Proactive Insights Section
 struct ProactiveInsightsSection: View {
     let insights: [ProactiveInsight]
@@ -414,76 +560,6 @@ struct ChatMessageBubble: View {
             return .white
         case .assistant, .system:
             return Color(hex: "E5E7EB")
-        }
-    }
-}
-
-struct ChatBubble: View {
-    let message: ChatMessage
-    
-    var body: some View {
-        HStack {
-            if message.isUser {
-                Spacer()
-            }
-            
-            Text(message.content)
-                .padding(12)
-                .foregroundColor(.white)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B"))
-                )
-                .frame(maxWidth: 280, alignment: message.isUser ? .trailing : .leading)
-            
-            if !message.isUser {
-                Spacer()
-            }
-        }
-        .padding(.horizontal, 8)
-    }
-}
-
-struct ChatArea: View {
-    @ObservedObject var viewModel: AIDashboardAssistantViewModel
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            ScrollView {
-                ScrollViewReader { proxy in
-                    LazyVStack(spacing: 12) {
-                        ForEach(viewModel.messages) { message in
-                            ChatBubble(message: message)
-                                .id(message.id)
-                        }
-                        
-                        if viewModel.isLoading {
-                            HStack(spacing: 4) {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                Text("Thinking...")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding()
-                        }
-                    }
-                    .padding(.vertical, 8)
-                    .onChange(of: viewModel.messages) { messages in
-                        if let lastMessage = messages.last {
-                            withAnimation {
-                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                            }
-                        }
-                    }
-                }
-            }
-            .frame(maxHeight: viewModel.isExpanded ? .infinity : 200)
-            
-            ChatInput(currentMessage: $viewModel.currentMessage) { message in
-                await viewModel.sendMessage(message)
-            }
         }
     }
 }

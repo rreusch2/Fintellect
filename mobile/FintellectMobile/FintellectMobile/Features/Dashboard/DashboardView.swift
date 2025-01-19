@@ -464,69 +464,6 @@ struct AIFinancialInsightsSection: View {
     }
 }
 
-// MARK: - Insight Card
-struct InsightCard: View {
-    let insight: AIInsight
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header with Priority Badge
-            HStack {
-                Text(insight.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .lineLimit(2)
-                
-                Spacer()
-                
-                PriorityBadge(type: insight.type)
-            }
-            
-            // Description
-            Text(insight.description)
-                .font(.caption)
-                .foregroundColor(Color(hex: "94A3B8"))
-                .lineLimit(4)
-        }
-        .padding()
-        .frame(width: 300)
-        .background(Color(hex: "1E293B"))
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(hex: "334155"), lineWidth: 1)
-        )
-    }
-}
-
-// MARK: - Priority Badge
-struct PriorityBadge: View {
-    let type: String
-    
-    var color: Color {
-        switch type {
-        case "HIGH":
-            return Color(hex: "EF4444")
-        case "MEDIUM":
-            return Color(hex: "F59E0B")
-        default:
-            return Color(hex: "10B981")
-        }
-    }
-    
-    var body: some View {
-        Text(type)
-            .font(.caption2)
-            .fontWeight(.semibold)
-            .foregroundColor(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.1))
-            .cornerRadius(8)
-    }
-}
-
 // MARK: - Empty Insights View
 struct EmptyInsightsView: View {
     var body: some View {

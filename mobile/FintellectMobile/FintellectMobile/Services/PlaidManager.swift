@@ -38,15 +38,15 @@ class PlaidManager: ObservableObject {
                 print("[Plaid] Link token created successfully")
                 
                 // Create configuration
-                let configuration = PLKConfiguration(token: linkToken)
+                let configuration = LinkConfiguration(token: linkToken)
                 
-                let linkViewController = PLKPlaidLinkViewController(configuration: configuration) { [weak self] success in
-                    print("[Plaid] Link success - public token: \(success.publicToken)")
+                let linkViewController = PLKPlaidLinkViewController(configuration: configuration) { [weak self] (linkSuccess: PLKLinkSuccess) in
+                    print("[Plaid] Link success - public token: \(linkSuccess.publicToken)")
                     Task { [weak self] in
-                        await self?.exchangePublicToken(publicToken: success.publicToken)
+                        await self?.exchangePublicToken(publicToken: linkSuccess.publicToken)
                     }
-                } onExit: { [weak self] exit in
-                    if let error = exit.error {
+                } onExit: { [weak self] (linkExit: PLKLinkExit) in
+                    if let error = linkExit.error {
                         print("[Plaid] Link exit with error: \(error)")
                         self?.error = error.localizedDescription
                     } else {

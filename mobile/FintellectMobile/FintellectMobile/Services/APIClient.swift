@@ -7,17 +7,14 @@ class APIClient {
     
     private init() {
         #if DEBUG
-        self.baseURL = "https://216.39.74.173:5001"  // MacinCloud IP
+        self.baseURL = "http://216.39.74.173:5001"  // MacinCloud IP with HTTP
         #else
         self.baseURL = "https://api.fintellect.app" // Production URL
         #endif
         
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
-        
-        // Allow self-signed certificates for development
-        let session = URLSession(configuration: config, delegate: URLSessionDelegateHandler(), delegateQueue: nil)
-        self.session = session
+        self.session = URLSession(configuration: config)  // Use standard session since we're using HTTP
         
         print("[API] Initialized with base URL: \(baseURL)")
     }
@@ -94,21 +91,5 @@ extension APIError: LocalizedError {
         case .decodingError(let error):
             return "Failed to decode response: \(error.localizedDescription)"
         }
-    }
-}
-
-class URLSessionDelegateHandler: NSObject, URLSessionDelegate {
-    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        // Accept all certificates in debug mode
-        #if DEBUG
-        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
-            if let serverTrust = challenge.protectionSpace.serverTrust {
-                let credential = URLCredential(trust: serverTrust)
-                completionHandler(.useCredential, credential)
-                return
-            }
-        }
-        #endif
-        completionHandler(.performDefaultHandling, nil)
     }
 } 

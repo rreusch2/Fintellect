@@ -54,9 +54,10 @@ struct BankConnectionStepView: View {
                 }
             }
         }
-        .sheet(isPresented: $plaidManager.isPresentingLink) {
+        .fullScreenCover(isPresented: $plaidManager.isPresentingLink) {
             if let linkController = plaidManager.linkController {
                 PlaidLinkView(linkController: linkController)
+                    .ignoresSafeArea()
             }
         }
     }
@@ -66,7 +67,9 @@ struct PlaidLinkView: UIViewControllerRepresentable {
     let linkController: LinkController
     
     func makeUIViewController(context: Context) -> UIViewController {
-        return linkController
+        let viewController = UIViewController()
+        linkController.makeCoordinator().present(linkController.handler, in: viewController)
+        return viewController
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}

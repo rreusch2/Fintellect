@@ -93,25 +93,33 @@ class TransactionsViewModel: ObservableObject {
     private func mapPlaidCategory(_ category: String) -> TransactionCategory {
         switch category {
         case "FOOD_AND_DRINK":
-            return .food
+            return .food("Food & Drink")
         case "TRANSPORTATION":
-            return .transportation
+            return .transportation("Transportation")
         case "ENTERTAINMENT":
-            return .entertainment
+            return .entertainment("Entertainment")
         case "GENERAL_MERCHANDISE", "SHOPPING":
-            return .shopping
+            return .shopping("Shopping")
         case "UTILITIES":
-            return .utilities
+            return .utilities("Bills & Utilities")
         case "HEALTHCARE":
-            return .health
+            return .health("Healthcare")
         case "HOUSING":
-            return .housing
+            return .housing("Housing")
         case "TRAVEL":
-            return .travel
+            return .travel("Travel")
         case "INCOME", "TRANSFER_IN":
-            return .income
+            return .income("Income")
+        case "LOAN_PAYMENTS":
+            return .other("Loan Payment")
+        case "GENERAL_SERVICES":
+            return .other("General Services")
+        case "PERSONAL_CARE":
+            return .other("Personal Care")
+        case "TRANSFER_OUT":
+            return .other("Transfer")
         default:
-            return .other
+            return .other("Other")
         }
     }
 }

@@ -6,7 +6,7 @@ enum AIError: Error {
     case decodingError(Error)
 }
 
-final class AIService {
+final class AIBackendService {
     private let apiClient: APIClient
     
     init(apiClient: APIClient = .shared) {

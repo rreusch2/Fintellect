@@ -78,7 +78,7 @@ struct AIInsight: Codable, Identifiable {
 // MARK: - View Model
 @MainActor
 class DashboardViewModel: ObservableObject {
-    private let aiService: AIService
+    private let aiService: AIBackendService
     
     @Published var totalBalance: Double = 0
     @Published var monthlySpending: Double = 0
@@ -93,7 +93,7 @@ class DashboardViewModel: ObservableObject {
     @Published var isLoadingInsights = false
     @Published var isLoadingChat = false
     
-    init(aiService: AIService = AIService()) {
+    init(aiService: AIBackendService = AIBackendService()) {
         self.aiService = aiService
         Task {
             await fetchInsights()

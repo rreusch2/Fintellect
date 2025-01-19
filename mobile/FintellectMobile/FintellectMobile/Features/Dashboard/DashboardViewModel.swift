@@ -78,6 +78,8 @@ struct AIInsight: Codable, Identifiable {
 // MARK: - View Model
 @MainActor
 class DashboardViewModel: ObservableObject {
+    private let aiService: AIService
+    
     @Published var totalBalance: Double = 0
     @Published var monthlySpending: Double = 0
     @Published var monthlySavings: Double = 0
@@ -85,7 +87,59 @@ class DashboardViewModel: ObservableObject {
     @Published var spendingCategories: [SpendingCategory] = []
     @Published var aiInsights: [AIInsight] = []
     @Published var isLoading = false
-    @Published var error: String?
+    @Published var error: Error?
+    @Published var insights: [AIInsight] = []
+    @Published var chatMessages: [ChatMessage] = []
+    @Published var isLoadingInsights = false
+    @Published var isLoadingChat = false
+    
+    init(aiService: AIService = AIService()) {
+        self.aiService = aiService
+        Task {
+            await fetchInsights()
+        }
+    }
+    
+    func fetchInsights() async {
+        isLoadingInsights = true
+        error = nil
+        
+        do {
+            insights = try await aiService.fetchDashboardInsights()
+        } catch {
+            self.error = error
+            #if DEBUG
+            insights = AIInsight.demoInsights
+            #endif
+        }
+        
+        isLoadingInsights = false
+    }
+    
+    func sendChatMessage(_ message: String) async {
+        isLoadingChat = true
+        error = nil
+        
+        // Add user message immediately
+        let userMessage = ChatMessage(content: message, isUser: true)
+        chatMessages.append(userMessage)
+        
+        do {
+            let response = try await aiService.sendChatMessage(message)
+            let aiMessage = ChatMessage(content: response, isUser: false)
+            chatMessages.append(aiMessage)
+        } catch {
+            self.error = error
+            // Add error message to chat
+            let errorMessage = ChatMessage(
+                content: "Sorry, I encountered an error. Please try again.",
+                isUser: false
+            )
+            chatMessages.append(errorMessage)
+        }
+        
+        isLoadingChat = false
+    }
     
     func fetchDashboardData() async {
         isLoading = true
@@ -98,7 +152,7 @@ class DashboardViewModel: ObservableObject {
             if let summary = try? JSONDecoder().decode(TransactionSummary.self, from: summaryData) {
                 print("[Dashboard] Successfully decoded transaction summary")
                 if !summary.hasPlaidConnection {
-                    error = "No bank account connected. Please connect your bank account to see your financial data."
+                    error = APIError.decodingError(NSError(domain: "DashboardViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode transaction summary"]))
                     isLoading = false
                     return
                 }
@@ -121,9 +175,9 @@ class DashboardViewModel: ObservableObject {
         } catch {
             print("[Dashboard] Error fetching data:", error)
             if let apiError = error as? APIError {
-                self.error = apiError.localizedDescription
+                self.error = apiError
             } else {
-                self.error = error.localizedDescription
+                self.error = error
             }
         }
         
@@ -188,4 +242,12 @@ class DashboardViewModel: ObservableObject {
             .map { $0.prefix(1).uppercased() + $0.dropFirst().lowercased() }
             .joined(separator: " ")
     }
+}
+
+// MARK: - Chat Models
+struct ChatMessage: Identifiable {
+    let id = UUID()
+    let content: String
+    let isUser: Bool
+    let timestamp: Date = Date()
 } 

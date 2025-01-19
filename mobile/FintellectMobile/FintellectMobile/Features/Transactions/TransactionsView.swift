@@ -41,95 +41,105 @@ struct TransactionsView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Stats Section
-                VStack(spacing: 16) {
-                    HStack(spacing: 16) {
-                        StatCard(
-                            title: "Total Spending",
-                            value: viewModel.totalSpending.formatted(.currency(code: "USD")),
-                            icon: "dollarsign.circle.fill",
-                            color: .blue
-                        )
-                        
-                        if let topCategory = viewModel.topCategory {
+            ZStack {
+                BackgroundView()
+                
+                VStack(spacing: 0) {
+                    // Stats Section
+                    VStack(spacing: 16) {
+                        HStack(spacing: 16) {
                             StatCard(
-                                title: "Top Category",
-                                value: topCategory.displayName,
-                                icon: topCategory.icon,
-                                color: topCategory.color
+                                title: "Total Spending",
+                                value: viewModel.totalSpending.formatted(.currency(code: "USD")),
+                                icon: "dollarsign.circle.fill",
+                                color: .blue
+                            )
+                            
+                            if let topCategory = viewModel.topCategory {
+                                StatCard(
+                                    title: "Top Category",
+                                    value: topCategory.displayName,
+                                    icon: topCategory.icon,
+                                    color: topCategory.color
+                                )
+                            }
+                        }
+                        
+                        HStack(spacing: 16) {
+                            StatCard(
+                                title: "Average Transaction",
+                                value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
+                                icon: "chart.bar.fill",
+                                color: .purple
+                            )
+                            
+                            StatCard(
+                                title: "Total Transactions",
+                                value: "\(viewModel.transactions.count)",
+                                icon: "list.bullet.rectangle.fill",
+                                color: .orange
                             )
                         }
                     }
+                    .padding()
+                    .background(Color(hex: "1E293B"))
+                    .cornerRadius(16)
+                    .padding()
                     
-                    HStack(spacing: 16) {
-                        StatCard(
-                            title: "Average Transaction",
-                            value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
-                            icon: "chart.bar.fill",
-                            color: .purple
-                        )
-                        
-                        StatCard(
-                            title: "Total Transactions",
-                            value: "\(viewModel.transactions.count)",
-                            icon: "list.bullet.rectangle.fill",
-                            color: .orange
-                        )
-                    }
-                }
-                .padding()
-                .background(Color(.systemBackground))
-                
-                // Category Filter
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        CategoryFilterButton(
-                            title: "All",
-                            isSelected: selectedCategory == nil,
-                            color: .gray
-                        ) {
-                            selectedCategory = nil
-                        }
-                        
-                        ForEach(categories, id: \.self) { category in
+                    // Category Filter
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
                             CategoryFilterButton(
-                                title: category.displayName,
-                                isSelected: selectedCategory == category,
-                                color: category.color
+                                title: "All",
+                                isSelected: selectedCategory == nil,
+                                color: .gray
                             ) {
-                                selectedCategory = category
+                                selectedCategory = nil
+                            }
+                            
+                            ForEach(categories, id: \.self) { category in
+                                CategoryFilterButton(
+                                    title: category.displayName,
+                                    isSelected: selectedCategory == category,
+                                    color: category.color
+                                ) {
+                                    selectedCategory = category
+                                }
                             }
                         }
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
-                }
-                .padding(.vertical, 8)
-                .background(Color(.systemBackground))
-                
-                // Transactions List
-                if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = viewModel.error {
-                    ErrorView(error: error) {
-                        Task {
+                    .padding(.vertical, 8)
+                    .background(Color(hex: "1E293B"))
+                    
+                    // Transactions List
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let error = viewModel.error {
+                        ErrorView(error: error) {
+                            Task {
+                                await viewModel.fetchTransactions()
+                            }
+                        }
+                    } else if viewModel.transactions.isEmpty {
+                        EmptyStateView()
+                    } else {
+                        List(filteredTransactions) { transaction in
+                            TransactionRow(transaction: transaction)
+                                .listRowBackground(Color(hex: "1E293B"))
+                        }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .refreshable {
                             await viewModel.fetchTransactions()
                         }
-                    }
-                } else if viewModel.transactions.isEmpty {
-                    EmptyStateView()
-                } else {
-                    List(filteredTransactions) { transaction in
-                        TransactionRow(transaction: transaction)
-                    }
-                    .listStyle(.plain)
-                    .refreshable {
-                        await viewModel.fetchTransactions()
                     }
                 }
             }
             .navigationTitle("Transactions")
+            .navigationBarTitleDisplayMode(.inline)
+            .foregroundColor(.white)
         }
     }
 }
@@ -279,17 +289,18 @@ struct TransactionRow: View {
                 .font(.title2)
                 .foregroundColor(transaction.category.color)
                 .frame(width: 40, height: 40)
-                .background(transaction.category.color.opacity(0.1))
+                .background(transaction.category.color.opacity(0.2))
                 .clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(transaction.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
+                    .foregroundColor(.white)
                 
                 Text(transaction.category.displayName)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.gray)
             }
             
             Spacer()
@@ -298,11 +309,11 @@ struct TransactionRow: View {
                 Text(transaction.formattedAmount)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(transaction.isExpense ? .primary : .green)
+                    .foregroundColor(transaction.isExpense ? .white : .green)
                 
                 Text(transaction.formattedDate)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.gray)
             }
         }
         .padding(.vertical, 8)
@@ -452,12 +463,12 @@ struct CategoryFilterButton: View {
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .white : .gray)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(isSelected ? color : Color(.systemGray6))
+                        .fill(isSelected ? color : Color(hex: "2D3748"))
                 )
         }
     }

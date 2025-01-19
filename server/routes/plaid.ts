@@ -445,13 +445,20 @@ router.post("/fix-categories", async (req, res) => {
   }
 });
 
-router.post("/exchange_token", async (req, res) => {
-  if (!req.user?.id) {
-    return res.status(401).send("Not authenticated");
+router.post("/exchange-public-token", async (req: JWTRequest, res: Response) => {
+  if (!req.jwtPayload?.userId) {
+    console.log("[Plaid] Exchange attempt without authentication");
+    return res.status(401).json({ error: "Not authenticated" });
   }
 
   try {
+    console.log("[Plaid] Exchanging public token for access token");
     const { public_token } = req.body;
+    
+    if (!public_token) {
+      console.log("[Plaid] No public token provided");
+      return res.status(400).json({ error: "No public token provided" });
+    }
     
     // Exchange public token for access token
     const exchangeResponse = await plaidClient.itemPublicTokenExchange({
@@ -467,92 +474,47 @@ router.post("/exchange_token", async (req, res) => {
     });
 
     const institutionId = itemResponse.data.item.institution_id;
+    if (!institutionId) {
+      console.log("[Plaid] No institution ID found");
+      return res.status(500).json({ error: "No institution ID found" });
+    }
+
     const institutionResponse = await plaidClient.institutionsGetById({
-      institution_id: institutionId!,
-      country_codes: ['US'],
+      institution_id: institutionId,
+      country_codes: [CountryCode.Us],
     });
 
     // Insert Plaid item
     const [plaidItem] = await db
       .insert(plaidItems)
       .values({
-        userId: req.user.id,
+        userId: req.jwtPayload.userId,
         plaidItemId: itemId,
         plaidAccessToken: accessToken,
-        plaidInstitutionId: institutionId!,
+        plaidInstitutionId: institutionId,
         plaidInstitutionName: institutionResponse.data.institution.name,
       })
       .returning();
-
-    console.log('Fetching initial transactions...');
-
-    // Initial transaction sync with proper categorization
-    const transactions = await plaidClient.transactionsGet({
-      access_token: accessToken,
-      start_date: '2023-01-01',
-      end_date: new Date().toISOString().split('T')[0],
-    });
-
-    console.log(`Processing ${transactions.data.transactions.length} transactions...`);
-
-    // Process transactions with enhanced categorization
-    for (const transaction of transactions.data.transactions) {
-      const description = transaction.name || '';
-      const merchantName = transaction.merchant_name || undefined;
-      const amount = Math.round(transaction.amount * 100);
-
-      // Use enhanced categorization
-      const { categoryId, subcategoryId } = suggestCategory(
-        description,
-        amount,
-        merchantName
-      );
-
-      console.log('Transaction categorization:', {
-        description,
-        merchantName,
-        amount,
-        suggestedCategory: categoryId,
-        suggestedSubcategory: subcategoryId,
-        originalCategory: transaction.category?.[0]
-      });
-
-      await db.insert(plaidTransactions).values({
-        userId: req.user.id,
-        plaidItemId: plaidItem.id,
-        plaidAccountId: transaction.account_id,
-        plaidTransactionId: transaction.transaction_id,
-        amount: amount,
-        date: new Date(transaction.date),
-        description: description,
-        merchantName: merchantName,
-        category: categoryId,
-        subcategory: subcategoryId,
-        pending: transaction.pending,
-      });
-    }
 
     // Update user's Plaid setup status
     await db
       .update(users)
       .set({ hasPlaidSetup: true })
-      .where(eq(users.id, req.user.id));
+      .where(eq(users.id, req.jwtPayload.userId));
 
-    console.log('Successfully processed all transactions');
+    console.log("[Plaid] Successfully exchanged public token and updated user status");
 
-    res.json({
+    // Return success without exposing sensitive data
+    res.json({ 
       success: true,
-      plaidItem: {
-        id: plaidItem.id,
-        institutionName: institutionResponse.data.institution.name,
-      },
+      institutionName: institutionResponse.data.institution.name
     });
 
   } catch (error) {
-    console.error("Error exchanging token:", error);
-    res.status(500).json({
-      error: "Failed to setup Plaid connection",
-      details: process.env.NODE_ENV === "development" ? error : undefined,
+    console.error("[Plaid] Error exchanging public token:", error);
+    res.status(500).json({ 
+      error: "Failed to exchange public token",
+      details: process.env.NODE_ENV === "development" ? error : undefined
     });
   }
 });

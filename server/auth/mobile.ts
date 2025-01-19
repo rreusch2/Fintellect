@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { users } from '@db/schema';
 import { db } from '@db';
 import { eq } from 'drizzle-orm';
-import { scrypt, timingSafeEqual } from 'crypto';
+import { scrypt, timingSafeEqual, randomBytes } from 'crypto';
 import { promisify } from 'util';
 
 const scryptAsync = promisify(scrypt);
@@ -235,7 +235,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Hash the password
-    const salt = crypto.randomBytes(16).toString('hex');
+    const salt = randomBytes(16).toString('hex');
     const hashedPassword = Buffer.from(await scryptAsync(password, salt, 64) as Buffer).toString('hex') + '.' + salt;
 
     // Create new user

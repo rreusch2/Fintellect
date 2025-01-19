@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum TransactionCategory: String {
+enum TransactionCategory: String, Codable, CaseIterable {
     case food = "FOOD_AND_DRINK"
     case transportation = "TRANSPORTATION"
     case entertainment = "ENTERTAINMENT"
@@ -11,6 +11,56 @@ enum TransactionCategory: String {
     case travel = "TRAVEL"
     case income = "INCOME"
     case other = "OTHER"
+    
+    var color: Color {
+        switch self {
+        case .food:
+            return Color(hex: "FF9800")  // Orange
+        case .transportation:
+            return Color(hex: "2196F3")  // Blue
+        case .entertainment:
+            return Color(hex: "E91E63")  // Pink
+        case .shopping:
+            return Color(hex: "9C27B0")  // Purple
+        case .utilities:
+            return Color(hex: "FFA726")  // Amber
+        case .health:
+            return Color(hex: "FF4081")  // Rose
+        case .housing:
+            return Color(hex: "4CAF50")  // Green
+        case .travel:
+            return Color(hex: "00BCD4")  // Cyan
+        case .income:
+            return Color(hex: "66BB6A")  // Light Green
+        case .other:
+            return Color(hex: "9E9E9E")  // Gray
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .food:
+            return "fork.knife"
+        case .transportation:
+            return "car.fill"
+        case .entertainment:
+            return "tv.fill"
+        case .shopping:
+            return "cart.fill"
+        case .utilities:
+            return "bolt.fill"
+        case .health:
+            return "cross.case.fill"
+        case .housing:
+            return "house.fill"
+        case .travel:
+            return "airplane"
+        case .income:
+            return "arrow.down.circle.fill"
+        case .other:
+            return "tag.fill"
+        }
+    }
 }
 
 struct Transaction: Identifiable {
@@ -49,38 +99,4 @@ struct Transaction: Identifiable {
         ]
     }
     #endif
-}
-
-enum TransactionCategory: String, Codable, CaseIterable {
-    case food = "Food & Dining"
-    case shopping = "Shopping"
-    case utilities = "Utilities"
-    case entertainment = "Entertainment"
-    case transportation = "Transportation"
-    case health = "Health"
-    case other = "Other"
-    
-    var color: Color {
-        switch self {
-        case .food: return Color(hex: "10B981")         // Green
-        case .shopping: return Color(hex: "8B5CF6")     // Purple
-        case .utilities: return Color(hex: "3B82F6")    // Blue
-        case .entertainment: return Color(hex: "F59E0B") // Orange
-        case .transportation: return Color(hex: "EC4899")// Pink
-        case .health: return Color(hex: "6366F1")       // Indigo
-        case .other: return Color(hex: "64748B")        // Gray
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .food: return "fork.knife"
-        case .shopping: return "cart.fill"
-        case .utilities: return "bolt.fill"
-        case .entertainment: return "tv.fill"
-        case .transportation: return "car.fill"
-        case .health: return "heart.fill"
-        case .other: return "circle.fill"
-        }
-    }
 } 

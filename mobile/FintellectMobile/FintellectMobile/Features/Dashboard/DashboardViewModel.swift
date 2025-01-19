@@ -162,10 +162,11 @@ class DashboardViewModel: ObservableObject {
         
         // Create spending categories sorted by amount
         spendingCategories = filteredCategories.map { category, amount in
-            let percentage = totalSpending > 0 ? (Double(amount) / totalSpending * 100.0) : 0
+            let amountInDollars = Double(amount) / 100.0
+            let percentage = totalSpending > 0 ? (Double(amount) / totalSpending) * 100.0 : 0
             return SpendingCategory(
                 name: formatCategoryName(category),
-                amount: Double(amount) / 100.0,
+                amount: amountInDollars,
                 percentage: percentage,
                 color: categoryColors[category] ?? Color(hex: "94A3B8")
             )

@@ -29,7 +29,7 @@ struct DashboardView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 24) {
                 BalanceOverviewSection(balance: viewModel.totalBalance)
-                MonthlyStatsSection(spending: viewModel.monthlySpending, savings: viewModel.monthlySavings)
+                MonthlyStatsSection(spending: viewModel.monthlySpending)
                 AIAssistantSection(viewModel: viewModel)
                 SpendingDistributionSection(
                     monthlySpending: viewModel.monthlySpending,
@@ -76,24 +76,14 @@ struct BalanceOverviewSection: View {
 // MARK: - Monthly Stats Section
 struct MonthlyStatsSection: View {
     let spending: Double
-    let savings: Double
     
     var body: some View {
-        VStack(spacing: 12) {
-            StatCard(
-                title: "Monthly Spending",
-                value: spending.formatted(.currency(code: "USD")),
-                icon: "arrow.down.circle.fill",
-                color: .red
-            )
-            
-            StatCard(
-                title: "Monthly Savings",
-                value: savings.formatted(.currency(code: "USD")),
-                icon: "arrow.up.circle.fill",
-                color: .green
-            )
-        }
+        StatCard(
+            title: "Monthly Spending",
+            value: spending.formatted(.currency(code: "USD")),
+            icon: "dollarsign.circle.fill",
+            color: Color(hex: "3B82F6")
+        )
         .padding(.horizontal, 16)
     }
 }

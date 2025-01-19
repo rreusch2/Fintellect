@@ -29,87 +29,109 @@ class PlaidManager: ObservableObject {
     private init() {}
     
     func createAndPresentLink() async {
-        print("[Plaid] Starting createAndPresentLink")
-        isLoading = true
-        error = nil
-        
+        print("[Plaid] Creating link token")
         do {
-            // Get link token from our backend
-            print("[Plaid] Requesting link token from backend")
+            // Request link token from our backend
             let response = try await APIClient.shared.post("/api/plaid/create-link-token", body: [:])
-            print("[Plaid] Response received: \(String(data: response, encoding: .utf8) ?? "nil")")
             
-            if let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
-               let linkToken = json["linkToken"] as? String {
-                print("[Plaid] Link token created successfully: \(linkToken)")
-                
-                // Create the configuration
-                var linkConfiguration = LinkTokenConfiguration(token: linkToken) { [weak self] success in
-                    print("[Plaid] Success with public token: \(success.publicToken)")
-                    Task { @MainActor in
-                        await self?.exchangePublicToken(publicToken: success.publicToken)
-                    }
-                    self?.isPresentingLink = false
-                    self?.isLoading = false
-                }
-                
-                // Add exit handler
-                linkConfiguration.onExit = { [weak self] exit in
-                    if let error = exit.error {
-                        print("[Plaid] Exit with error: \(error)")
-                        self?.error = error.localizedDescription
-                    } else {
-                        print("[Plaid] User exited")
-                        self?.error = "Bank connection cancelled"
-                    }
-                    self?.isPresentingLink = false
-                    self?.isLoading = false
-                }
-                
-                // Add event handler
-                linkConfiguration.onEvent = { event in
-                    print("[Plaid] Event: \(event)")
-                }
-                
-                // Create the handler
-                print("[Plaid] Creating Plaid handler")
-                let result = Plaid.create(linkConfiguration)
-                switch result {
-                case .success(let handler):
-                    print("[Plaid] Handler created successfully")
-                    self.linkController = LinkController(handler: handler)
-                    self.isPresentingLink = true
-                case .failure(let error):
-                    print("[Plaid] Handler creation failed: \(error)")
-                    throw error
-                }
-            } else {
-                print("[Plaid] Failed to parse link token from response")
-                throw NSError(domain: "Plaid", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get link token"])
+            // Parse the response
+            guard let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
+                  let linkToken = json["linkToken"] as? String else {
+                throw NSError(domain: "PlaidManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get link token"])
             }
+            
+            print("[Plaid] Link token created successfully")
+            
+            // Create configuration
+            let linkConfiguration = LinkTokenConfiguration(token: linkToken)
+            
+            // Create handler
+            let handler = Plaid.create(configuration: linkConfiguration)
+            
+            // Set up success handler
+            handler.onSuccess = { [weak self] success in
+                print("[Plaid] Link success")
+                Task { @MainActor in
+                    await self?.handleSuccess(publicToken: success.publicToken)
+                }
+            }
+            
+            // Set up exit handler
+            handler.onExit = { [weak self] exit in
+                print("[Plaid] Link exit: \(exit.error?.localizedDescription ?? "No error")")
+                Task { @MainActor in
+                    self?.isPresentingLink = false
+                    if let error = exit.error?.localizedDescription {
+                        self?.error = error
+                    }
+                }
+            }
+            
+            // Set up event handler
+            handler.onEvent = { event in
+                print("[Plaid] Link event: \(event.eventName)")
+            }
+            
+            // Present the link
+            await MainActor.run {
+                linkController = handler
+                isPresentingLink = true
+            }
+            
         } catch {
-            print("[Plaid] Error: \(error)")
+            print("[Plaid] Error creating link: \(error)")
             self.error = error.localizedDescription
-            self.isLoading = false
         }
     }
     
-    private func exchangePublicToken(publicToken: String) async {
+    private func handleSuccess(publicToken: String) async {
+        print("[Plaid] Exchanging public token")
         do {
+            // Exchange public token for access token
             let body: [String: Any] = ["public_token": publicToken]
             let response = try await APIClient.shared.post("/api/plaid/exchange-public-token", body: body)
             
-            if let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
-               let success = json["success"] as? Bool, success {
-                print("[Plaid] Public token exchanged successfully")
-                NotificationCenter.default.post(name: NSNotification.Name("PlaidAccountLinked"), object: nil)
+            // Parse response
+            guard let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
+                  json["success"] as? Bool == true else {
+                throw NSError(domain: "PlaidManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to exchange public token"])
             }
+            
+            print("[Plaid] Public token exchanged successfully")
+            
+            // Sync transactions
+            try await syncTransactions()
+            
+            // Post notification that Plaid account was linked
+            await MainActor.run {
+                NotificationCenter.default.post(name: NSNotification.Name("PlaidAccountLinked"), object: nil)
+                isPresentingLink = false
+            }
+            
         } catch {
-            print("[Plaid] Error exchanging public token: \(error)")
-            self.error = "Failed to link bank account. Please try again."
+            print("[Plaid] Error handling success: \(error)")
+            self.error = error.localizedDescription
         }
-        
-        self.isLoading = false
+    }
+    
+    func syncTransactions() async throws {
+        print("[Plaid] Syncing transactions")
+        do {
+            // Request transaction sync
+            let response = try await APIClient.shared.post("/api/plaid/sync", body: [:])
+            
+            // Parse response
+            guard let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
+                  json["success"] as? Bool == true else {
+                throw NSError(domain: "PlaidManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to sync transactions"])
+            }
+            
+            print("[Plaid] Transactions synced successfully")
+            
+        } catch {
+            print("[Plaid] Error syncing transactions: \(error)")
+            throw error
+        }
     }
 }
 

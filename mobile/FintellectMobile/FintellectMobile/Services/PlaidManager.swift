@@ -23,7 +23,6 @@ class PlaidManager: ObservableObject {
     
     @Published var isLoading = false
     @Published var error: String?
-    private var handler: Handler?
     
     private init() {}
     
@@ -38,45 +37,30 @@ class PlaidManager: ObservableObject {
                let linkToken = json["link_token"] as? String {
                 print("[Plaid] Link token created successfully")
                 
-                // Create basic configuration
-                let configuration = LinkTokenConfiguration(token: linkToken)
-                
-                // Create handler
-                do {
-                    let handler = try await Plaid.create(configuration)
-                    self.handler = handler
-                    
-                    // Set up success handler
-                    handler.onSuccess = { [weak self] success in
-                        print("[Plaid] Link success - public token: \(success.publicToken)")
-                        Task { [weak self] in
-                            await self?.exchangePublicToken(publicToken: success.publicToken)
+                try await withCheckedThrowingContinuation { continuation in
+                    let viewController = PLKPlaidLinkViewController(
+                        linkToken: linkToken,
+                        onSuccess: { success in
+                            print("[Plaid] Link success - public token: \(success.publicToken)")
+                            Task { [weak self] in
+                                await self?.exchangePublicToken(publicToken: success.publicToken)
+                            }
+                            continuation.resume()
+                        },
+                        onExit: { error in
+                            if let error = error {
+                                print("[Plaid] Link exit with error: \(error)")
+                                continuation.resume(throwing: error)
+                            } else {
+                                print("[Plaid] Link exit without error")
+                                continuation.resume(throwing: NSError(domain: "Plaid", code: -1, userInfo: [NSLocalizedDescriptionKey: "User exited"]))
+                            }
                         }
-                    }
+                    )
                     
-                    // Set up exit handler
-                    handler.onExit = { [weak self] exit in
-                        if let error = exit.error {
-                            print("[Plaid] Link exit with error: \(error)")
-                            self?.error = error.localizedDescription
-                        } else {
-                            print("[Plaid] Link exit without error")
-                        }
-                        self?.isLoading = false
+                    if let rootViewController = UIApplication.shared.windows.first?.rootViewController {
+                        rootViewController.present(viewController, animated: true)
                     }
-                    
-                    // Set up event handler
-                    handler.onEvent = { event in
-                        print("[Plaid] Link event: \(event.eventName)")
-                    }
-                    
-                    // Present Link
-                    if let viewController = UIApplication.shared.keyWindow?.rootViewController {
-                        try await handler.present(using: .viewController(viewController))
-                    }
-                } catch {
-                    print("[Plaid] Unable to create handler: \(error)")
-                    self.error = error.localizedDescription
                 }
             }
         } catch {

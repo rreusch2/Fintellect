@@ -23,7 +23,6 @@ class PlaidManager: ObservableObject {
     
     @Published var isLoading = false
     @Published var error: String?
-    private var handler: PLKHandler?
     
     private init() {}
     
@@ -38,16 +37,38 @@ class PlaidManager: ObservableObject {
                let linkToken = json["link_token"] as? String {
                 print("[Plaid] Link token created successfully")
                 
-                // Create handler
-                handler = PLKHandler(token: linkToken)
-                handler?.delegate = self
+                // Create configuration
+                let configuration = LinkTokenConfiguration(token: linkToken)
                 
                 // Present Plaid Link
-                if let viewController = handler?.createLinkViewController() {
-                    if let topViewController = UIApplication.shared.keyWindow?.rootViewController {
-                        topViewController.present(viewController, animated: true)
+                let result = try await Plaid.create(configuration)
+                
+                // Set up success handler
+                result.onSuccess = { success in
+                    print("[Plaid] Link success - public token: \(success.publicToken)")
+                    Task {
+                        await self.exchangePublicToken(publicToken: success.publicToken)
                     }
                 }
+                
+                // Set up exit handler
+                result.onExit = { exit in
+                    if let error = exit.error {
+                        print("[Plaid] Link exit with error: \(error)")
+                        self.error = error.localizedDescription
+                    } else {
+                        print("[Plaid] Link exit without error")
+                    }
+                    self.isLoading = false
+                }
+                
+                // Set up event handler
+                result.onEvent = { event in
+                    print("[Plaid] Link event: \(event)")
+                }
+                
+                // Open Plaid Link
+                try await result.open(presentUsing: .viewController)
             }
         } catch {
             print("[Plaid] Error creating link token: \(error)")
@@ -72,29 +93,5 @@ class PlaidManager: ObservableObject {
         }
         
         self.isLoading = false
-    }
-}
-
-extension PlaidManager: PLKHandlerDelegate {
-    func linkHandler(_ handler: PLKHandler, didSucceedWithPublicToken publicToken: String, metadata: [String: Any]?) {
-        print("[Plaid] Link success with public token: \(publicToken)")
-        Task {
-            await exchangePublicToken(publicToken: publicToken)
-        }
-        isLoading = false
-    }
-    
-    func linkHandler(_ handler: PLKHandler, didExitWithError error: Error?, metadata: [String: Any]?) {
-        if let error = error {
-            print("[Plaid] Link exit with error: \(error)")
-            self.error = error.localizedDescription
-        } else {
-            print("[Plaid] Link exit without error")
-        }
-        isLoading = false
-    }
-    
-    func linkHandler(_ handler: PLKHandler, didHandleEvent event: String, metadata: [String: Any]?) {
-        print("[Plaid] Link event: \(event)")
     }
 } 

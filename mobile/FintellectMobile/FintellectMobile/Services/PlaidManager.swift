@@ -38,16 +38,24 @@ class PlaidManager: ObservableObject {
                let linkToken = json["link_token"] as? String {
                 print("[Plaid] Link token created successfully")
                 
-                // Create configuration with handlers
-                let configuration = LinkTokenConfiguration(
-                    token: linkToken,
-                    onSuccess: { [weak self] (success: LinkSuccess) in
+                // Create basic configuration
+                let configuration = LinkTokenConfiguration(token: linkToken)
+                
+                // Create handler
+                do {
+                    let handler = try await Plaid.create(configuration)
+                    self.handler = handler
+                    
+                    // Set up success handler
+                    handler.onSuccess = { [weak self] success in
                         print("[Plaid] Link success - public token: \(success.publicToken)")
                         Task { [weak self] in
                             await self?.exchangePublicToken(publicToken: success.publicToken)
                         }
-                    },
-                    onExit: { [weak self] (exit: LinkExit) in
+                    }
+                    
+                    // Set up exit handler
+                    handler.onExit = { [weak self] exit in
                         if let error = exit.error {
                             print("[Plaid] Link exit with error: \(error)")
                             self?.error = error.localizedDescription
@@ -55,21 +63,16 @@ class PlaidManager: ObservableObject {
                             print("[Plaid] Link exit without error")
                         }
                         self?.isLoading = false
-                    },
-                    onEvent: { (event: LinkEvent) in
+                    }
+                    
+                    // Set up event handler
+                    handler.onEvent = { event in
                         print("[Plaid] Link event: \(event.eventName)")
                     }
-                )
-                
-                // Create handler
-                do {
-                    let handler = try await Plaid.create(configuration)
-                    self.handler = handler
                     
                     // Present Link
                     if let viewController = UIApplication.shared.keyWindow?.rootViewController {
-                        let presentationMethod = PresentationMethod.viewController(viewController)
-                        try await handler.present(using: presentationMethod)
+                        try await handler.present(using: .viewController(viewController))
                     }
                 } catch {
                     print("[Plaid] Unable to create handler: \(error)")

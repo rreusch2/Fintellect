@@ -22,31 +22,33 @@ class PlaidManager: ObservableObject {
                 print("[Plaid] Link token created successfully")
                 
                 // Create configuration
-                let configuration = LinkTokenConfiguration(
-                    token: linkToken,
-                    onSuccess: { success in
-                        print("[Plaid] Link success - public token: \(success.publicToken)")
-                        Task {
-                            await self.exchangePublicToken(publicToken: success.publicToken)
-                        }
-                    },
-                    onExit: { exit in
-                        if let error = exit.error {
-                            print("[Plaid] Link exit with error: \(error)")
-                            self.error = error.localizedDescription
-                        } else {
-                            print("[Plaid] Link exit without error")
-                        }
-                        self.isLoading = false
-                    },
-                    onEvent: { event in
-                        print("[Plaid] Link event: \(event)")
+                let linkConfiguration = LinkKit.Configuration(
+                    linkToken: linkToken
+                ) { linkSuccess in
+                    print("[Plaid] Link success - public token: \(linkSuccess.publicToken)")
+                    Task {
+                        await self.exchangePublicToken(publicToken: linkSuccess.publicToken)
                     }
-                )
+                }
+                
+                // Add event handlers
+                linkConfiguration.onEvent = { event in
+                    print("[Plaid] Link event: \(event)")
+                }
+                
+                linkConfiguration.onExit = { exit in
+                    if let error = exit.error {
+                        print("[Plaid] Link exit with error: \(error)")
+                        self.error = error.localizedDescription
+                    } else {
+                        print("[Plaid] Link exit without error")
+                    }
+                    self.isLoading = false
+                }
                 
                 // Present Plaid Link
-                let result = try await Plaid.create(configuration)
-                try await result.open()
+                let handler = Plaid.createHandler(configuration: linkConfiguration)
+                try await handler.open(presentUsing: .viewController)
             }
         } catch {
             print("[Plaid] Error creating link token: \(error)")

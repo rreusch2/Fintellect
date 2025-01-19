@@ -141,7 +141,7 @@ class DashboardViewModel: ObservableObject {
             amount > 0 &&
             category != "INCOME" &&
             !category.contains("TRANSFER") &&
-            !["OTHER", "UNCATEGORIZED"].includes(category)
+            !["OTHER", "UNCATEGORIZED"].contains(category)
         }
         
         // Calculate total spending from filtered categories

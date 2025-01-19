@@ -204,8 +204,10 @@ struct RegisterView: View {
                 }
             }
             .fullScreenCover(isPresented: $showOnboarding) {
-                print("[Register] Presenting onboarding view")
                 OnboardingView()
+                    .onAppear {
+                        print("[Register] Presenting onboarding view")
+                    }
             }
             .onAppear {
                 animateBackground = true

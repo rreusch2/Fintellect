@@ -145,24 +145,33 @@ struct SummaryStatsSection: View {
                     title: "Total Spending",
                     value: viewModel.totalSpending.formatted(.currency(code: "USD")),
                     icon: "dollarsign.circle.fill",
-                    color: .red
+                    color: .blue
                 )
                 
-                StatCard(
-                    title: "Top Category (\(viewModel.topCategory?.rawValue ?? "None"))",
-                    value: viewModel.topCategoryAmount.formatted(.currency(code: "USD")),
-                    icon: "chart.pie.fill",
-                    color: viewModel.topCategory?.color ?? .gray
-                )
+                if let topCategory = viewModel.topCategory {
+                    StatCard(
+                        title: "Top Category",
+                        value: topCategory.displayName,
+                        icon: topCategory.icon,
+                        color: topCategory.color
+                    )
+                }
                 
                 StatCard(
-                    title: "Avg Transaction",
+                    title: "Average Transaction",
                     value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
-                    icon: "number.circle.fill",
-                    color: Color(hex: "3B82F6")
+                    icon: "chart.bar.fill",
+                    color: .purple
+                )
+                
+                StatCard(
+                    title: "Total Transactions",
+                    value: "\(viewModel.transactions.count)",
+                    icon: "list.bullet.rectangle.fill",
+                    color: .orange
                 )
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal)
         }
     }
 }
@@ -265,53 +274,38 @@ struct TransactionRow: View {
     let transaction: Transaction
     
     var body: some View {
-        HStack(spacing: 16) {
-            // Category Icon
+        HStack {
             Image(systemName: transaction.category.icon)
-                .font(.system(size: 24))
+                .font(.title2)
                 .foregroundColor(transaction.category.color)
                 .frame(width: 40, height: 40)
-                .background(
-                    Circle()
-                        .fill(transaction.category.color.opacity(0.2))
-                )
+                .background(transaction.category.color.opacity(0.1))
+                .clipShape(Circle())
             
-            // Transaction Details
             VStack(alignment: .leading, spacing: 4) {
                 Text(transaction.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.white)
                 
-                HStack {
-                    Text(transaction.category.rawValue)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(transaction.category.color.opacity(0.2))
-                        .foregroundColor(transaction.category.color)
-                        .cornerRadius(8)
-                    
-                    Text(transaction.formattedDate)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
+                Text(transaction.category.displayName)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            // Amount
-            Text(transaction.formattedAmount)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(transaction.isExpense ? .red : .green)
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(transaction.formattedAmount)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(transaction.isExpense ? .primary : .green)
+                
+                Text(transaction.formattedDate)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(hex: "1E293B"))
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-        )
+        .padding(.vertical, 8)
     }
 }
 

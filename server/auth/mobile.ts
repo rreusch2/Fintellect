@@ -279,4 +279,113 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// Accept terms endpoint
+router.post('/accept-terms', async (req, res) => {
+  console.log('[Mobile Auth] Terms acceptance request');
+  
+  // Get user ID from auth token
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.log('[Mobile Auth] No Bearer token found');
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    console.log(`[Mobile Auth] Token verified for user ${decoded.userId}`);
+    
+    // Update user's onboarding step
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        onboardingStep: 1 // Move to next step after terms acceptance
+      })
+      .where(eq(users.id, decoded.userId))
+      .returning();
+    
+    if (!updatedUser) {
+      console.log(`[Mobile Auth] User ${decoded.userId} not found`);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log(`[Mobile Auth] Terms accepted for user ${decoded.userId}`);
+    res.json({
+      success: true,
+      user: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        hasPlaidSetup: updatedUser.hasPlaidSetup,
+        hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
+        monthlyIncome: updatedUser.monthlyIncome,
+        onboardingStep: updatedUser.onboardingStep
+      }
+    });
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      console.log('[Mobile Auth] Token expired');
+      return res.status(401).json({ error: 'Token expired' });
+    }
+    
+    console.error('[Mobile Auth] Terms acceptance error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Complete onboarding endpoint
+router.post('/complete-onboarding', async (req, res) => {
+  console.log('[Mobile Auth] Complete onboarding request');
+  
+  // Get user ID from auth token
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.log('[Mobile Auth] No Bearer token found');
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    console.log(`[Mobile Auth] Token verified for user ${decoded.userId}`);
+    
+    // Update user's onboarding status
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        hasCompletedOnboarding: true,
+        onboardingStep: 2 // Final step
+      })
+      .where(eq(users.id, decoded.userId))
+      .returning();
+    
+    if (!updatedUser) {
+      console.log(`[Mobile Auth] User ${decoded.userId} not found`);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log(`[Mobile Auth] Onboarding completed for user ${decoded.userId}`);
+    res.json({
+      success: true,
+      user: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        hasPlaidSetup: updatedUser.hasPlaidSetup,
+        hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
+        monthlyIncome: updatedUser.monthlyIncome,
+        onboardingStep: updatedUser.onboardingStep
+      }
+    });
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      console.log('[Mobile Auth] Token expired');
+      return res.status(401).json({ error: 'Token expired' });
+    }
+    
+    console.error('[Mobile Auth] Complete onboarding error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router; 

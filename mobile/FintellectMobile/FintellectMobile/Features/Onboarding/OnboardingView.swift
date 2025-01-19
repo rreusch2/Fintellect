@@ -85,68 +85,38 @@ class OnboardingViewModel: ObservableObject {
 
 struct OnboardingView: View {
     @StateObject private var viewModel = OnboardingViewModel()
-    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var authViewModel: AuthViewModel
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background gradient with animated orbs
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(hex: "1E293B"),  // Dark blue
-                        Color(hex: "0F172A"),  // Darker blue
-                        Color(hex: "020617")   // Almost black
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // Progress Indicator
-                    HStack(spacing: 8) {
-                        ForEach(OnboardingStep.allCases, id: \.self) { step in
-                            Capsule()
-                                .fill(step.rawValue <= viewModel.currentStep.rawValue ? 
-                                      Color(hex: "3B82F6") : Color(hex: "475569"))
-                                .frame(height: 4)
+        ZStack {
+            // Background
+            Color(hex: "0F172A").ignoresSafeArea()
+            
+            // Content
+            Group {
+                switch viewModel.currentStep {
+                case 0:
+                    TermsStepView(viewModel: viewModel)
+                        .sheet(isPresented: $viewModel.showTermsSheet) {
+                            TermsSheet()
                         }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    
-                    // Current Step View
-                    Group {
-                        switch viewModel.currentStep {
-                        case .terms:
-                            TermsStepView(viewModel: viewModel)
-                        case .bankConnection:
-                            BankConnectionStepView(viewModel: viewModel)
+                        .sheet(isPresented: $viewModel.showPrivacySheet) {
+                            PrivacySheet()
                         }
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
-                }
-                
-                if viewModel.isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(1.5)
+                case 1:
+                    BankConnectionStepView(viewModel: viewModel)
+                default:
+                    EmptyView()
                 }
             }
-            .sheet(isPresented: $viewModel.showTermsSheet) {
-                TermsSheet()
+        }
+        .alert("Error", isPresented: .constant(viewModel.error != nil)) {
+            Button("OK") {
+                viewModel.error = nil
             }
-            .sheet(isPresented: $viewModel.showPrivacySheet) {
-                PrivacySheet()
-            }
-            .alert("Error", isPresented: .constant(viewModel.error != nil)) {
-                Button("OK") {
-                    viewModel.error = nil
-                }
-            } message: {
-                if let error = viewModel.error {
-                    Text(error)
-                }
+        } message: {
+            if let error = viewModel.error {
+                Text(error)
             }
         }
     }

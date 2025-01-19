@@ -40,7 +40,7 @@ class PlaidManager: ObservableObject {
             print("[Plaid] Response received: \(String(data: response, encoding: .utf8) ?? "nil")")
             
             if let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
-               let linkToken = json["link_token"] as? String {
+               let linkToken = json["linkToken"] as? String {
                 print("[Plaid] Link token created successfully: \(linkToken)")
                 
                 // Create the configuration

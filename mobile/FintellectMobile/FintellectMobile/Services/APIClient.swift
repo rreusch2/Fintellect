@@ -7,7 +7,7 @@ class APIClient {
     
     private init() {
         #if DEBUG
-        self.baseURL = "http://216.39.74.173:5001/api"  // Add /api prefix to ensure we hit the API routes
+        self.baseURL = "http://216.39.74.173:5001"  // Remove /api since it's included in request paths
         #else
         self.baseURL = "https://api.fintellect.app" // Production URL
         #endif

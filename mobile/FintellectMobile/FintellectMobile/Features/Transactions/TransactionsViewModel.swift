@@ -52,7 +52,7 @@ class TransactionsViewModel: ObservableObject {
                 print("[Transactions] Successfully decoded \(plaidTransactions.count) transactions")
                 self.transactions = plaidTransactions.map { plaidTx in
                     Transaction(
-                        id: plaidTx.id,
+                        id: String(plaidTx.id),
                         name: plaidTx.merchantName ?? plaidTx.description,
                         amount: Double(plaidTx.amount) / 100.0,
                         date: plaidTx.date,

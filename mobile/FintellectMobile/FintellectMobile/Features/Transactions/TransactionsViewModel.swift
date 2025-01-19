@@ -126,5 +126,5 @@ struct PlaidTransaction: Codable {
     let date: Date
     let description: String
     let merchantName: String?
-    let accountId: String
+    let accountId: Int
 } 

@@ -1,4 +1,5 @@
 import SwiftUI
+@_exported import FintellectMobile.ChatModels
 
 // MARK: - Models
 struct QuickAction: Identifiable {

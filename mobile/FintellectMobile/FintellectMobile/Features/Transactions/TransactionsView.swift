@@ -16,7 +16,7 @@ struct TransactionsView: View {
             .filter { transaction in
                 if searchText.isEmpty { return true }
                 return transaction.name.localizedCaseInsensitiveContains(searchText) ||
-                       transaction.category.rawValue.localizedCaseInsensitiveContains(searchText)
+                       transaction.category.displayName.localizedCaseInsensitiveContains(searchText)
             }
             .filter { transaction in
                 if let startDate = viewModel.startDate, let endDate = viewModel.endDate {
@@ -443,6 +443,29 @@ struct ErrorView: View {
                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
         )
         .padding(.horizontal, 16)
+    }
+}
+
+// MARK: - Category Filter Button
+struct CategoryFilterButton: View {
+    let title: String
+    let isSelected: Bool
+    let color: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(isSelected ? .white : .primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(isSelected ? color : Color(.systemGray6))
+                )
+        }
     }
 }
 

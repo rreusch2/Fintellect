@@ -15,8 +15,17 @@ import type { AuthenticatedRequest } from "../auth.js";
 import { setupDemoMode, isDemoMode } from "../services/demo.js";
 import type { JWTPayload } from "../middleware/jwtAuth.js";
 
-interface JWTRequest extends Request {
-  jwtPayload: JWTPayload;
+// Extend Request type to include both JWT and session auth
+declare module 'express' {
+  interface Request {
+    jwtPayload?: JWTPayload;
+    user?: {
+      id: number;
+      username: string;
+      hasPlaidSetup: boolean;
+      hasCompletedOnboarding: boolean;
+    };
+  }
 }
 
 const router = Router();
@@ -176,9 +185,19 @@ router.post("/disconnect", async (req: any, res: any) => {
   }
 });
 
-router.get("/transactions/summary", async (req: AuthenticatedRequest, res: Response) => {
-  if (!req.user?.id) {
-    return res.status(401).send("Not authenticated");
+router.get("/transactions/summary", async (req: Request, res: Response) => {
+  // Check for JWT auth first
+  if (!req.jwtPayload?.userId) {
+    // Fall back to session auth
+    if (!req.user?.id) {
+      console.log("[Plaid] Summary request without authentication");
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+  }
+
+  const userId = req.jwtPayload?.userId || req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ error: "Not authenticated" });
   }
 
   try {
@@ -188,7 +207,7 @@ router.get("/transactions/summary", async (req: AuthenticatedRequest, res: Respo
         hasPlaidSetup: users.hasPlaidSetup
       })
       .from(users)
-      .where(eq(users.id, req.user.id))
+      .where(eq(users.id, userId))
       .limit(1);
 
     // Get the latest Plaid item
@@ -199,12 +218,12 @@ router.get("/transactions/summary", async (req: AuthenticatedRequest, res: Respo
         plaidInstitutionId: plaidItems.plaidInstitutionId,
       })
       .from(plaidItems)
-      .where(eq(plaidItems.userId, req.user.id))
+      .where(eq(plaidItems.userId, userId))
       .limit(1);
 
     // If we have a Plaid connection and it's not demo mode, try to sync the latest data
     if (plaidItem?.plaidAccessToken && plaidItem.plaidInstitutionId !== "demo") {
-      const syncResult = await PlaidService.syncTransactions(plaidItem.id, plaidItem.plaidAccessToken, req.user.id);
+      const syncResult = await PlaidService.syncTransactions(plaidItem.id, plaidItem.plaidAccessToken, userId);
       if (syncResult?.status === 'pending') {
         return res.status(202).json({
           hasPlaidConnection: true,
@@ -240,7 +259,7 @@ router.get("/transactions/summary", async (req: AuthenticatedRequest, res: Respo
       .from(plaidTransactions)
       .where(
         and(
-          eq(plaidTransactions.userId, req.user.id),
+          eq(plaidTransactions.userId, userId),
           not(like(plaidTransactions.category, '%HOUSING%')),
           not(like(plaidTransactions.category, '%HOUSE%'))
         )
@@ -268,7 +287,7 @@ router.get("/transactions/summary", async (req: AuthenticatedRequest, res: Respo
         accountId: plaidAccounts.plaidAccountId,
       })
       .from(plaidAccounts)
-      .where(eq(plaidAccounts.userId, req.user.id));
+      .where(eq(plaidAccounts.userId, userId));
 
     // Remove duplicate accounts by plaidAccountId
     const uniqueAccounts = accounts.reduce((acc, account) => {

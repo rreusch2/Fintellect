@@ -92,21 +92,39 @@ class DashboardViewModel: ObservableObject {
         error = nil
         
         do {
-            // Fetch transaction summary from the API
+            print("[Dashboard] Fetching transaction summary")
             let summaryData = try await APIClient.shared.get("/api/plaid/transactions/summary")
+            
             if let summary = try? JSONDecoder().decode(TransactionSummary.self, from: summaryData) {
+                print("[Dashboard] Successfully decoded transaction summary")
+                if !summary.hasPlaidConnection {
+                    error = "No bank account connected. Please connect your bank account to see your financial data."
+                    isLoading = false
+                    return
+                }
+                
                 updateDashboardData(with: summary)
+                print("[Dashboard] Updated dashboard with transaction summary")
+            } else {
+                print("[Dashboard] Failed to decode transaction summary")
+                throw APIError.decodingError(NSError(domain: "DashboardViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode transaction summary"]))
             }
             
             // Fetch AI insights
+            print("[Dashboard] Fetching AI insights")
             let insightsData = try await APIClient.shared.get("/api/ai/dashboard-insights")
             if let insights = try? JSONDecoder().decode([AIInsight].self, from: insightsData) {
                 aiInsights = insights
+                print("[Dashboard] Successfully updated AI insights")
             }
             
         } catch {
-            self.error = error.localizedDescription
             print("[Dashboard] Error fetching data:", error)
+            if let apiError = error as? APIError {
+                self.error = apiError.localizedDescription
+            } else {
+                self.error = error.localizedDescription
+            }
         }
         
         isLoading = false
@@ -152,6 +170,8 @@ class DashboardViewModel: ObservableObject {
                 color: categoryColors[category] ?? Color(hex: "94A3B8")
             )
         }.sorted { $0.amount > $1.amount }
+        
+        print("[Dashboard] Processed \(spendingCategories.count) spending categories")
     }
     
     // Helper function to format category names like the web app

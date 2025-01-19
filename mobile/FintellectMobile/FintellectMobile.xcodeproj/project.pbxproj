@@ -38,7 +38,6 @@
 				"FintellectMobile 2025-01-16 11-27-55/DistributionSummary.plist",
 				"FintellectMobile 2025-01-16 11-27-55/ExportOptions.plist",
 				"FintellectMobile 2025-01-16 11-27-55/manifest.plist",
-				"FintellectMobile 2025-01-16 11-27-55/Packaging.log",
 				"Frame 1.png",
 				Info.plist,
 				"Preview Content/Preview Assets.xcassets",

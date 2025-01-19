@@ -137,7 +137,14 @@ async function startServer() {
   // Setup web app after API routes
   if (process.env.NODE_ENV === "development") {
     const { setupVite } = await import("./vite.js");
-    await setupVite(app, server);
+    // Only apply Vite middleware to non-API routes
+    app.use((req, res, next) => {
+      if (req.path.startsWith('/api')) {
+        next();
+      } else {
+        setupVite(app, server);
+      }
+    });
   } else {
     setupStatic(app);
   }

@@ -214,7 +214,7 @@ struct ChatArea: View {
                 }
                 .padding(.vertical, 8)
             }
-            .frame(height: viewModel.isExpanded ? 400 : 200)
+            .frame(maxHeight: viewModel.isExpanded ? .infinity : 200)
             
             HStack(spacing: 12) {
                 TextField("Ask about your finances...", text: $viewModel.currentMessage)
@@ -234,6 +234,7 @@ struct ChatArea: View {
                 }
                 .disabled(viewModel.currentMessage.isEmpty || viewModel.isLoading)
             }
+            .padding(.bottom, 8)
         }
     }
 }
@@ -280,14 +281,14 @@ struct ExpandedChatView: View {
             ZStack {
                 Color(hex: "0F172A").ignoresSafeArea()
                 
-                VStack(spacing: 20) {
+                VStack(spacing: 16) {
                     // Quick Actions Grid
                     LazyVGrid(columns: [
                         GridItem(.flexible()),
                         GridItem(.flexible())
-                    ], spacing: 16) {
+                    ], spacing: 12) {
                         ForEach(QuickAction.actions) { action in
-                            ExpandedQuickActionButton(action: action) {
+                            CompactQuickActionButton(action: action) {
                                 Task {
                                     await viewModel.sendMessage(action.message)
                                 }
@@ -298,57 +299,64 @@ struct ExpandedChatView: View {
                     
                     // Chat Area
                     ChatArea(viewModel: viewModel)
-                        .padding()
+                        .padding(.horizontal)
                 }
-                .padding(.vertical)
+                .padding(.vertical, 8)
             }
             .navigationTitle("AI Assistant")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color(hex: "0F172A"), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
+                    .foregroundColor(Color(hex: "3B82F6"))
                 }
             }
         }
     }
 }
 
-// MARK: - Expanded Quick Action Button
-struct ExpandedQuickActionButton: View {
+// Add a new compact version of the quick action button for the expanded view
+struct CompactQuickActionButton: View {
     let action: QuickAction
     let onTap: () -> Void
     
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 12) {
-                Image(systemName: action.icon)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(action.color)
-                    .frame(width: 48, height: 48)
-                    .background(action.bgColor)
-                    .clipShape(Circle())
-                
-                Text(action.label)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.leading)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    Image(systemName: action.icon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(action.color)
+                        .frame(width: 36, height: 36)
+                        .background(action.bgColor)
+                        .clipShape(Circle())
+                    
+                    Text(action.label)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                }
                 
                 Text(action.message)
                     .font(.caption)
                     .foregroundColor(.gray)
-                    .lineLimit(2)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
+            .padding(12)
             .background(
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: 16)
                     .fill(Color(hex: "1E293B"))
                     .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: 16)
                     .stroke(action.color.opacity(0.3), lineWidth: 1)
             )
         }

@@ -7,7 +7,7 @@ class APIClient {
     
     private init() {
         #if DEBUG
-        self.baseURL = "http://216.39.74.173:5001"  // MacinCloud IP with HTTP
+        self.baseURL = "http://216.39.74.173:5001/api"  // Add /api prefix to ensure we hit the API routes
         #else
         self.baseURL = "https://api.fintellect.app" // Production URL
         #endif

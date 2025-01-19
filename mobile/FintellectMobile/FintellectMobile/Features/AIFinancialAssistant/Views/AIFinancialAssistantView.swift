@@ -223,23 +223,20 @@ struct ChatContent: View {
 // MARK: - Chat Input
 struct ChatInput: View {
     @Binding var currentMessage: String
-    let onSend: (String) async -> Void
+    var onSend: (String) async -> Void
     
     var body: some View {
         HStack(spacing: 12) {
-            TextField("Ask anything about your finances...", text: $currentMessage)
-                .textFieldStyle(CustomTextFieldStyle())
+            TextField("Ask about your finances...", text: $currentMessage)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
             
             Button {
-                guard !currentMessage.isEmpty else { return }
-                let messageToSend = currentMessage
-                currentMessage = ""
                 Task {
-                    await onSend(messageToSend)
+                    await onSend(currentMessage)
                 }
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.title2)
+                    .font(.system(size: 28))
                     .foregroundColor(Color(hex: "3B82F6"))
             }
         }

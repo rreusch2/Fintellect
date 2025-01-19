@@ -138,7 +138,7 @@ class PlaidManager: ObservableObject {
 
 // Bridge between SwiftUI and UIKit for Plaid Link
 struct LinkController: UIViewControllerRepresentable {
-    private let handler: Handler
+    let handler: Handler
 
     init(handler: Handler) {
         self.handler = handler
@@ -158,16 +158,17 @@ struct LinkController: UIViewControllerRepresentable {
         // Empty implementation
     }
 
-    final class Coordinator: NSObject {
-        private let parent: LinkController
-        private let handler: Handler
+    class Coordinator: NSObject {
+        let parent: LinkController
+        let handler: Handler
 
-        fileprivate init(parent: LinkController, handler: Handler) {
+        init(parent: LinkController, handler: Handler) {
             self.parent = parent
             self.handler = handler
+            super.init()
         }
 
-        fileprivate func present(_ handler: Handler, in viewController: UIViewController) {
+        func present(_ handler: Handler, in viewController: UIViewController) {
             handler.open(presentUsing: .custom({ linkViewController in
                 viewController.addChild(linkViewController)
                 viewController.view.addSubview(linkViewController.view)

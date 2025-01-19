@@ -68,11 +68,16 @@ struct PlaidLinkView: UIViewControllerRepresentable {
     
     func makeUIViewController(context: Context) -> UIViewController {
         let viewController = UIViewController()
-        linkController.makeCoordinator().present(linkController.handler, in: viewController)
+        let coordinator = context.coordinator
+        coordinator.present(linkController.handler, in: viewController)
         return viewController
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+    
+    func makeCoordinator() -> LinkController.Coordinator {
+        linkController.makeCoordinator()
+    }
 }
 
 struct SecurityFeatureRow: View {

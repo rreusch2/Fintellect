@@ -14,29 +14,29 @@ struct QuickAction: Identifiable {
             label: "Analyze Spending",
             message: "Can you analyze my recent spending patterns and suggest areas for improvement?",
             icon: "chart.pie.fill",
-            color: .blue,
-            bgColor: Color.blue.opacity(0.1)
+            color: Color(hex: "3B82F6"),
+            bgColor: Color(hex: "3B82F6").opacity(0.2)
         ),
         QuickAction(
             label: "Budget Help",
             message: "Help me create a budget based on my spending patterns",
             icon: "target",
-            color: .green,
-            bgColor: Color.green.opacity(0.1)
+            color: Color(hex: "10B981"),
+            bgColor: Color(hex: "10B981").opacity(0.2)
         ),
         QuickAction(
             label: "Savings Tips",
             message: "What are some personalized saving tips based on my transaction history?",
             icon: "dollarsign.circle.fill",
-            color: .purple,
-            bgColor: Color.purple.opacity(0.1)
+            color: Color(hex: "8B5CF6"),
+            bgColor: Color(hex: "8B5CF6").opacity(0.2)
         ),
         QuickAction(
             label: "Recurring Charges",
             message: "Can you identify my recurring charges and suggest potential optimizations?",
             icon: "calendar",
-            color: .orange,
-            bgColor: Color.orange.opacity(0.1)
+            color: Color(hex: "F59E0B"),
+            bgColor: Color(hex: "F59E0B").opacity(0.2)
         )
     ]
 }
@@ -98,22 +98,25 @@ struct AIDashboardAssistant: View {
             HStack(spacing: 8) {
                 Label("AI Assistant", systemImage: "sparkles")
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(.white)
                 
                 Spacer()
                 
                 Text("BETA")
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(.blue)
+                    .foregroundColor(Color(hex: "3B82F6"))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.2))
+                    .background(Color(hex: "3B82F6").opacity(0.2))
                     .cornerRadius(6)
                 
                 Button(action: { viewModel.isExpanded.toggle() }) {
                     Image(systemName: viewModel.isExpanded ? "chevron.down" : "chevron.up")
                         .foregroundColor(.gray)
+                        .padding(8)
+                        .background(Color(hex: "1E293B"))
+                        .clipShape(Circle())
                 }
             }
             
@@ -142,8 +145,8 @@ struct AIDashboardAssistant: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(colorScheme == .dark ? Color(hex: "1E293B") : .white)
-                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+                .fill(Color(hex: "0F172A"))
+                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
         )
         .sheet(isPresented: $viewModel.isExpanded) {
             ExpandedChatView(viewModel: viewModel)
@@ -158,18 +161,30 @@ struct QuickActionButton: View {
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Image(systemName: action.icon)
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(action.color)
+                    .frame(width: 24, height: 24)
+                
                 Text(action.label)
-                    .foregroundColor(.primary)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
             }
-            .font(.footnote)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(action.bgColor)
-            .cornerRadius(20)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(hex: "1E293B"))
+                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(action.color.opacity(0.3), lineWidth: 1)
+            )
         }
+        .buttonStyle(PressableButtonStyle())
     }
 }
 
@@ -186,7 +201,7 @@ struct ChatArea: View {
                     }
                     
                     if viewModel.isLoading {
-                        HStack {
+                        HStack(spacing: 4) {
                             ProgressView()
                                 .scaleEffect(0.8)
                             Text("Thinking...")
@@ -203,7 +218,7 @@ struct ChatArea: View {
             
             HStack(spacing: 12) {
                 TextField("Ask about your finances...", text: $viewModel.currentMessage)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .textFieldStyle(CustomTextFieldStyle())
                 
                 Button {
                     Task {
@@ -212,7 +227,10 @@ struct ChatArea: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color(hex: "3B82F6"))
+                        .frame(width: 44, height: 44)
+                        .background(Color(hex: "1E293B"))
+                        .clipShape(Circle())
                 }
                 .disabled(viewModel.currentMessage.isEmpty || viewModel.isLoading)
             }
@@ -232,9 +250,16 @@ struct ChatBubble: View {
             
             Text(message.content)
                 .padding(12)
-                .background(message.isUser ? Color.blue : Color(.systemGray6))
-                .foregroundColor(message.isUser ? .white : .primary)
-                .cornerRadius(16)
+                .foregroundColor(.white)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B"))
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
                 .frame(maxWidth: 280, alignment: message.isUser ? .trailing : .leading)
             
             if !message.isUser {
@@ -252,9 +277,30 @@ struct ExpandedChatView: View {
     
     var body: some View {
         NavigationView {
-            VStack {
-                ChatArea(viewModel: viewModel)
-                    .padding()
+            ZStack {
+                Color(hex: "0F172A").ignoresSafeArea()
+                
+                VStack(spacing: 20) {
+                    // Quick Actions Grid
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 16) {
+                        ForEach(QuickAction.actions) { action in
+                            ExpandedQuickActionButton(action: action) {
+                                Task {
+                                    await viewModel.sendMessage(action.message)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    
+                    // Chat Area
+                    ChatArea(viewModel: viewModel)
+                        .padding()
+                }
+                .padding(.vertical)
             }
             .navigationTitle("AI Assistant")
             .navigationBarTitleDisplayMode(.inline)
@@ -266,5 +312,46 @@ struct ExpandedChatView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Expanded Quick Action Button
+struct ExpandedQuickActionButton: View {
+    let action: QuickAction
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 12) {
+                Image(systemName: action.icon)
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundColor(action.color)
+                    .frame(width: 48, height: 48)
+                    .background(action.bgColor)
+                    .clipShape(Circle())
+                
+                Text(action.label)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.leading)
+                
+                Text(action.message)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(hex: "1E293B"))
+                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(action.color.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableButtonStyle())
     }
 } 

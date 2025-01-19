@@ -6,13 +6,18 @@ import {
   plaidItems,
   plaidTransactions, 
   plaidAccounts
-} from "@db/schema";
-import { plaidClient, PlaidService } from "../services/plaid";
-import { CountryCode } from "plaid";
-import { suggestCategory } from "../services/categories";
+} from "@db/schema.js";
+import { plaidClient, PlaidService } from "../services/plaid.js";
+import { CountryCode, Products } from "plaid";
+import { suggestCategory } from "../services/categories.js";
 import type { Request, Response } from "express";
-import type { AuthenticatedRequest } from "../auth";
-import { setupDemoMode, isDemoMode } from "../services/demo";
+import type { AuthenticatedRequest } from "../auth.js";
+import { setupDemoMode, isDemoMode } from "../services/demo.js";
+import type { JWTPayload } from "../middleware/jwtAuth.js";
+
+interface JWTRequest extends Request {
+  jwtPayload: JWTPayload;
+}
 
 const router = Router();
 
@@ -636,6 +641,47 @@ router.post("/demo", async (req: AuthenticatedRequest, res: Response) => {
   } catch (error) {
     console.error("Error setting up demo mode:", error);
     res.status(500).json({ error: "Failed to setup demo mode" });
+  }
+});
+
+// Create link token
+router.post("/create-link-token", async (req: JWTRequest, res: Response) => {
+  if (!req.jwtPayload?.userId) {
+    console.error("[Plaid] Create link token attempt without authentication");
+    return res.status(401).json({ error: "Not logged in" });
+  }
+
+  try {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, req.jwtPayload.userId))
+      .limit(1);
+
+    if (!user) {
+      console.error("[Plaid] User not found:", req.jwtPayload.userId);
+      return res.status(401).json({ error: "User not found" });
+    }
+
+    const configs = {
+      user: {
+        client_user_id: user.id.toString()
+      },
+      client_name: "Fintellect",
+      products: [Products.Transactions],
+      country_codes: [CountryCode.Us],
+      language: "en",
+      webhook: "https://webhook.example.com",
+    };
+
+    const createTokenResponse = await plaidClient.linkTokenCreate(configs);
+    const linkToken = createTokenResponse.data.link_token;
+    console.log("[Plaid] Link token created for user:", user.id);
+
+    res.json({ link_token: linkToken });
+  } catch (error) {
+    console.error("[Plaid] Error creating link token:", error);
+    res.status(500).json({ error: "Failed to create link token" });
   }
 });
 

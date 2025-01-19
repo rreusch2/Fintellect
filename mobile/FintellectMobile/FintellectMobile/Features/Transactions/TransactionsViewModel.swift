@@ -71,25 +71,24 @@ class TransactionsViewModel: ObservableObject {
     }
     
     private func mapPlaidCategory(_ category: String) -> TransactionCategory {
-        let upperCategory = category.uppercased()
-        switch upperCategory {
-        case _ where upperCategory.contains("FOOD") || upperCategory.contains("RESTAURANT"):
+        switch category {
+        case "FOOD_AND_DRINK":
             return .food
-        case _ where upperCategory.contains("TRANSPORT"):
+        case "TRANSPORTATION":
             return .transportation
-        case _ where upperCategory.contains("ENTERTAINMENT") || upperCategory.contains("RECREATION"):
+        case "ENTERTAINMENT":
             return .entertainment
-        case _ where upperCategory.contains("SHOPPING") || upperCategory.contains("MERCHANDISE"):
+        case "GENERAL_MERCHANDISE", "SHOPPING":
             return .shopping
-        case _ where upperCategory.contains("UTILITIES") || upperCategory.contains("SERVICE"):
+        case "UTILITIES":
             return .utilities
-        case _ where upperCategory.contains("HEALTH") || upperCategory.contains("MEDICAL"):
+        case "HEALTHCARE":
             return .health
-        case _ where upperCategory.contains("HOUSE") || upperCategory.contains("RENT") || upperCategory.contains("MORTGAGE"):
+        case "HOUSING":
             return .housing
-        case _ where upperCategory.contains("TRAVEL"):
+        case "TRAVEL":
             return .travel
-        case _ where upperCategory.contains("INCOME") || upperCategory.contains("DEPOSIT"):
+        case "INCOME", "TRANSFER_IN":
             return .income
         default:
             return .other
@@ -102,6 +101,8 @@ struct PlaidTransaction: Codable {
     let id: Int
     let amount: Int
     let category: String
+    let subcategory: String?
+    let originalCategory: String?
     let date: Date
     let description: String
     let merchantName: String?

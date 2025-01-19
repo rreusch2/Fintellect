@@ -27,11 +27,31 @@
 		06164DB72D3633FC001F5AE8 /* FintellectMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FintellectMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		06164DC72D3633FD001F5AE8 /* FintellectMobileTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FintellectMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		06164DD12D3633FD001F5AE8 /* FintellectMobileUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FintellectMobileUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0654383D2D39E78E00F9757A /* FintellectMobile.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = FintellectMobile.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0667EF822D37907A00353851 /* Exceptions for "FintellectMobile" folder in "FintellectMobile" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+				"FintellectMobile 2025-01-16 11-27-55/DistributionSummary.plist",
+				"FintellectMobile 2025-01-16 11-27-55/ExportOptions.plist",
+				"FintellectMobile 2025-01-16 11-27-55/manifest.plist",
+				"Frame 1.png",
+				Info.plist,
+				"Preview Content/Preview Assets.xcassets",
+			);
+			target = 06164DB62D3633FC001F5AE8 /* FintellectMobile */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		06164DB92D3633FC001F5AE8 /* FintellectMobile */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0667EF822D37907A00353851 /* Exceptions for "FintellectMobile" folder in "FintellectMobile" target */,
+			);
 			path = FintellectMobile;
 			sourceTree = "<group>";
 		};
@@ -75,6 +95,7 @@
 		06164DAE2D3633FC001F5AE8 = {
 			isa = PBXGroup;
 			children = (
+				0654383D2D39E78E00F9757A /* FintellectMobile.xctestplan */,
 				06164DB92D3633FC001F5AE8 /* FintellectMobile */,
 				06164DCA2D3633FD001F5AE8 /* FintellectMobileTests */,
 				06164DD42D3633FD001F5AE8 /* FintellectMobileUITests */,
@@ -393,11 +414,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FintellectMobile/FintellectMobile.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"FintellectMobile/Preview Content\"";
+				DEVELOPMENT_TEAM = 5HP4X6G5VH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FintellectMobile/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -421,11 +445,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FintellectMobile/FintellectMobile.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"FintellectMobile/Preview Content\"";
+				DEVELOPMENT_TEAM = 5HP4X6G5VH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FintellectMobile/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -450,6 +477,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5HP4X6G5VH;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MARKETING_VERSION = 1.0;
@@ -468,6 +496,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5HP4X6G5VH;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MARKETING_VERSION = 1.0;
@@ -485,6 +514,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5HP4X6G5VH;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = mobile.FintellectMobileUITests;
@@ -501,6 +531,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5HP4X6G5VH;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = mobile.FintellectMobileUITests;

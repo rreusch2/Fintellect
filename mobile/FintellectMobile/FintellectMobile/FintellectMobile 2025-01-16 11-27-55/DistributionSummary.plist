@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>FintellectMobile.ipa</key>
+	<array>
+		<dict>
+			<key>architectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>buildNumber</key>
+			<string>1</string>
+			<key>certificate</key>
+			<dict>
+				<key>SHA1</key>
+				<string>BDC9CFD229F7D2FC03494D51B77A2B3AE939D2B5</string>
+				<key>dateExpires</key>
+				<string>1/16/26</string>
+				<key>type</key>
+				<string>Cloud Managed Apple Distribution</string>
+			</dict>
+			<key>entitlements</key>
+			<dict>
+				<key>application-identifier</key>
+				<string>5HP4X6G5VH.mobile.FintellectMobile</string>
+				<key>com.apple.developer.team-identifier</key>
+				<string>5HP4X6G5VH</string>
+				<key>get-task-allow</key>
+				<false/>
+			</dict>
+			<key>name</key>
+			<string>FintellectMobile.app</string>
+			<key>profile</key>
+			<dict>
+				<key>UUID</key>
+				<string>a27bfabf-9599-4475-82c8-09f20012a1a4</string>
+				<key>dateExpires</key>
+				<string>1/16/26</string>
+				<key>name</key>
+				<string>iOS Team Ad Hoc Provisioning Profile: mobile.FintellectMobile</string>
+			</dict>
+			<key>team</key>
+			<dict>
+				<key>id</key>
+				<string>5HP4X6G5VH</string>
+				<key>name</key>
+				<string>Reid Reusch</string>
+			</dict>
+			<key>versionNumber</key>
+			<string>1.0</string>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -1,6 +1,6 @@
 //
 //  FintellectMobileApp.swift
-//  FintellectMobile
+//  FintllectMobile
 //
 //  Created by user273382 on 1/13/25.
 //

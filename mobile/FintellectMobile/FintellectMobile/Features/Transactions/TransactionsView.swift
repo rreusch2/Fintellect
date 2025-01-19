@@ -45,10 +45,10 @@ struct TransactionsView: View {
                 BackgroundView()
                 
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 16) {
                         // Stats Cards Section
-                        VStack(spacing: 16) {
-                            HStack(spacing: 16) {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
                                 CardView {
                                     StatCard(
                                         title: "Total Spending",
@@ -56,7 +56,7 @@ struct TransactionsView: View {
                                         icon: "dollarsign.circle.fill"
                                     )
                                 }
-                                .frame(maxWidth: .infinity)
+                                .frame(width: UIScreen.main.bounds.width * 0.43)
                                 
                                 CardView {
                                     StatCard(
@@ -66,10 +66,13 @@ struct TransactionsView: View {
                                         color: viewModel.topCategory?.color ?? .gray
                                     )
                                 }
-                                .frame(maxWidth: .infinity)
+                                .frame(width: UIScreen.main.bounds.width * 0.43)
                             }
-                            
-                            HStack(spacing: 16) {
+                            .padding(.horizontal)
+                        }
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
                                 CardView {
                                     StatCard(
                                         title: "Average Transaction",
@@ -78,7 +81,7 @@ struct TransactionsView: View {
                                         color: .purple
                                     )
                                 }
-                                .frame(maxWidth: .infinity)
+                                .frame(width: UIScreen.main.bounds.width * 0.43)
                                 
                                 CardView {
                                     StatCard(
@@ -88,10 +91,10 @@ struct TransactionsView: View {
                                         color: .orange
                                     )
                                 }
-                                .frame(maxWidth: .infinity)
+                                .frame(width: UIScreen.main.bounds.width * 0.43)
                             }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
                         
                         // Filter Section
                         VStack(spacing: 12) {
@@ -122,6 +125,7 @@ struct TransactionsView: View {
                                 .background(Color(hex: "1E293B"))
                                 .cornerRadius(8)
                             }
+                            .padding(.horizontal)
                             
                             // Category Filter
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -147,32 +151,29 @@ struct TransactionsView: View {
                                 .padding(.horizontal)
                             }
                         }
-                        .padding(.horizontal)
                         
                         // Transactions List
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                        } else if let error = viewModel.error {
-                            ErrorView(error: error) {
-                                Task {
-                                    await viewModel.fetchTransactions()
+                        LazyVStack(spacing: 8) {
+                            if viewModel.isLoading {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                            } else if let error = viewModel.error {
+                                ErrorView(error: error) {
+                                    Task {
+                                        await viewModel.fetchTransactions()
+                                    }
                                 }
-                            }
-                            .padding(.horizontal)
-                        } else if viewModel.transactions.isEmpty {
-                            EmptyStateView()
-                                .padding(.horizontal)
-                        } else {
-                            LazyVStack(spacing: 12) {
+                            } else if viewModel.transactions.isEmpty {
+                                EmptyStateView()
+                            } else {
                                 ForEach(filteredTransactions) { transaction in
                                     CardView {
                                         TransactionRow(transaction: transaction)
                                     }
+                                    .padding(.horizontal)
                                 }
                             }
-                            .padding(.horizontal)
                         }
                     }
                     .padding(.vertical)

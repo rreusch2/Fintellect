@@ -37,35 +37,28 @@ class PlaidManager: ObservableObject {
                let linkToken = json["link_token"] as? String {
                 print("[Plaid] Link token created successfully")
                 
-                // Create configuration
-                let configuration = LinkTokenConfiguration(token: linkToken)
-                
-                // Present Plaid Link
-                if let viewController = UIApplication.shared.keyWindow?.rootViewController {
-                    try await Plaid.create(configuration)
-                        .onSuccess { [weak self] success in
-                            print("[Plaid] Link success - public token: \(success.publicToken)")
-                            Task { [weak self] in
-                                await self?.exchangePublicToken(publicToken: success.publicToken)
-                            }
+                let result = try await withCheckedThrowingContinuation { continuation in
+                    let handler = Plaid.create(linkToken) { linkSuccess in
+                        continuation.resume(returning: linkSuccess.publicToken)
+                    } onExit: { error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                        } else {
+                            continuation.resume(throwing: NSError(domain: "Plaid", code: -1, userInfo: [NSLocalizedDescriptionKey: "User exited"]))
                         }
-                        .onExit { [weak self] exit in
-                            if let error = exit.error {
-                                print("[Plaid] Link exit with error: \(error)")
-                                self?.error = error.localizedDescription
-                            } else {
-                                print("[Plaid] Link exit without error")
-                            }
-                            self?.isLoading = false
-                        }
-                        .onEvent { event in
-                            print("[Plaid] Link event: \(event)")
-                        }
-                        .presentUsing(.viewController(viewController))
+                    }
+                    
+                    if let viewController = UIApplication.shared.keyWindow?.rootViewController {
+                        handler.open(presentUsing: .viewController(viewController))
+                    }
                 }
+                
+                // Handle success
+                print("[Plaid] Link success - public token: \(result)")
+                await exchangePublicToken(publicToken: result)
             }
         } catch {
-            print("[Plaid] Error creating link token: \(error)")
+            print("[Plaid] Error: \(error)")
             self.error = error.localizedDescription
             self.isLoading = false
         }

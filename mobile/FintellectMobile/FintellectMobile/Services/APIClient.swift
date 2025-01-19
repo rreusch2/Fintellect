@@ -4,6 +4,7 @@ class APIClient {
     static let shared = APIClient()
     private let baseURL: String
     private let session: URLSession
+    private let retryQueue = DispatchQueue(label: "com.fintellect.apiretry")
     
     private init() {
         #if DEBUG
@@ -29,7 +30,7 @@ class APIClient {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
-        return try await performRequest(request, shouldRetry: true)
+        return try await performRequest(request)
     }
     
     func post(_ path: String, body: [String: Any]) async throws -> Data {
@@ -47,10 +48,14 @@ class APIClient {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         print("[API] POST request to: \(path)")
-        return try await performRequest(request, shouldRetry: true)
+        return try await performRequest(request)
     }
     
-    private func performRequest(_ request: URLRequest, shouldRetry: Bool = true) async throws -> Data {
+    private func performRequest(_ request: URLRequest, retryCount: Int = 0) async throws -> Data {
+        if retryCount >= 3 {
+            throw APIError.serverError("Max retry attempts reached")
+        }
+        
         let (data, response) = try await session.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -60,8 +65,8 @@ class APIClient {
         
         print("[API] Response status code: \(httpResponse.statusCode)")
         
-        // Handle 401 Unauthorized - Try to refresh token
-        if httpResponse.statusCode == 401 && shouldRetry {
+        // Handle 401 Unauthorized
+        if httpResponse.statusCode == 401 {
             print("[API] Unauthorized - attempting token refresh")
             if let newToken = try? await refreshToken() {
                 // Update the request with new token
@@ -69,7 +74,9 @@ class APIClient {
                 newRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
                 
                 // Retry the request with new token
-                return try await performRequest(newRequest, shouldRetry: false)
+                return try await performRequest(newRequest, retryCount: retryCount + 1)
+            } else {
+                throw APIError.serverError("Token refresh failed")
             }
         }
         
@@ -113,6 +120,7 @@ class APIClient {
         }
         
         // Save new access token
+        print("[API] Saving new access token")
         KeychainManager.saveToken(newAccessToken, forKey: "accessToken")
         print("[API] Token refreshed successfully")
         

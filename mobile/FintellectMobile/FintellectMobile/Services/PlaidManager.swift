@@ -38,21 +38,30 @@ class PlaidManager: ObservableObject {
                 print("[Plaid] Link token created successfully")
                 
                 // Create configuration
-                let configuration = PLKConfiguration(token: linkToken)
+                let configuration = LinkTokenConfiguration(token: linkToken)
                 
-                let handler = PLKHandler(configuration: configuration, delegate: nil)
-                handler.open(presentUsing: .viewController(UIApplication.shared.keyWindow?.rootViewController)) { [weak self] result in
-                    switch result {
-                    case .success(let success):
-                        print("[Plaid] Link success - public token: \(success.publicToken)")
-                        Task { [weak self] in
-                            await self?.exchangePublicToken(publicToken: success.publicToken)
+                // Present Plaid Link
+                if let viewController = UIApplication.shared.keyWindow?.rootViewController {
+                    try await Plaid.create(configuration)
+                        .onSuccess { [weak self] success in
+                            print("[Plaid] Link success - public token: \(success.publicToken)")
+                            Task { [weak self] in
+                                await self?.exchangePublicToken(publicToken: success.publicToken)
+                            }
                         }
-                    case .failure(let error):
-                        print("[Plaid] Link exit with error: \(error)")
-                        self?.error = error.localizedDescription
-                    }
-                    self?.isLoading = false
+                        .onExit { [weak self] exit in
+                            if let error = exit.error {
+                                print("[Plaid] Link exit with error: \(error)")
+                                self?.error = error.localizedDescription
+                            } else {
+                                print("[Plaid] Link exit without error")
+                            }
+                            self?.isLoading = false
+                        }
+                        .onEvent { event in
+                            print("[Plaid] Link event: \(event)")
+                        }
+                        .presentUsing(.viewController(viewController))
                 }
             }
         } catch {

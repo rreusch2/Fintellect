@@ -1,16 +1,32 @@
 import SwiftUI
 
-enum TransactionCategory: String, Codable, CaseIterable {
-    case food = "FOOD_AND_DRINK"
-    case transportation = "TRANSPORTATION"
-    case entertainment = "ENTERTAINMENT"
-    case shopping = "GENERAL_MERCHANDISE"
-    case utilities = "GENERAL_SERVICES"
-    case health = "PERSONAL_CARE"
-    case housing = "HOUSING"
-    case travel = "TRAVEL"
-    case income = "INCOME"
-    case other = "OTHER"
+enum TransactionCategory {
+    case food(String)
+    case transportation(String)
+    case entertainment(String)
+    case shopping(String)
+    case utilities(String)
+    case health(String)
+    case housing(String)
+    case travel(String)
+    case income(String)
+    case other(String)
+    
+    var displayName: String {
+        switch self {
+        case .food(let name),
+             .transportation(let name),
+             .entertainment(let name),
+             .shopping(let name),
+             .utilities(let name),
+             .health(let name),
+             .housing(let name),
+             .travel(let name),
+             .income(let name),
+             .other(let name):
+            return name
+        }
+    }
     
     var color: Color {
         switch self {
@@ -91,11 +107,11 @@ struct Transaction: Identifiable {
         }
         
         return [
-            Transaction(id: UUID().uuidString, name: "Whole Foods Market", amount: -82.47, date: dates[0], category: .food),
-            Transaction(id: UUID().uuidString, name: "Netflix Subscription", amount: -15.99, date: dates[1], category: .entertainment),
-            Transaction(id: UUID().uuidString, name: "Target", amount: -156.32, date: dates[2], category: .shopping),
-            Transaction(id: UUID().uuidString, name: "Electric Bill", amount: -124.56, date: dates[3], category: .utilities),
-            Transaction(id: UUID().uuidString, name: "Uber Ride", amount: -28.45, date: dates[4], category: .transportation)
+            Transaction(id: UUID().uuidString, name: "Whole Foods Market", amount: -82.47, date: dates[0], category: .food("Whole Foods Market")),
+            Transaction(id: UUID().uuidString, name: "Netflix Subscription", amount: -15.99, date: dates[1], category: .entertainment("Netflix")),
+            Transaction(id: UUID().uuidString, name: "Target", amount: -156.32, date: dates[2], category: .shopping("Target")),
+            Transaction(id: UUID().uuidString, name: "Electric Bill", amount: -124.56, date: dates[3], category: .utilities("Electricity")),
+            Transaction(id: UUID().uuidString, name: "Uber Ride", amount: -28.45, date: dates[4], category: .transportation("Uber"))
         ]
     }
     #endif

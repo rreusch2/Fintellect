@@ -174,7 +174,9 @@ struct ChatSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             ChatContent(viewModel: viewModel)
-            ChatInput(currentMessage: $viewModel.currentMessage, onSend: viewModel.sendMessage)
+            ChatInput(currentMessage: $viewModel.currentMessage) { message in
+                await viewModel.sendMessage(message)
+            }
         }
         .padding(.horizontal)
     }
@@ -221,17 +223,21 @@ struct ChatContent: View {
 // MARK: - Chat Input
 struct ChatInput: View {
     @Binding var currentMessage: String
-    let onSend: (String) -> Void
+    let onSend: (String) async -> Void
     
     var body: some View {
         HStack(spacing: 12) {
             TextField("Ask anything about your finances...", text: $currentMessage)
                 .textFieldStyle(CustomTextFieldStyle())
             
-            Button(action: {
+            Button {
                 guard !currentMessage.isEmpty else { return }
-                onSend(currentMessage)
-            }) {
+                let messageToSend = currentMessage
+                currentMessage = ""
+                Task {
+                    await onSend(messageToSend)
+                }
+            } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
                     .foregroundColor(Color(hex: "3B82F6"))

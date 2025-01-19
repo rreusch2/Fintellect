@@ -42,14 +42,8 @@ class PlaidManager: ObservableObject {
             
             print("[Plaid] Link token created successfully")
             
-            // Create basic configuration
-            let linkConfiguration = LinkTokenConfiguration(token: linkToken)
-            
-            // Create handler
-            let handler = try Plaid.create(linkConfiguration)
-            
-            // Set up success handler
-            handler.onSuccess = { [weak self] success in
+            // Create configuration with success handler
+            var linkConfiguration = LinkTokenConfiguration(token: linkToken) { [weak self] (success: LinkSuccess) in
                 print("[Plaid] Link success")
                 Task { @MainActor in
                     await self?.handleSuccess(publicToken: success.publicToken)
@@ -57,7 +51,7 @@ class PlaidManager: ObservableObject {
             }
             
             // Set up exit handler
-            handler.onExit = { [weak self] exit in
+            linkConfiguration.onExit = { [weak self] (exit: LinkExit) in
                 print("[Plaid] Link exit: \(exit.error?.localizedDescription ?? "No error")")
                 Task { @MainActor in
                     self?.isPresentingLink = false
@@ -68,14 +62,21 @@ class PlaidManager: ObservableObject {
             }
             
             // Set up event handler
-            handler.onEvent = { event in
+            linkConfiguration.onEvent = { (event: LinkEvent) in
                 print("[Plaid] Link event: \(event.eventName)")
             }
             
-            // Present the link
-            await MainActor.run {
-                linkController = LinkController(handler: handler)
-                isPresentingLink = true
+            // Create handler
+            let result = Plaid.create(linkConfiguration)
+            switch result {
+            case .success(let handler):
+                await MainActor.run {
+                    linkController = LinkController(handler: handler)
+                    isPresentingLink = true
+                }
+            case .failure(let error):
+                print("[Plaid] Error creating handler: \(error)")
+                throw error
             }
             
         } catch {

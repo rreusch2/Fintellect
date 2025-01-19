@@ -58,55 +58,41 @@ struct BankConnectionStepView: View {
             // Action Buttons
             VStack(spacing: 16) {
                 // Connect Bank Button
-                Button(action: {
+                Button {
                     print("[Plaid] Connect Bank Button tapped")
                     Task {
                         await plaidManager.createAndPresentLink()
                     }
-                }) {
-                    HStack {
-                        if plaidManager.isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        } else {
-                            Text("Connect Bank Account")
-                                .font(.headline)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(hex: "3B82F6"), Color(hex: "2563EB")],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                } label: {
+                    Text("Connect Bank Account")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(hex: "3B82F6"), Color(hex: "2563EB")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .foregroundColor(.white)
-                    .cornerRadius(14)
-                    .shadow(color: Color(hex: "3B82F6").opacity(0.3), radius: 8, x: 0, y: 4)
+                        .foregroundColor(.white)
+                        .cornerRadius(14)
+                        .shadow(color: Color(hex: "3B82F6").opacity(0.3), radius: 8, x: 0, y: 4)
                 }
-                .disabled(plaidManager.isLoading || viewModel.isLoading)
+                .disabled(plaidManager.isLoading)
                 
                 // Skip Button
-                Button(action: {
+                Button {
                     print("[Onboarding] Skip button tapped")
                     Task {
                         await viewModel.completeOnboarding()
                     }
-                }) {
-                    HStack {
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .gray))
-                        } else {
-                            Text("Skip for now")
-                                .font(.subheadline)
-                                .foregroundColor(Color(hex: "94A3B8"))
-                        }
-                    }
+                } label: {
+                    Text("Skip for now")
+                        .font(.subheadline)
+                        .foregroundColor(Color(hex: "94A3B8"))
                 }
-                .disabled(plaidManager.isLoading || viewModel.isLoading)
+                .disabled(viewModel.isLoading)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)

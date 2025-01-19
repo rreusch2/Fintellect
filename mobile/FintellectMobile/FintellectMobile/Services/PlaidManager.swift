@@ -37,14 +37,16 @@ class PlaidManager: ObservableObject {
             // Get link token from our backend
             print("[Plaid] Requesting link token from backend")
             let response = try await APIClient.shared.post("/api/plaid/create-link-token", body: [:])
+            print("[Plaid] Response received: \(String(data: response, encoding: .utf8) ?? "nil")")
+            
             if let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
                let linkToken = json["link_token"] as? String {
-                print("[Plaid] Link token created successfully")
+                print("[Plaid] Link token created successfully: \(linkToken)")
                 
                 // Create the configuration
                 var linkConfiguration = LinkTokenConfiguration(token: linkToken) { [weak self] success in
                     print("[Plaid] Success with public token: \(success.publicToken)")
-                    Task {
+                    Task { @MainActor in
                         await self?.exchangePublicToken(publicToken: success.publicToken)
                     }
                     self?.isPresentingLink = false
@@ -75,8 +77,8 @@ class PlaidManager: ObservableObject {
                 switch result {
                 case .success(let handler):
                     print("[Plaid] Handler created successfully")
-                    linkController = LinkController(handler: handler)
-                    isPresentingLink = true
+                    self.linkController = LinkController(handler: handler)
+                    self.isPresentingLink = true
                 case .failure(let error):
                     print("[Plaid] Handler creation failed: \(error)")
                     throw error

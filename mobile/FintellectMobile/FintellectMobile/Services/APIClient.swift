@@ -5,6 +5,7 @@ class APIClient {
     private let baseURL: String
     private let session: URLSession
     private let retryQueue = DispatchQueue(label: "com.fintellect.apiretry")
+    private var lastTokenRefresh: Date?
     
     private init() {
         #if DEBUG
@@ -20,18 +21,35 @@ class APIClient {
         print("[API] Initialized with base URL: \(baseURL)")
     }
     
+    private func isTokenExpired(_ token: String) -> Bool {
+        let parts = token.split(separator: ".")
+        guard parts.count == 3,
+              let payloadData = Data(base64Encoded: String(parts[1]).padding(toLength: ((String(parts[1]).count + 3) / 4) * 4, withPad: "=", startingAt: 0)),
+              let payload = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any],
+              let exp = payload["exp"] as? TimeInterval else {
+            return true
+        }
+        
+        // Add 5-second buffer to expiration
+        return Date(timeIntervalSince1970: exp).addingTimeInterval(-5) < Date()
+    }
+    
     func get(_ path: String) async throws -> Data {
         print("[API] Making GET request to: \(path)")
         var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
-        // Add auth header if token exists
         if let token = try? KeychainManager.getToken(forKey: "accessToken") {
-            print("[API] Adding auth header with token: \(String(token.prefix(20)))...")
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        } else {
-            print("[API] No access token found for request")
+            if isTokenExpired(token) {
+                print("[API] Token is expired or near expiration, refreshing...")
+                if let newToken = try? await refreshToken() {
+                    request.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
+                }
+            } else {
+                print("[API] Using existing token: \(String(token.prefix(20)))...")
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
         }
         
         return try await performRequest(request)
@@ -44,17 +62,19 @@ class APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
-        // Add auth header if token exists
         if let token = try? KeychainManager.getToken(forKey: "accessToken") {
-            print("[API] Adding auth header with token: \(String(token.prefix(20)))...")
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        } else {
-            print("[API] No access token found for request")
+            if isTokenExpired(token) {
+                print("[API] Token is expired or near expiration, refreshing...")
+                if let newToken = try? await refreshToken() {
+                    request.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
+                }
+            } else {
+                print("[API] Using existing token: \(String(token.prefix(20)))...")
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
         }
         
-        // Convert body to JSON data
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        
         return try await performRequest(request)
     }
     
@@ -62,6 +82,12 @@ class APIClient {
         if retryCount >= 3 {
             print("[API] Max retry attempts reached (\(retryCount))")
             throw APIError.serverError("Max retry attempts reached")
+        }
+        
+        // Add delay between retries
+        if retryCount > 0 {
+            print("[API] Waiting before retry attempt \(retryCount)...")
+            try? await Task.sleep(nanoseconds: UInt64(retryCount * 1_000_000_000))
         }
         
         // Log request headers for debugging
@@ -82,6 +108,12 @@ class APIClient {
         // Handle 401 Unauthorized
         if httpResponse.statusCode == 401 {
             print("[API] Unauthorized - attempting token refresh (attempt \(retryCount + 1))")
+            
+            // Check if we've refreshed recently
+            if let lastRefresh = lastTokenRefresh, Date().timeIntervalSince(lastRefresh) < 1.0 {
+                print("[API] Token was just refreshed, waiting before retry...")
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
             
             do {
                 guard let newToken = try await refreshToken() else {
@@ -153,6 +185,7 @@ class APIClient {
            let newAccessToken = json["accessToken"] as? String {
             print("[API] Successfully received new access token")
             KeychainManager.saveToken(newAccessToken, forKey: "accessToken")
+            lastTokenRefresh = Date()
             return newAccessToken
         } else {
             print("[API] Token refresh failed - Invalid response format")

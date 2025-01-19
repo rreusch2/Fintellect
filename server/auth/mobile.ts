@@ -216,4 +216,67 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
+// Mobile register endpoint
+router.post('/register', async (req, res) => {
+  console.log('[Mobile Auth] Registration attempt');
+  const { username, email, password } = req.body;
+
+  try {
+    // Check if user already exists
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username.toLowerCase()))
+      .limit(1);
+
+    if (existingUser) {
+      console.log(`[Mobile Auth] Registration failed: Username ${username} already exists`);
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    // Hash the password
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hashedPassword = Buffer.from(await scryptAsync(password, salt, 64) as Buffer).toString('hex') + '.' + salt;
+
+    // Create new user
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        username: username.toLowerCase(),
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        hasCompletedOnboarding: false,
+        hasPlaidSetup: false,
+        onboardingStep: 0
+      })
+      .returning();
+
+    // Generate tokens
+    const accessToken = createAccessToken(newUser.id);
+    const refreshToken = createRefreshToken(newUser.id);
+
+    console.log(`[Mobile Auth] Registration successful for user ${username}`);
+    
+    // Return user data and tokens
+    res.json({
+      success: true,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        hasPlaidSetup: newUser.hasPlaidSetup,
+        hasCompletedOnboarding: newUser.hasCompletedOnboarding,
+        monthlyIncome: newUser.monthlyIncome,
+        onboardingStep: newUser.onboardingStep
+      },
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    });
+  } catch (error) {
+    console.error('[Mobile Auth] Registration error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router; 

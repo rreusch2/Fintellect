@@ -81,6 +81,30 @@ struct TransactionsView: View {
                     }
                     .padding(.horizontal)
                     
+                    // Transaction Limit Picker
+                    HStack {
+                        Menu {
+                            ForEach([10, 20, 50, 100], id: \.self) { limit in
+                                Button("Show \(limit) transactions") {
+                                    selectedLimit = limit
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Text("Show \(selectedLimit) transactions")
+                                    .foregroundColor(.gray)
+                                Image(systemName: "chevron.down")
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color(hex: "1E293B"))
+                            .cornerRadius(20)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    
                     // Category Filter
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -122,6 +146,8 @@ struct TransactionsView: View {
                         VStack(spacing: 0) {
                             ForEach(filteredTransactions) { transaction in
                                 TransactionRow(transaction: transaction)
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 12)
                                 
                                 if transaction.id != filteredTransactions.last?.id {
                                     Divider()
@@ -129,7 +155,6 @@ struct TransactionsView: View {
                                 }
                             }
                         }
-                        .padding()
                         .background(Color(hex: "1E293B"))
                         .cornerRadius(16)
                         .padding(.horizontal)
@@ -139,7 +164,10 @@ struct TransactionsView: View {
             }
             .background(BackgroundView())
             .navigationTitle("Transactions")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color(hex: "0F172A"), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .refreshable {
                 await viewModel.fetchTransactions()
             }
@@ -311,15 +339,14 @@ struct TransactionRow: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text(transaction.formattedAmount)
                     .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(transaction.isExpense ? .white : .green)
+                    .fontWeight(.semibold)
+                    .foregroundColor(transaction.isExpense ? Color(hex: "EF4444") : Color(hex: "22C55E"))
                 
                 Text(transaction.formattedDate)
                     .font(.caption)
                     .foregroundColor(.gray)
             }
         }
-        .padding(.vertical, 8)
     }
 }
 

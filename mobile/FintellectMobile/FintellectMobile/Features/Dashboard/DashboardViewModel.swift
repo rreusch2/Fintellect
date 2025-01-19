@@ -134,17 +134,17 @@ class DashboardViewModel: ObservableObject {
         // Convert amounts from cents to dollars
         totalBalance = Double(summary.totalBalance) / 100.0
         monthlySpending = Double(summary.monthlySpending) / 100.0
-        monthlySavings = Double(summary.monthlySavings) / 100.0
         monthOverMonthChange = summary.monthOverMonthChange
         
-        // Filter and process category totals similar to web app
+        // Filter categories like the web app
         let filteredCategories = summary.categoryTotals.filter { category, amount in
             amount > 0 &&
-            !["TRANSFER_IN", "TRANSFER_OUT", "OTHER", "UNCATEGORIZED"].contains(category) &&
-            !category.contains("TRANSFER")
+            category != "INCOME" &&
+            !category.contains("TRANSFER") &&
+            !["OTHER", "UNCATEGORIZED"].includes(category)
         }
         
-        // Calculate total spending for percentages
+        // Calculate total spending from filtered categories
         let totalSpending = Double(filteredCategories.values.reduce(0, +))
         
         // Map category totals to SpendingCategory objects with consistent colors
@@ -170,9 +170,14 @@ class DashboardViewModel: ObservableObject {
                 percentage: percentage,
                 color: categoryColors[category] ?? Color(hex: "94A3B8")
             )
-        }.sorted { $0.amount > $1.amount }
+        }
+        .sorted { $0.amount > $1.amount }
         
         print("[Dashboard] Processed \(spendingCategories.count) spending categories")
+        // Log percentages for debugging
+        spendingCategories.forEach { category in
+            print("[Dashboard] Category: \(category.name), Amount: $\(category.amount), Percentage: \(category.percentage)%")
+        }
     }
     
     // Helper function to format category names like the web app

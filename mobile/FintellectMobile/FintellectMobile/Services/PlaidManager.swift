@@ -38,37 +38,30 @@ class PlaidManager: ObservableObject {
                 print("[Plaid] Link token created successfully")
                 
                 // Create configuration
-                let configuration = LinkTokenConfiguration(token: linkToken)
-                
-                // Create handler
-                let handler = try await Plaid.create(configuration)
-                
-                // Set up success handler
-                handler.onSuccess = { [weak self] success in
-                    print("[Plaid] Link success - public token: \(success.publicToken)")
-                    Task { [weak self] in
-                        await self?.exchangePublicToken(publicToken: success.publicToken)
+                let configuration = LinkTokenConfiguration(
+                    token: linkToken,
+                    onSuccess: { [weak self] success in
+                        print("[Plaid] Link success - public token: \(success.publicToken)")
+                        Task { [weak self] in
+                            await self?.exchangePublicToken(publicToken: success.publicToken)
+                        }
+                    },
+                    onExit: { [weak self] exit in
+                        if let error = exit.error {
+                            print("[Plaid] Link exit with error: \(error)")
+                            self?.error = error.localizedDescription
+                        } else {
+                            print("[Plaid] Link exit without error")
+                        }
+                        self?.isLoading = false
+                    },
+                    onEvent: { event in
+                        print("[Plaid] Link event: \(event)")
                     }
-                }
-                
-                // Set up exit handler
-                handler.onExit = { [weak self] exit in
-                    if let error = exit.error {
-                        print("[Plaid] Link exit with error: \(error)")
-                        self?.error = error.localizedDescription
-                    } else {
-                        print("[Plaid] Link exit without error")
-                    }
-                    self?.isLoading = false
-                }
-                
-                // Set up event handler
-                handler.onEvent = { event in
-                    print("[Plaid] Link event: \(event)")
-                }
+                )
                 
                 // Present Plaid Link
-                try await handler.presentLink()
+                try await Plaid.create(configuration)
             }
         } catch {
             print("[Plaid] Error creating link token: \(error)")

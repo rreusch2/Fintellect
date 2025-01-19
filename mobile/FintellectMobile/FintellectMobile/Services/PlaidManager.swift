@@ -47,7 +47,7 @@ class PlaidManager: ObservableObject {
                     self.handler = handler
                     
                     // Set up success handler
-                    handler.onSuccess = { [weak self] success in
+                    handler.onSuccess = { [weak self] (success: LinkSuccess) in
                         print("[Plaid] Link success - public token: \(success.publicToken)")
                         Task { [weak self] in
                             await self?.exchangePublicToken(publicToken: success.publicToken)
@@ -55,7 +55,7 @@ class PlaidManager: ObservableObject {
                     }
                     
                     // Set up exit handler
-                    handler.onExit = { [weak self] exit in
+                    handler.onExit = { [weak self] (exit: LinkExit) in
                         if let error = exit.error {
                             print("[Plaid] Link exit with error: \(error)")
                             self?.error = error.localizedDescription
@@ -66,7 +66,7 @@ class PlaidManager: ObservableObject {
                     }
                     
                     // Set up event handler
-                    handler.onEvent = { event in
+                    handler.onEvent = { (event: LinkEvent) in
                         print("[Plaid] Link event: \(event.eventName)")
                     }
                     

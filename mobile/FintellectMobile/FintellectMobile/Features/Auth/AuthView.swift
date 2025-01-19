@@ -6,7 +6,6 @@ struct AuthView: View {
     @State private var username = ""
     @State private var password = ""
     @State private var showRegister = false
-    @State private var showMainApp = false
     @State private var appear = [false, false, false]
     @State private var animateBackground = false
     
@@ -230,15 +229,6 @@ struct AuthView: View {
                 withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
                     appear[2] = true
                 }
-                // Set up notification observer for onboarding completion
-                NotificationCenter.default.addObserver(
-                    forName: NSNotification.Name("OnboardingCompleted"),
-                    object: nil,
-                    queue: .main
-                ) { _ in
-                    print("[Auth] Onboarding completed, transitioning to main app")
-                    showMainApp = true
-                }
             }
             .onChange(of: authViewModel.isAuthenticated) { isAuthenticated in
                 if isAuthenticated {
@@ -258,15 +248,6 @@ struct AuthView: View {
                     Text(error)
                 }
             }
-        }
-        .fullScreenCover(isPresented: $showMainApp) {
-            MainTabView()
-        }
-        .fullScreenCover(isPresented: $showRegister) {
-            OnboardingView()
-                .onAppear {
-                    print("[Auth] Presenting onboarding view")
-                }
         }
     }
 }

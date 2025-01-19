@@ -20,23 +20,32 @@ struct FintellectMobileApp: App {
                         if user.hasCompletedOnboarding {
                             MainTabView()
                                 .environmentObject(authViewModel)
+                                .transition(.opacity)
                         } else {
                             OnboardingView()
                                 .environmentObject(authViewModel)
+                                .transition(.opacity)
                         }
                     }
                 } else {
                     if hasSeenWelcome {
                         AuthView(hasSeenWelcome: $hasSeenWelcome)
                             .environmentObject(authViewModel)
+                            .transition(.opacity)
                     } else {
                         WelcomeView(hasSeenWelcome: $hasSeenWelcome)
                             .environmentObject(authViewModel)
+                            .transition(.opacity)
                     }
                 }
             }
+            .animation(.easeInOut, value: authViewModel.isAuthenticated)
+            .animation(.easeInOut, value: authViewModel.currentUser?.hasCompletedOnboarding)
             .onChange(of: authViewModel.isAuthenticated) { newValue in
                 print("[App] Authentication state changed: \(newValue)")
+            }
+            .onChange(of: authViewModel.currentUser?.hasCompletedOnboarding) { completed in
+                print("[App] Onboarding completion state changed: \(String(describing: completed))")
             }
         }
     }

@@ -3,6 +3,8 @@
 title: "Fintellect - SwiftUI and Node.js Backend Integration"
 description: "Context rules for integrating SwiftUI iOS frontend with existing Node.js backend and PostgreSQL database."
 
+
+Always make sure not to mess up functionality with the web app when changing the backend for the mobile app.
 # -----------------------------------------------------------
  Context & Project Overview
 # -----------------------------------------------------------
@@ -319,3 +321,78 @@ notes: >
   The project is transitioning from a web-only application to a multi-platform solution.
   Mobile development prioritizes user experience while maintaining security.
   All new features should be documented here to maintain consistency across the codebase.
+
+# -----------------------------------------------------------
+# Integration Progress & Learnings
+# -----------------------------------------------------------
+integration_status:
+  auth:
+    completed:
+      - "JWT-based authentication for mobile"
+      - "Session-based authentication for web"
+      - "Secure token storage in iOS Keychain"
+      - "Demo user support"
+    next_steps:
+      - "Implement token refresh mechanism"
+      - "Add biometric authentication option"
+      - "Enhance error handling for edge cases"
+
+  plaid:
+    completed:
+      - "Basic Plaid Link integration"
+      - "Transaction syncing"
+      - "Account balance updates"
+      - "Support for both JWT and session auth"
+    next_steps:
+      - "Implement webhook handling"
+      - "Add account disconnection flow"
+      - "Enhance error recovery"
+
+  onboarding:
+    completed:
+      - "Multi-step flow implementation"
+      - "Terms & Privacy acceptance"
+      - "Bank connection via Plaid"
+    next_steps:
+      - "Add progress persistence"
+      - "Implement skip functionality"
+      - "Enhanced error handling"
+
+# -----------------------------------------------------------
+# Key Learnings & Tips
+# -----------------------------------------------------------
+key_learnings:
+  authentication:
+    - "Always check both req.jwtPayload?.userId and req.user?.id for dual auth support"
+    - "Use proper error handling with specific error types"
+    - "Implement proper token refresh mechanism"
+    - "Keep authentication state in sync across views"
+
+  plaid_integration:
+    - "Handle both mobile and web authentication methods in Plaid endpoints"
+    - "Use proper error handling for Plaid API calls"
+    - "Implement proper transaction syncing with error recovery"
+    - "Keep UI state in sync with Plaid operations"
+
+  swift_ui:
+    - "Use @MainActor for view models handling async operations"
+    - "Implement proper error handling and user feedback"
+    - "Keep state management clean with proper MVVM structure"
+    - "Use NotificationCenter for cross-module communication"
+
+  debugging_tips:
+    - "Check both server and client logs for authentication issues"
+    - "Verify token presence and validity in requests"
+    - "Monitor Plaid Link events for integration issues"
+    - "Use proper logging with module prefixes"
+
+# -----------------------------------------------------------
+# Common Pitfalls
+# -----------------------------------------------------------
+common_pitfalls:
+  - "Not handling both authentication methods in backend endpoints"
+  - "Missing error handling in async operations"
+  - "Not properly managing loading states"
+  - "Forgetting to sync state after successful operations"
+  - "Not providing proper user feedback during async operations"
+  - "Missing proper cleanup in SwiftUI views"

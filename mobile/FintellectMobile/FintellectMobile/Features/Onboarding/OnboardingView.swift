@@ -24,8 +24,9 @@ class OnboardingViewModel: ObservableObject {
     @Published var showBankConnectionSheet = false
     @Published var error: String?
     @Published var isLoading = false
+    @Published var hasCompletedOnboarding = false
     
-    private let authViewModel: AuthViewModel
+    var authViewModel: AuthViewModel
     
     init(authViewModel: AuthViewModel) {
         self.authViewModel = authViewModel
@@ -101,13 +102,17 @@ class OnboardingViewModel: ObservableObject {
                     monthlyIncome: userData["monthlyIncome"] as? Int,
                     onboardingStep: userData["onboardingStep"] as? Int
                 )
-                authViewModel.currentUser = updatedUser
-                print("[Onboarding] Onboarding completed successfully")
-                NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
+                await MainActor.run {
+                    authViewModel.currentUser = updatedUser
+                    hasCompletedOnboarding = true
+                    print("[Onboarding] Onboarding completed successfully")
+                }
             }
         } catch {
-            self.error = error.localizedDescription
-            print("[Onboarding] Error completing onboarding: \(error)")
+            await MainActor.run {
+                self.error = error.localizedDescription
+                print("[Onboarding] Error completing onboarding: \(error)")
+            }
         }
         
         isLoading = false
@@ -117,7 +122,7 @@ class OnboardingViewModel: ObservableObject {
 struct OnboardingView: View {
     @EnvironmentObject private var authViewModel: AuthViewModel
     @StateObject private var viewModel: OnboardingViewModel
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss
     
     init() {
         // Initialize viewModel with authViewModel from environment
@@ -154,9 +159,9 @@ struct OnboardingView: View {
                 Text(error)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OnboardingCompleted"))) { _ in
-            print("[Onboarding] Received completion notification, dismissing")
-            dismiss()
+        .onAppear {
+            // Initialize viewModel with the correct authViewModel
+            viewModel.authViewModel = authViewModel
         }
     }
 }

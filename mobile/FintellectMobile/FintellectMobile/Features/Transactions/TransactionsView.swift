@@ -314,6 +314,12 @@ struct TransactionsList: View {
 struct TransactionRow: View {
     let transaction: Transaction
     
+    var formattedAmount: String {
+        let amount = abs(transaction.amount)  // Use absolute value
+        let formatted = amount.formatted(.currency(code: "USD"))
+        return transaction.isExpense ? "-\(formatted)" : formatted
+    }
+    
     var body: some View {
         HStack {
             Image(systemName: transaction.category.icon)
@@ -337,7 +343,7 @@ struct TransactionRow: View {
             Spacer()
             
             VStack(alignment: .trailing, spacing: 4) {
-                Text(transaction.formattedAmount)
+                Text(formattedAmount)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(transaction.isExpense ? Color(hex: "EF4444") : Color(hex: "22C55E"))

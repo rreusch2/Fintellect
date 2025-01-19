@@ -136,6 +136,17 @@ struct BankConnectionStepView: View {
                 await viewModel.completeOnboarding()
             }
         }
+        .fullScreenCover(
+            isPresented: $plaidManager.isPresentingLink,
+            content: {
+                if let linkController = plaidManager.linkController {
+                    linkController
+                        .ignoresSafeArea(.all)
+                } else {
+                    Text("Error: LinkController not initialized")
+                }
+            }
+        )
     }
 }
 

@@ -23,7 +23,8 @@ class PlaidManager: ObservableObject {
     
     @Published var isLoading = false
     @Published var error: String?
-    private var handler: Handler?
+    @Published var isPresentingLink = false
+    private var linkController: LinkController?
     
     private init() {}
     
@@ -38,34 +39,42 @@ class PlaidManager: ObservableObject {
                let linkToken = json["link_token"] as? String {
                 print("[Plaid] Link token created successfully")
                 
-                let result = try await withCheckedThrowingContinuation { continuation in
-                    // Create the Plaid Link token configuration
-                    let config = LinkTokenConfiguration(
-                        token: linkToken,
-                        onSuccess: { success in
-                            continuation.resume(returning: success.publicToken)
-                        },
-                        onExit: { exit in
-                            if let error = exit.error {
-                                continuation.resume(throwing: error)
-                            } else {
-                                continuation.resume(throwing: NSError(domain: "Plaid", code: -1, userInfo: [NSLocalizedDescriptionKey: "User exited"]))
-                            }
-                        }
-                    )
-                    
-                    // Create and present the Plaid Link view
-                    let plaidView = PlaidLinkView(configuration: config)
-                    let hostingController = UIHostingController(rootView: plaidView)
-                    
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let rootViewController = windowScene.windows.first?.rootViewController {
-                        rootViewController.present(hostingController, animated: true)
+                // Create the configuration
+                var linkConfiguration = LinkTokenConfiguration(token: linkToken) { [weak self] success in
+                    print("[Plaid] Success with public token: \(success.publicToken)")
+                    Task {
+                        await self?.exchangePublicToken(publicToken: success.publicToken)
                     }
+                    self?.isPresentingLink = false
                 }
                 
-                // Handle success
-                await exchangePublicToken(publicToken: result)
+                // Add exit handler
+                linkConfiguration.onExit = { [weak self] exit in
+                    if let error = exit.error {
+                        print("[Plaid] Exit with error: \(error)")
+                        self?.error = error.localizedDescription
+                    } else {
+                        print("[Plaid] User exited")
+                        self?.error = "Bank connection cancelled"
+                    }
+                    self?.isPresentingLink = false
+                    self?.isLoading = false
+                }
+                
+                // Add event handler
+                linkConfiguration.onEvent = { event in
+                    print("[Plaid] Event: \(event)")
+                }
+                
+                // Create the handler
+                let result = Plaid.create(linkConfiguration)
+                switch result {
+                case .success(let handler):
+                    linkController = LinkController(handler: handler)
+                    isPresentingLink = true
+                case .failure(let error):
+                    throw error
+                }
             }
         } catch {
             print("[Plaid] Error: \(error)")
@@ -90,5 +99,54 @@ class PlaidManager: ObservableObject {
         }
         
         self.isLoading = false
+    }
+}
+
+// Bridge between SwiftUI and UIKit for Plaid Link
+struct LinkController: UIViewControllerRepresentable {
+    private let handler: Handler
+
+    init(handler: Handler) {
+        self.handler = handler
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self, handler: handler)
+    }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        let viewController = UIViewController()
+        context.coordinator.present(handler, in: viewController)
+        return viewController
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        // Empty implementation
+    }
+
+    final class Coordinator: NSObject {
+        private let parent: LinkController
+        private let handler: Handler
+
+        fileprivate init(parent: LinkController, handler: Handler) {
+            self.parent = parent
+            self.handler = handler
+        }
+
+        fileprivate func present(_ handler: Handler, in viewController: UIViewController) {
+            handler.open(presentUsing: .custom({ linkViewController in
+                viewController.addChild(linkViewController)
+                viewController.view.addSubview(linkViewController.view)
+                linkViewController.view.translatesAutoresizingMaskIntoConstraints = false
+                linkViewController.view.frame = viewController.view.bounds
+                NSLayoutConstraint.activate([
+                    linkViewController.view.centerXAnchor.constraint(equalTo: viewController.view.centerXAnchor),
+                    linkViewController.view.centerYAnchor.constraint(equalTo: viewController.view.centerYAnchor),
+                    linkViewController.view.widthAnchor.constraint(equalTo: viewController.view.widthAnchor),
+                    linkViewController.view.heightAnchor.constraint(equalTo: viewController.view.heightAnchor),
+                ])
+                linkViewController.didMove(toParent: viewController)
+            }))
+        }
     }
 } 

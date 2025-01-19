@@ -36,7 +36,6 @@ struct DashboardView: View {
                     categories: viewModel.spendingCategories
                 )
                 AIInsightsSection(insights: viewModel.aiInsights)
-                AIFinancialInsightsSection(viewModel: viewModel)
             }
             .padding(.vertical, 24)
         }
@@ -93,6 +92,7 @@ struct MonthlyStatsSection: View {
 struct AIAssistantSection: View {
     @ObservedObject var viewModel: DashboardViewModel
     @State private var chatMessage = ""
+    @State private var chatMessages: [ChatMessage] = []
     @State private var selectedInsightType: InsightType? = nil
     
     var body: some View {
@@ -120,65 +120,8 @@ struct AIAssistantSection: View {
                 .foregroundColor(.gray)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
-            // Quick Actions
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(QuickAction.allCases) { action in
-                        Button {
-                            Task {
-                                await viewModel.sendChatMessage(action.message)
-                            }
-                        } label: {
-                            Text(action.title)
-                                .font(.subheadline)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color(hex: "1E293B"))
-                                .cornerRadius(20)
-                        }
-                    }
-                }
-                .padding(.horizontal)
-            }
-            
-            // Chat Area
-            VStack(spacing: 16) {
-                // Messages
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(viewModel.chatMessages) { message in
-                            ChatBubble(message: message)
-                        }
-                        if viewModel.isLoadingChat {
-                            TypingIndicator()
-                        }
-                    }
-                    .padding()
-                }
-                .frame(maxHeight: 200)
-                
-                // Input Area
-                HStack(spacing: 12) {
-                    TextField("Ask me anything...", text: $chatMessage)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .foregroundColor(.white)
-                    
-                    Button {
-                        guard !chatMessage.isEmpty else { return }
-                        let message = chatMessage
-                        chatMessage = ""
-                        Task {
-                            await viewModel.sendChatMessage(message)
-                        }
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(Color(hex: "3B82F6"))
-                    }
-                    .disabled(chatMessage.isEmpty || viewModel.isLoadingChat)
-                }
-            }
+            QuickActionsScrollView(selectedType: $selectedInsightType, chatMessages: $chatMessages)
+            ChatAreaView(chatMessage: $chatMessage, chatMessages: $chatMessages)
         }
         .padding(16)
         .background(
@@ -190,74 +133,130 @@ struct AIAssistantSection: View {
     }
 }
 
-// MARK: - Chat Bubble
-struct ChatBubble: View {
-    let message: ChatMessage
+// MARK: - Quick Actions ScrollView
+struct QuickActionsScrollView: View {
+    @Binding var selectedType: InsightType?
+    @Binding var chatMessages: [ChatMessage]
     
     var body: some View {
-        HStack {
-            if message.isUser {
-                Spacer()
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(InsightType.allCases, id: \.self) { type in
+                    QuickActionButton(
+                        type: type,
+                        selectedType: $selectedType,
+                        chatMessages: $chatMessages
+                    )
+                }
             }
-            
-            Text(message.content)
-                .padding(12)
-                .background(message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B"))
-                .foregroundColor(.white)
-                .cornerRadius(16)
-                .cornerRadius(16, corners: message.isUser ? [.topLeft, .topRight, .bottomLeft] : [.topLeft, .topRight, .bottomRight])
-            
-            if !message.isUser {
-                Spacer()
-            }
+            .padding(.horizontal, 4)
         }
     }
 }
 
-// MARK: - Typing Indicator
-struct TypingIndicator: View {
-    @State private var phase = 0
+// MARK: - Quick Action Button
+struct QuickActionButton: View {
+    let type: InsightType
+    @Binding var selectedType: InsightType?
+    @Binding var chatMessages: [ChatMessage]
     
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<3) { index in
-                Circle()
-                    .fill(Color(hex: "3B82F6"))
-                    .frame(width: 6, height: 6)
-                    .scaleEffect(phase == index ? 1.2 : 0.8)
-                    .animation(.easeInOut(duration: 0.5).repeatForever(), value: phase)
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                handlePromptSelection(type)
             }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: iconFor(type))
+                Text(type.rawValue)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            .font(.footnote)
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(width: 130, height: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(hex: "1E293B"))
+                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            )
         }
-        .onAppear {
-            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                phase = (phase + 1) % 3
-            }
+        .buttonStyle(PressableButtonStyle())
+    }
+    
+    private func handlePromptSelection(_ type: InsightType) {
+        selectedType = type
+        let promptMessage = ChatMessage(content: type.rawValue, isUser: true)
+        chatMessages.append(promptMessage)
+        
+        let response = getAIResponse(for: type)
+        let aiMessage = ChatMessage(content: response, isUser: false)
+        chatMessages.append(aiMessage)
+    }
+    
+    private func getAIResponse(for type: InsightType) -> String {
+        switch type {
+        case .spending:
+            return "Let me analyze your spending patterns to find opportunities for optimization..."
+        case .budget:
+            return "I'll help you create a personalized budget based on your financial goals..."
+        case .savings:
+            return "Let's explore ways to optimize your savings based on your recent spending..."
+        case .recurring:
+            return "I'll check your recurring charges to identify potential savings opportunities..."
+        }
+    }
+    
+    private func iconFor(_ type: InsightType) -> String {
+        switch type {
+        case .spending: return "chart.bar.fill"
+        case .budget: return "dollarsign.circle.fill"
+        case .savings: return "leaf.fill"
+        case .recurring: return "repeat.circle.fill"
         }
     }
 }
 
-// MARK: - Quick Actions
-enum QuickAction: String, CaseIterable, Identifiable {
-    case spendingAnalysis = "Analyze my spending"
-    case savingsTips = "Suggest savings tips"
-    case investmentAdvice = "Investment advice"
-    case budgetHelp = "Help with budgeting"
+// MARK: - Chat Area View
+struct ChatAreaView: View {
+    @Binding var chatMessage: String
+    @Binding var chatMessages: [ChatMessage]
     
-    var id: String { rawValue }
-    
-    var title: String { rawValue }
-    
-    var message: String {
-        switch self {
-        case .spendingAnalysis:
-            return "Can you analyze my recent spending patterns?"
-        case .savingsTips:
-            return "What are some personalized saving tips for me?"
-        case .investmentAdvice:
-            return "Give me investment recommendations based on my profile"
-        case .budgetHelp:
-            return "Help me create a budget based on my spending patterns"
+    var body: some View {
+        VStack(spacing: 12) {
+            ScrollView {
+                VStack(spacing: 12) {
+                    ForEach(chatMessages) { message in
+                        ChatBubble(message: message.content, isUser: message.isUser)
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+            .frame(height: 180)
+            
+            HStack(spacing: 12) {
+                TextField("Ask about your finances...", text: $chatMessage)
+                    .textFieldStyle(CustomTextFieldStyle())
+                
+                Button(action: sendMessage) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(Color(hex: "3B82F6"))
+                }
+            }
         }
+    }
+    
+    private func sendMessage() {
+        guard !chatMessage.isEmpty else { return }
+        let userMessage = ChatMessage(content: chatMessage, isUser: true)
+        chatMessages.append(userMessage)
+        chatMessage = ""
+        
+        let aiMessage = ChatMessage(content: "I'll help you analyze that. Let me check your financial data...", isUser: false)
+        chatMessages.append(aiMessage)
     }
 }
 
@@ -411,79 +410,59 @@ struct AIInsightsSection: View {
     }
 }
 
-// MARK: - AI Financial Insights Section
-struct AIFinancialInsightsSection: View {
-    @ObservedObject var viewModel: DashboardViewModel
+struct ChatMessage: Identifiable {
+    let id = UUID()
+    let content: String
+    let isUser: Bool
+}
+
+struct ChatBubble: View {
+    let message: String
+    let isUser: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Header
-            HStack(spacing: 8) {
-                Label("AI Financial Insights", systemImage: "brain")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                if viewModel.isLoadingInsights {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "3B82F6")))
-                        .scaleEffect(0.8)
-                } else {
-                    Button {
-                        Task {
-                            await viewModel.fetchInsights()
-                        }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .foregroundColor(Color(hex: "3B82F6"))
-                    }
-                }
-            }
+        HStack {
+            if isUser { Spacer() }
             
-            if viewModel.insights.isEmpty && !viewModel.isLoadingInsights {
-                EmptyInsightsView()
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
-                        ForEach(viewModel.insights) { insight in
-                            InsightCard(insight: insight)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-            }
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(isUser ? Color(hex: "3B82F6") : Color(hex: "334155"))
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                )
+            
+            if !isUser { Spacer() }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(hex: "0F172A"))
-                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
-        )
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 8)
     }
 }
 
-// MARK: - Empty Insights View
-struct EmptyInsightsView: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 30))
-                .foregroundColor(Color(hex: "3B82F6").opacity(0.5))
-            
-            Text("No insights yet")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.white)
-            
-            Text("Connect your bank account to get personalized AI insights")
-                .font(.caption)
-                .foregroundColor(Color(hex: "94A3B8"))
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
+struct CustomTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .font(.subheadline)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(hex: "1E293B"))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color(hex: "3B82F6").opacity(0.3), lineWidth: 1)
+            )
+    }
+}
+
+// Add this new button style for the press animation
+struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 

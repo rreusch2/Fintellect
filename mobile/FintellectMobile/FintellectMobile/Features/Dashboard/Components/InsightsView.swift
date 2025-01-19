@@ -20,5 +20,7 @@ struct InsightsView: View {
 }
 
 #Preview {
-    InsightsView(insights: AIInsight.demoInsights)
+    InsightsView(insights: [
+        AIInsight(type: "tip", title: "Sample Insight", description: "This is a sample AI insight about your finances.")
+    ])
 } 

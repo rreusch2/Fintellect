@@ -78,8 +78,6 @@ struct AIInsight: Codable, Identifiable {
 // MARK: - View Model
 @MainActor
 class DashboardViewModel: ObservableObject {
-    private let aiService: AIBackendService
-    
     @Published var totalBalance: Double = 0
     @Published var monthlySpending: Double = 0
     @Published var monthlySavings: Double = 0
@@ -87,58 +85,17 @@ class DashboardViewModel: ObservableObject {
     @Published var spendingCategories: [SpendingCategory] = []
     @Published var aiInsights: [AIInsight] = []
     @Published var isLoading = false
-    @Published var error: Error?
-    @Published var insights: [AIInsight] = []
-    @Published var chatMessages: [ChatMessage] = []
+    @Published var error: String?
+    private let aiService: AIService
     @Published var isLoadingInsights = false
-    @Published var isLoadingChat = false
+    @Published var chatMessages: [ChatMessage] = []
+    @Published var isTyping = false
     
-    init(aiService: AIBackendService = AIBackendService()) {
+    init(aiService: AIService = AIService()) {
         self.aiService = aiService
         Task {
-            await fetchInsights()
+            await fetchAIInsights()
         }
-    }
-    
-    func fetchInsights() async {
-        isLoadingInsights = true
-        error = nil
-        
-        do {
-            insights = try await aiService.fetchDashboardInsights()
-        } catch {
-            self.error = error
-            #if DEBUG
-            insights = AIInsight.demoInsights
-            #endif
-        }
-        
-        isLoadingInsights = false
-    }
-    
-    func sendChatMessage(_ message: String) async {
-        isLoadingChat = true
-        error = nil
-        
-        // Add user message immediately
-        let userMessage = ChatMessage(content: message, isUser: true)
-        chatMessages.append(userMessage)
-        
-        do {
-            let response = try await aiService.sendChatMessage(message)
-            let aiMessage = ChatMessage(content: response, isUser: false)
-            chatMessages.append(aiMessage)
-        } catch {
-            self.error = error
-            // Add error message to chat
-            let errorMessage = ChatMessage(
-                content: "Sorry, I encountered an error. Please try again.",
-                isUser: false
-            )
-            chatMessages.append(errorMessage)
-        }
-        
-        isLoadingChat = false
     }
     
     func fetchDashboardData() async {
@@ -152,7 +109,7 @@ class DashboardViewModel: ObservableObject {
             if let summary = try? JSONDecoder().decode(TransactionSummary.self, from: summaryData) {
                 print("[Dashboard] Successfully decoded transaction summary")
                 if !summary.hasPlaidConnection {
-                    error = APIError.decodingError(NSError(domain: "DashboardViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode transaction summary"]))
+                    error = "No bank account connected. Please connect your bank account to see your financial data."
                     isLoading = false
                     return
                 }
@@ -175,9 +132,9 @@ class DashboardViewModel: ObservableObject {
         } catch {
             print("[Dashboard] Error fetching data:", error)
             if let apiError = error as? APIError {
-                self.error = apiError
+                self.error = apiError.localizedDescription
             } else {
-                self.error = error
+                self.error = error.localizedDescription
             }
         }
         
@@ -241,5 +198,36 @@ class DashboardViewModel: ObservableObject {
             .split(separator: " ")
             .map { $0.prefix(1).uppercased() + $0.dropFirst().lowercased() }
             .joined(separator: " ")
+    }
+    
+    func fetchAIInsights() async {
+        isLoadingInsights = true
+        defer { isLoadingInsights = false }
+        
+        do {
+            aiInsights = try await aiService.getDashboardInsights()
+        } catch {
+            print("Error fetching AI insights: \(error)")
+            #if DEBUG
+            aiInsights = AIInsight.demoInsights
+            #endif
+        }
+    }
+    
+    func sendMessage(_ message: String) async {
+        let userMessage = ChatMessage(content: message, isUser: true)
+        chatMessages.append(userMessage)
+        isTyping = true
+        
+        do {
+            let response = try await aiService.chat(message: message)
+            let aiMessage = ChatMessage(content: response.message, isUser: false)
+            chatMessages.append(aiMessage)
+        } catch {
+            let errorMessage = ChatMessage(content: "I apologize, but I'm having trouble processing your request at the moment. Please try again later.", isUser: false)
+            chatMessages.append(errorMessage)
+        }
+        
+        isTyping = false
     }
 } 

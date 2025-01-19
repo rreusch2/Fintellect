@@ -1,102 +1,60 @@
 import Foundation
 
-enum AIError: Error {
-    case invalidResponse
-    case networkError(Error)
-    case decodingError(Error)
+enum AIEndpoint {
+    case chat
+    case insights
+    case savingsTips
+    
+    var path: String {
+        switch self {
+        case .chat:
+            return "/api/ai/chat"
+        case .insights:
+            return "/api/ai/insights"
+        case .savingsTips:
+            return "/api/ai/savings-tips"
+        }
+    }
 }
 
-final class AIBackendService {
+actor AIService {
     private let apiClient: APIClient
     
     init(apiClient: APIClient = .shared) {
         self.apiClient = apiClient
     }
     
-    // MARK: - Dashboard Insights
-    func fetchDashboardInsights() async throws -> [AIInsight] {
-        let data = try await apiClient.get("/api/ai/insights")
-        do {
-            return try JSONDecoder().decode([AIInsight].self, from: data)
-        } catch {
-            throw AIError.decodingError(error)
-        }
+    func chat(message: String) async throws -> AIResponse {
+        let body = ["message": message]
+        return try await apiClient.post(AIEndpoint.chat.path, body: body)
     }
     
-    // MARK: - Chat
-    func sendChatMessage(_ message: String) async throws -> String {
-        let data = try await apiClient.post("/api/ai/chat", body: ["message": message])
-        do {
-            let response = try JSONDecoder().decode([String: String].self, from: data)
-            guard let aiResponse = response["message"] else {
-                throw AIError.invalidResponse
-            }
-            return aiResponse
-        } catch {
-            throw AIError.decodingError(error)
-        }
+    func getDashboardInsights() async throws -> [AIInsight] {
+        return try await apiClient.get(AIEndpoint.insights.path)
     }
     
-    // MARK: - Financial Tips
-    func fetchFinancialTips() async throws -> [FinancialTip] {
-        let data = try await apiClient.get("/api/ai/savings-tips")
-        do {
-            return try JSONDecoder().decode([FinancialTip].self, from: data)
-        } catch {
-            throw AIError.decodingError(error)
-        }
-    }
-    
-    // MARK: - Budget Analysis
-    func fetchBudgetAnalysis() async throws -> BudgetAnalysis {
-        let data = try await apiClient.get("/api/ai/budget-analysis")
-        do {
-            return try JSONDecoder().decode(BudgetAnalysis.self, from: data)
-        } catch {
-            throw AIError.decodingError(error)
-        }
+    func getSavingsTips() async throws -> [AIResponse] {
+        return try await apiClient.get(AIEndpoint.savingsTips.path)
     }
 }
 
-// MARK: - Models
-struct FinancialTip: Codable {
-    let title: String
-    let description: String
-    let potentialSavings: String
-    let difficulty: String
-    let timeframe: String
+// MARK: - Response Models
+struct AIResponse: Codable {
+    let message: String
+    let type: String
+    let metadata: AIMetadata?
+}
+
+struct AIMetadata: Codable {
+    let confidence: Double?
     let category: String?
-}
-
-struct BudgetAnalysis: Codable {
-    struct Overview: Codable {
-        let totalSpend: Int
-        let topCategories: [TopCategory]
-        let monthOverMonthChange: Double
-        
-        struct TopCategory: Codable {
-            let category: String
-            let amount: Int
-            let trend: String
-        }
-    }
+    let actionable: Bool?
+    let suggestedActions: [String]?
     
-    struct Insight: Codable {
-        let category: String
-        let finding: String
-        let suggestedAction: String
-        let potentialSavings: Int
+    enum CodingKeys: String, CodingKey {
+        case confidence
+        case category
+        case actionable
+        case suggestedActions = "suggested_actions"
     }
-    
-    struct Recommendation: Codable {
-        let title: String
-        let description: String
-        let impact: String
-        let effort: String
-        let timeframe: String
-    }
-    
-    let overview: Overview
-    let insights: [Insight]
-    let recommendations: [Recommendation]
 } 

@@ -40,25 +40,76 @@ struct PremiumBadge: View {
 // MARK: - Main Assistant Card
 struct MainAssistantCard: View {
     @ObservedObject var viewModel: AIFinancialAssistantViewModel
+    @State private var message = ""
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             AssistantHeader()
-            SmartWorkflowsSection(workflows: viewModel.workflows, onWorkflowSelected: viewModel.startWorkflow)
             
-            Divider()
-                .background(Color(hex: "334155"))
-                .padding(.vertical, 8)
+            // Workflows
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(viewModel.workflows) { workflow in
+                        WorkflowButton(workflow: workflow) {
+                            Task {
+                                await viewModel.startWorkflow(workflow)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
             
-            ChatSection(viewModel: viewModel)
+            // Chat Area
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    ForEach(viewModel.chatMessages) { message in
+                        ChatBubble(message: message)
+                    }
+                    
+                    if viewModel.isTyping {
+                        HStack {
+                            TypingIndicator()
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                .padding(.vertical)
+            }
+            .frame(maxWidth: .infinity)
+            .background(Color(hex: "1E293B"))
+            .cornerRadius(16)
+            
+            // Message Input
+            HStack(spacing: 12) {
+                TextField("Ask anything...", text: $message)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .disabled(viewModel.isTyping)
+                
+                Button {
+                    guard !message.isEmpty else { return }
+                    let messageToSend = message
+                    message = ""
+                    
+                    Task {
+                        await viewModel.sendMessage(messageToSend)
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(message.isEmpty ? .gray : Color(hex: "3B82F6"))
+                }
+                .disabled(message.isEmpty || viewModel.isTyping)
+            }
+            .padding()
+            .background(Color(hex: "1E293B"))
+            .cornerRadius(16)
         }
-        .padding(.vertical)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(hex: "1E293B"))
-                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
-        )
-        .padding(.horizontal)
+        .padding()
+        .background(Color(hex: "0F172A"))
+        .cornerRadius(20)
+        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
     }
 }
 
@@ -234,6 +285,82 @@ struct LearningHubSection: View {
             }
         }
         .padding(.horizontal)
+    }
+}
+
+struct TypingIndicator: View {
+    @State private var dotOffset: CGFloat = 0
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(Color(hex: "3B82F6"))
+                    .frame(width: 6, height: 6)
+                    .offset(y: dotOffset)
+                    .animation(
+                        Animation.easeInOut(duration: 0.5)
+                            .repeatForever()
+                            .delay(0.2 * Double(index)),
+                        value: dotOffset
+                    )
+            }
+        }
+        .onAppear {
+            dotOffset = -5
+        }
+    }
+}
+
+struct ChatBubble: View {
+    let message: PremiumChatMessage
+    
+    var body: some View {
+        HStack {
+            if message.type == .user {
+                Spacer()
+            }
+            
+            VStack(alignment: message.type == .user ? .trailing : .leading, spacing: 4) {
+                Text(message.content)
+                    .padding(12)
+                    .background(bubbleColor)
+                    .foregroundColor(textColor)
+                    .cornerRadius(16)
+                
+                if let attachments = message.attachments {
+                    ForEach(attachments) { attachment in
+                        // Handle different attachment types here
+                        EmptyView()
+                    }
+                }
+            }
+            
+            if message.type != .user {
+                Spacer()
+            }
+        }
+        .padding(.horizontal)
+    }
+    
+    private var bubbleColor: Color {
+        switch message.type {
+        case .user:
+            return Color(hex: "3B82F6")
+        case .assistant:
+            return Color(hex: "1E293B")
+        case .system:
+            return Color(hex: "374151")
+        }
+    }
+    
+    private var textColor: Color {
+        switch message.type {
+        case .user:
+            return .white
+        case .assistant, .system:
+            return Color(hex: "E5E7EB")
+        }
     }
 }
 

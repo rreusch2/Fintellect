@@ -25,17 +25,39 @@ class AuthViewModel: ObservableObject {
                 "password": password
             ]
             
+            print("[Auth] Sending registration request with username: \(username)")
             let response: Data = try await APIClient.shared.post("/api/auth/mobile/register", body: credentials)
             
-            if let registerResponse = try? JSONDecoder().decode(RegisterResponse.self, from: response) {
+            // Print raw response for debugging
+            if let jsonString = String(data: response, encoding: .utf8) {
+                print("[Auth] Raw registration response: \(jsonString)")
+            }
+            
+            let decoder = JSONDecoder()
+            do {
+                let registerResponse = try decoder.decode(RegisterResponse.self, from: response)
+                print("[Auth] Successfully decoded registration response")
+                print("[Auth] User: \(registerResponse.user)")
+                print("[Auth] Success: \(registerResponse.success)")
+                
                 // Store tokens
+                print("[Auth] Attempting to save tokens")
                 try KeychainManager.saveToken(registerResponse.tokens.accessToken, forKey: "accessToken")
                 try KeychainManager.saveToken(registerResponse.tokens.refreshToken, forKey: "refreshToken")
+                print("[Auth] Tokens saved successfully")
                 
                 // Update user state
                 self.currentUser = registerResponse.user
                 self.isAuthenticated = true
                 print("[Auth] Registration successful for user: \(registerResponse.user.username)")
+                print("[Auth] Authentication state updated - isAuthenticated: \(self.isAuthenticated)")
+            } catch {
+                print("[Auth] Detailed decoding error: \(error)")
+                // Try to decode error response
+                if let errorResponse = try? JSONDecoder().decode([String: String].self, from: response) {
+                    throw APIError.serverError(errorResponse["message"] ?? "Unknown error")
+                }
+                throw APIError.decodingError(error)
             }
         } catch {
             self.error = error.localizedDescription

@@ -1,10 +1,10 @@
-# .cursorrules
+.cursorrules
 
 title: "Fintellect - SwiftUI and Node.js Backend Integration"
 description: "Context rules for integrating SwiftUI iOS frontend with existing Node.js backend and PostgreSQL database."
 
 # -----------------------------------------------------------
-# Context & Project Overview
+ Context & Project Overview
 # -----------------------------------------------------------
 project_overview:
   name: "Fintellect"
@@ -13,7 +13,7 @@ project_overview:
     The platform integrates a SwiftUI mobile app with an existing Node.js + PostgreSQL backend and React-based web frontend.
 
 # -----------------------------------------------------------
-# Dynamic Rules Maintenance
+ Dynamic Rules Maintenance
 # -----------------------------------------------------------
 rules_maintenance:
   auto_update: true
@@ -49,7 +49,7 @@ important_notes:
   - "This AI agent has the ability to search, analyze, and edit files across all major folders without explicit instructions. It must avoid creating redundant or conflicting code."
 
 # -----------------------------------------------------------
-# Environment & Workflow Details
+ Environment & Workflow Details
 # -----------------------------------------------------------
 environment:
   operating_system: "Windows 11 PC and MacinCloud (macOS environment)"
@@ -313,7 +313,7 @@ security:
     - "Security headers"
 
 # -----------------------------------------------------------
-# Final Notes
+ Final Notes
 # -----------------------------------------------------------
 notes: >
   The project is transitioning from a web-only application to a multi-platform solution.

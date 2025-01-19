@@ -152,9 +152,12 @@ struct RegisterView: View {
                                     password: password
                                 )
                                 print("[Register] Registration completed, isAuthenticated: \(authViewModel.isAuthenticated)")
+                                print("[Register] Current user: \(String(describing: authViewModel.currentUser))")
                                 if authViewModel.isAuthenticated {
                                     print("[Register] Showing onboarding view")
                                     showOnboarding = true
+                                } else {
+                                    print("[Register] Authentication failed - not showing onboarding")
                                 }
                             }
                         }) {
@@ -201,6 +204,7 @@ struct RegisterView: View {
                 }
             }
             .fullScreenCover(isPresented: $showOnboarding) {
+                print("[Register] Presenting onboarding view")
                 OnboardingView()
             }
             .onAppear {
@@ -213,6 +217,13 @@ struct RegisterView: View {
                 }
                 withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
                     appear[2] = true
+                }
+            }
+            .onChange(of: authViewModel.isAuthenticated) { newValue in
+                print("[Register] Authentication state changed to: \(newValue)")
+                if newValue {
+                    print("[Register] User authenticated, showing onboarding")
+                    showOnboarding = true
                 }
             }
         }

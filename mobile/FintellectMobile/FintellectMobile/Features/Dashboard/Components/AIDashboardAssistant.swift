@@ -8,6 +8,7 @@ struct QuickAction: Identifiable {
     let icon: String
     let color: Color
     let bgColor: Color
+    let description: String
     
     static let actions = [
         QuickAction(
@@ -15,28 +16,32 @@ struct QuickAction: Identifiable {
             message: "Can you analyze my recent spending patterns and suggest areas for improvement?",
             icon: "chart.pie.fill",
             color: Color(hex: "3B82F6"),
-            bgColor: Color(hex: "3B82F6").opacity(0.2)
+            bgColor: Color(hex: "3B82F6").opacity(0.2),
+            description: "Review spending patterns and find savings"
         ),
         QuickAction(
             label: "Budget Help",
             message: "Help me create a budget based on my spending patterns",
             icon: "target",
             color: Color(hex: "10B981"),
-            bgColor: Color(hex: "10B981").opacity(0.2)
+            bgColor: Color(hex: "10B981").opacity(0.2),
+            description: "Create a personalized budget plan"
         ),
         QuickAction(
             label: "Savings Tips",
             message: "What are some personalized saving tips based on my transaction history?",
             icon: "dollarsign.circle.fill",
             color: Color(hex: "8B5CF6"),
-            bgColor: Color(hex: "8B5CF6").opacity(0.2)
+            bgColor: Color(hex: "8B5CF6").opacity(0.2),
+            description: "Get personalized savings advice"
         ),
         QuickAction(
             label: "Recurring Charges",
             message: "Can you identify my recurring charges and suggest potential optimizations?",
             icon: "calendar",
             color: Color(hex: "F59E0B"),
-            bgColor: Color(hex: "F59E0B").opacity(0.2)
+            bgColor: Color(hex: "F59E0B").opacity(0.2),
+            description: "Optimize your subscriptions"
         )
     ]
 }
@@ -191,28 +196,39 @@ struct QuickActionButton: View {
 // MARK: - Chat Area
 struct ChatArea: View {
     @ObservedObject var viewModel: AIDashboardAssistantViewModel
+    private let scrollProxy = ScrollViewProxy.self
     
     var body: some View {
         VStack(spacing: 12) {
             ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(viewModel.messages) { message in
-                        ChatBubble(message: message)
-                    }
-                    
-                    if viewModel.isLoading {
-                        HStack(spacing: 4) {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                            Text("Thinking...")
-                                .font(.caption)
-                                .foregroundColor(.gray)
+                ScrollViewReader { proxy in
+                    LazyVStack(spacing: 12) {
+                        ForEach(viewModel.messages) { message in
+                            ChatBubble(message: message)
+                                .id(message.id)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
+                        
+                        if viewModel.isLoading {
+                            HStack(spacing: 4) {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Thinking...")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .onChange(of: viewModel.messages) { messages in
+                        if let lastMessage = messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
+                        }
                     }
                 }
-                .padding(.vertical, 8)
             }
             .frame(maxHeight: viewModel.isExpanded ? .infinity : 200)
             
@@ -342,11 +358,10 @@ struct CompactQuickActionButton: View {
                         .foregroundColor(.white)
                 }
                 
-                Text(action.message)
+                Text(action.description)
                     .font(.caption)
                     .foregroundColor(.gray)
                     .lineLimit(1)
-                    .truncationMode(.tail)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)

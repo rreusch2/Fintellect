@@ -37,8 +37,8 @@ class PlaidManager: ObservableObject {
                let linkToken = json["link_token"] as? String {
                 print("[Plaid] Link token created successfully")
                 
-                // Create configuration
-                let configuration = LinkTokenConfiguration(
+                // Create handler
+                let handler = try await Plaid.createHandler(
                     token: linkToken,
                     onSuccess: { [weak self] success in
                         print("[Plaid] Link success - public token: \(success.publicToken)")
@@ -61,7 +61,9 @@ class PlaidManager: ObservableObject {
                 )
                 
                 // Present Plaid Link
-                try await Plaid.create(configuration)
+                if let viewController = UIApplication.shared.keyWindow?.rootViewController {
+                    try await handler.open(presentUsing: .viewController(viewController))
+                }
             }
         } catch {
             print("[Plaid] Error creating link token: \(error)")

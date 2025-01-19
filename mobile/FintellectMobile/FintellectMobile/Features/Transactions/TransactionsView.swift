@@ -515,37 +515,6 @@ struct CategoryFilterButton: View {
     }
 }
 
-// MARK: - StatCard
-struct StatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(color)
-                Spacer()
-            }
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.gray)
-            
-            Text(value)
-                .font(.headline)
-                .foregroundColor(.white)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color(hex: "1E293B"))
-        .cornerRadius(12)
-    }
-}
-
 #Preview {
     NavigationView {
         TransactionsView()

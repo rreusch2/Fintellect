@@ -64,7 +64,7 @@ struct MainAssistantCard: View {
             ScrollView {
                 LazyVStack(spacing: 16) {
                     ForEach(viewModel.chatMessages) { message in
-                        PremiumChatBubble(message: message)
+                        ChatMessageBubble(message: message)
                     }
                     
                     if viewModel.isTyping {
@@ -196,7 +196,7 @@ struct ChatContent: View {
                 ScrollView(showsIndicators: true) {
                     LazyVStack(spacing: 16) {
                         ForEach(viewModel.chatMessages) { message in
-                            PremiumChatBubble(message: message)
+                            ChatMessageBubble(message: message)
                         }
                         
                         if viewModel.isTyping {
@@ -312,7 +312,7 @@ struct TypingIndicator: View {
     }
 }
 
-struct PremiumChatBubble: View {
+struct ChatMessageBubble: View {
     let message: PremiumChatMessage
     
     var body: some View {

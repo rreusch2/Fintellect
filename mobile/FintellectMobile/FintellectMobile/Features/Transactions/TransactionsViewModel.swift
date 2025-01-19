@@ -53,7 +53,7 @@ class TransactionsViewModel: ObservableObject {
                         name: plaidTx.merchantName ?? plaidTx.name,
                         amount: Double(plaidTx.amount) / 100.0,
                         date: plaidTx.date,
-                        category: TransactionCategory(rawValue: plaidTx.category) ?? .other
+                        category: mapPlaidCategory(plaidTx.category)
                     )
                 }
             } else {
@@ -65,6 +65,32 @@ class TransactionsViewModel: ObservableObject {
         }
         
         isLoading = false
+    }
+    
+    private func mapPlaidCategory(_ category: String) -> TransactionCategory {
+        let upperCategory = category.uppercased()
+        switch upperCategory {
+        case _ where upperCategory.contains("FOOD") || upperCategory.contains("RESTAURANT"):
+            return .food
+        case _ where upperCategory.contains("TRANSPORT"):
+            return .transportation
+        case _ where upperCategory.contains("ENTERTAINMENT") || upperCategory.contains("RECREATION"):
+            return .entertainment
+        case _ where upperCategory.contains("SHOPPING") || upperCategory.contains("MERCHANDISE"):
+            return .shopping
+        case _ where upperCategory.contains("UTILITIES") || upperCategory.contains("SERVICE"):
+            return .utilities
+        case _ where upperCategory.contains("HEALTH") || upperCategory.contains("MEDICAL"):
+            return .health
+        case _ where upperCategory.contains("HOUSE") || upperCategory.contains("RENT") || upperCategory.contains("MORTGAGE"):
+            return .housing
+        case _ where upperCategory.contains("TRAVEL"):
+            return .travel
+        case _ where upperCategory.contains("INCOME") || upperCategory.contains("DEPOSIT"):
+            return .income
+        default:
+            return .other
+        }
     }
 }
 
@@ -106,6 +132,8 @@ extension TransactionCategory {
             return Color(hex: "14B8A6")  // Teal
         case .travel:
             return Color(hex: "EAB308")  // Yellow
+        case .income:
+            return Color(hex: "22C55E")  // Green
         case .other:
             return Color(hex: "94A3B8")  // Gray
         }
@@ -129,31 +157,10 @@ extension TransactionCategory {
             return "house.fill"
         case .travel:
             return "airplane"
+        case .income:
+            return "arrow.down.circle.fill"
         case .other:
             return "tag.fill"
-        }
-    }
-    
-    init(rawValue: String) {
-        switch rawValue.uppercased() {
-        case _ where rawValue.contains("FOOD") || rawValue.contains("RESTAURANT"):
-            self = .food
-        case _ where rawValue.contains("TRANSPORT"):
-            self = .transportation
-        case _ where rawValue.contains("ENTERTAINMENT") || rawValue.contains("RECREATION"):
-            self = .entertainment
-        case _ where rawValue.contains("SHOPPING") || rawValue.contains("MERCHANDISE"):
-            self = .shopping
-        case _ where rawValue.contains("UTILITIES") || rawValue.contains("SERVICE"):
-            self = .utilities
-        case _ where rawValue.contains("HEALTH") || rawValue.contains("MEDICAL"):
-            self = .health
-        case _ where rawValue.contains("HOUSE") || rawValue.contains("RENT") || rawValue.contains("MORTGAGE"):
-            self = .housing
-        case _ where rawValue.contains("TRAVEL"):
-            self = .travel
-        default:
-            self = .other
         }
     }
 } 

@@ -1,14 +1,27 @@
 import SwiftUI
 
-struct Transaction: Identifiable, Codable {
-    let id = UUID()
+enum TransactionCategory: String {
+    case food = "FOOD_AND_DRINK"
+    case transportation = "TRANSPORTATION"
+    case entertainment = "ENTERTAINMENT"
+    case shopping = "GENERAL_MERCHANDISE"
+    case utilities = "GENERAL_SERVICES"
+    case health = "PERSONAL_CARE"
+    case housing = "HOUSING"
+    case travel = "TRAVEL"
+    case income = "INCOME"
+    case other = "OTHER"
+}
+
+struct Transaction: Identifiable {
+    let id: String
     let name: String
     let amount: Double
     let date: Date
     let category: TransactionCategory
     
     var isExpense: Bool {
-        amount < 0
+        amount > 0  // In Plaid, positive amounts are expenses
     }
     
     var formattedAmount: String {
@@ -17,10 +30,6 @@ struct Transaction: Identifiable, Codable {
     
     var formattedDate: String {
         date.formatted(date: .abbreviated, time: .omitted)
-    }
-    
-    enum CodingKeys: String, CodingKey {
-        case id, name, amount, date, category
     }
     
     #if DEBUG
@@ -32,11 +41,11 @@ struct Transaction: Identifiable, Codable {
         }
         
         return [
-            Transaction(name: "Whole Foods Market", amount: -82.47, date: dates[0], category: .food),
-            Transaction(name: "Netflix Subscription", amount: -15.99, date: dates[1], category: .entertainment),
-            Transaction(name: "Target", amount: -156.32, date: dates[2], category: .shopping),
-            Transaction(name: "Electric Bill", amount: -124.56, date: dates[3], category: .utilities),
-            Transaction(name: "Uber Ride", amount: -28.45, date: dates[4], category: .transportation)
+            Transaction(id: UUID().uuidString, name: "Whole Foods Market", amount: -82.47, date: dates[0], category: .food),
+            Transaction(id: UUID().uuidString, name: "Netflix Subscription", amount: -15.99, date: dates[1], category: .entertainment),
+            Transaction(id: UUID().uuidString, name: "Target", amount: -156.32, date: dates[2], category: .shopping),
+            Transaction(id: UUID().uuidString, name: "Electric Bill", amount: -124.56, date: dates[3], category: .utilities),
+            Transaction(id: UUID().uuidString, name: "Uber Ride", amount: -28.45, date: dates[4], category: .transportation)
         ]
     }
     #endif

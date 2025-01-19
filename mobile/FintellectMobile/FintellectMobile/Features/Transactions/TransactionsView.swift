@@ -7,6 +7,7 @@ struct TransactionsView: View {
     @State private var searchText = ""
     @State private var showDatePicker = false
     @State private var selectedLimit = 10
+    @State private var selectedCategory: TransactionCategory?
     
     private let limitOptions = [10, 20, 50, 100]
     
@@ -23,47 +24,112 @@ struct TransactionsView: View {
                 }
                 return true
             }
+            .filter { transaction in
+                if let selectedCategory = selectedCategory {
+                    return transaction.category == selectedCategory
+                }
+                return true
+            }
             .prefix(selectedLimit))
     }
     
+    var categories: [TransactionCategory] {
+        Array(Set(viewModel.transactions.map { $0.category })).sorted { a, b in
+            a.displayName < b.displayName
+        }
+    }
+    
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Summary Stats Section
-                SummaryStatsSection(viewModel: viewModel)
+        NavigationView {
+            VStack(spacing: 0) {
+                // Stats Section
+                VStack(spacing: 16) {
+                    HStack(spacing: 16) {
+                        StatCard(
+                            title: "Total Spending",
+                            value: viewModel.totalSpending.formatted(.currency(code: "USD")),
+                            icon: "dollarsign.circle.fill",
+                            color: .blue
+                        )
+                        
+                        if let topCategory = viewModel.topCategory {
+                            StatCard(
+                                title: "Top Category",
+                                value: topCategory.displayName,
+                                icon: topCategory.icon,
+                                color: topCategory.color
+                            )
+                        }
+                    }
+                    
+                    HStack(spacing: 16) {
+                        StatCard(
+                            title: "Average Transaction",
+                            value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
+                            icon: "chart.bar.fill",
+                            color: .purple
+                        )
+                        
+                        StatCard(
+                            title: "Total Transactions",
+                            value: "\(viewModel.transactions.count)",
+                            icon: "list.bullet.rectangle.fill",
+                            color: .orange
+                        )
+                    }
+                }
+                .padding()
+                .background(Color(.systemBackground))
                 
-                // Search and Filter Section
-                SearchAndFilterSection(
-                    searchText: $searchText,
-                    showDatePicker: $showDatePicker,
-                    selectedLimit: $selectedLimit,
-                    limitOptions: limitOptions,
-                    startDate: $viewModel.startDate,
-                    endDate: $viewModel.endDate
-                )
+                // Category Filter
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        CategoryFilterButton(
+                            title: "All",
+                            isSelected: selectedCategory == nil,
+                            color: .gray
+                        ) {
+                            selectedCategory = nil
+                        }
+                        
+                        ForEach(categories, id: \.self) { category in
+                            CategoryFilterButton(
+                                title: category.displayName,
+                                isSelected: selectedCategory == category,
+                                color: category.color
+                            ) {
+                                selectedCategory = category
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.vertical, 8)
+                .background(Color(.systemBackground))
                 
+                // Transactions List
                 if viewModel.isLoading {
                     ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = viewModel.error {
-                    ErrorView(message: error) {
+                    ErrorView(error: error) {
                         Task {
                             await viewModel.fetchTransactions()
                         }
                     }
+                } else if viewModel.transactions.isEmpty {
+                    EmptyStateView()
                 } else {
-                    // Transactions List
-                    TransactionsList(transactions: filteredTransactions)
+                    List(filteredTransactions) { transaction in
+                        TransactionRow(transaction: transaction)
+                    }
+                    .listStyle(.plain)
+                    .refreshable {
+                        await viewModel.fetchTransactions()
+                    }
                 }
             }
-            .padding(.vertical, 24)
-        }
-        .background(BackgroundView())
-        .navigationTitle("Transactions")
-        .navigationBarTitleDisplayMode(.inline)
-        .refreshable {
-            await viewModel.fetchTransactions()
+            .navigationTitle("Transactions")
         }
     }
 }
@@ -339,7 +405,7 @@ struct DateRangePickerView: View {
 
 // MARK: - Error View
 struct ErrorView: View {
-    let message: String
+    let error: String
     let retryAction: () -> Void
     
     var body: some View {
@@ -352,7 +418,7 @@ struct ErrorView: View {
                 .font(.headline)
                 .foregroundColor(.white)
             
-            Text(message)
+            Text(error)
                 .font(.subheadline)
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)

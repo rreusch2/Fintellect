@@ -18,6 +18,7 @@ import plaidRouter from "./routes/plaid";
 import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent";
 import { financialTipAgent } from "./services/ai/agents/FinancialTipAgent";
 import mobileAuthRouter from './auth/mobile';
+import { jwtAuth } from './middleware/jwtAuth.js';
 
 
 const scryptAsync = promisify(scrypt);
@@ -41,8 +42,15 @@ export function registerRoutes(app: Express): Server {
   // Mount the mobile auth router first
   app.use("/api/auth/mobile", mobileAuthRouter);
 
-  // Mount the Plaid router
-  app.use("/api/plaid", plaidRouter);
+  // Mount the Plaid router with JWT auth for mobile requests
+  app.use("/api/plaid", (req, res, next) => {
+    // Check if it's a mobile request (has Authorization header)
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+      return jwtAuth(req, res, next);
+    }
+    // For web requests, continue with session auth
+    next();
+  }, plaidRouter);
 
   app.post("/api/register", async (req, res, next) => {
     try {

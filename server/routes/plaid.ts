@@ -644,41 +644,70 @@ router.post("/demo", async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// Create link token
-router.post("/create-link-token", async (req: JWTRequest, res: Response) => {
-  if (!req.jwtPayload?.userId) {
-    console.error("[Plaid] Create link token attempt without authentication");
+// Create link token endpoint
+router.post("/create-link-token", async (req: Request, res: Response) => {
+  // Check for JWT auth first
+  if (req.jwtPayload?.userId) {
+    console.log(`[Plaid] Creating link token for JWT user ${req.jwtPayload.userId}`);
+    const userId = req.jwtPayload.userId;
+    
+    // Get user data
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+      
+    if (!user) {
+      console.log(`[Plaid] User ${userId} not found`);
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    try {
+      const config = {
+        user: {
+          client_user_id: userId.toString(),
+        },
+        client_name: "Fintellect",
+        products: [Products.Transactions],
+        country_codes: [CountryCode.Us],
+        language: "en",
+        webhook: process.env.PLAID_WEBHOOK_URL,
+      };
+
+      const createTokenResponse = await plaidClient.linkTokenCreate(config);
+      const linkToken = createTokenResponse.data.link_token;
+      console.log(`[Plaid] Link token created successfully for JWT user ${userId}`);
+      res.json({ linkToken });
+    } catch (error) {
+      console.error("[Plaid] Error creating link token:", error);
+      res.status(500).json({ error: "Failed to create link token" });
+    }
+    return;
+  }
+
+  // Fall back to session auth for web requests
+  if (!req.user?.id) {
+    console.log("[Plaid] Create link token attempt without authentication");
     return res.status(401).json({ error: "Not logged in" });
   }
 
   try {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, req.jwtPayload.userId))
-      .limit(1);
-
-    if (!user) {
-      console.error("[Plaid] User not found:", req.jwtPayload.userId);
-      return res.status(401).json({ error: "User not found" });
-    }
-
-    const configs = {
+    const config = {
       user: {
-        client_user_id: user.id.toString()
+        client_user_id: req.user.id.toString(),
       },
       client_name: "Fintellect",
       products: [Products.Transactions],
       country_codes: [CountryCode.Us],
       language: "en",
-      webhook: "https://webhook.example.com",
+      webhook: process.env.PLAID_WEBHOOK_URL,
     };
 
-    const createTokenResponse = await plaidClient.linkTokenCreate(configs);
+    const createTokenResponse = await plaidClient.linkTokenCreate(config);
     const linkToken = createTokenResponse.data.link_token;
-    console.log("[Plaid] Link token created for user:", user.id);
-
-    res.json({ link_token: linkToken });
+    console.log(`[Plaid] Link token created successfully for user ${req.user.id}`);
+    res.json({ linkToken });
   } catch (error) {
     console.error("[Plaid] Error creating link token:", error);
     res.status(500).json({ error: "Failed to create link token" });

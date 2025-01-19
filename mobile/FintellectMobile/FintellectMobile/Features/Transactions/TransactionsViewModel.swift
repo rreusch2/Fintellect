@@ -4,6 +4,8 @@ class TransactionsViewModel: ObservableObject {
     @Published var transactions: [Transaction] = []
     @Published var startDate: Date?
     @Published var endDate: Date?
+    @Published var isLoading = false
+    @Published var error: String?
     
     // MARK: - Computed Properties
     var totalSpending: Double {
@@ -31,34 +33,127 @@ class TransactionsViewModel: ObservableObject {
     }
     
     init() {
-        loadMockData()
+        Task { await fetchTransactions() }
     }
     
-    private func loadMockData() {
-        // Generate dates for the last 30 days
-        let calendar = Calendar.current
-        let today = Date()
-        let dates = (0..<30).map { days in
-            calendar.date(byAdding: .day, value: -days, to: today) ?? today
+    @MainActor
+    func fetchTransactions() async {
+        isLoading = true
+        error = nil
+        
+        do {
+            print("[Transactions] Fetching transactions")
+            let data = try await APIClient.shared.get("/api/plaid/transactions")
+            
+            if let transactionsData = try? JSONDecoder().decode([PlaidTransaction].self, from: data) {
+                print("[Transactions] Successfully decoded \(transactionsData.count) transactions")
+                self.transactions = transactionsData.map { plaidTx in
+                    Transaction(
+                        id: plaidTx.id,
+                        name: plaidTx.merchantName ?? plaidTx.name,
+                        amount: Double(plaidTx.amount) / 100.0,
+                        date: plaidTx.date,
+                        category: TransactionCategory(rawValue: plaidTx.category) ?? .other
+                    )
+                }
+            } else {
+                throw APIError.decodingError(NSError(domain: "TransactionsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode transactions"]))
+            }
+        } catch {
+            print("[Transactions] Error fetching transactions:", error)
+            self.error = error.localizedDescription
         }
         
-        // Mock transaction data
-        transactions = [
-            Transaction(name: "Whole Foods Market", amount: -82.47, date: dates[0], category: .food),
-            Transaction(name: "Netflix Subscription", amount: -15.99, date: dates[1], category: .entertainment),
-            Transaction(name: "Target", amount: -156.32, date: dates[2], category: .shopping),
-            Transaction(name: "Electric Bill", amount: -124.56, date: dates[3], category: .utilities),
-            Transaction(name: "Uber Ride", amount: -28.45, date: dates[4], category: .transportation),
-            Transaction(name: "CVS Pharmacy", amount: -45.23, date: dates[5], category: .health),
-            Transaction(name: "Amazon Prime", amount: -14.99, date: dates[6], category: .shopping),
-            Transaction(name: "Starbucks", amount: -6.75, date: dates[7], category: .food),
-            Transaction(name: "Movie Tickets", amount: -32.50, date: dates[8], category: .entertainment),
-            Transaction(name: "Gas Station", amount: -48.62, date: dates[9], category: .transportation),
-            Transaction(name: "Salary Deposit", amount: 3500.00, date: dates[10], category: .other),
-            Transaction(name: "Gym Membership", amount: -79.99, date: dates[11], category: .health),
-            Transaction(name: "Restaurant", amount: -95.43, date: dates[12], category: .food),
-            Transaction(name: "Water Bill", amount: -78.34, date: dates[13], category: .utilities),
-            Transaction(name: "Apple Music", amount: -9.99, date: dates[14], category: .entertainment)
-        ]
+        isLoading = false
+    }
+}
+
+// MARK: - Models
+struct PlaidTransaction: Codable {
+    let id: String
+    let name: String
+    let merchantName: String?
+    let amount: Int
+    let date: Date
+    let category: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id = "plaidTransactionId"
+        case name
+        case merchantName
+        case amount
+        case date
+        case category
+    }
+}
+
+extension TransactionCategory {
+    var color: Color {
+        switch self {
+        case .food:
+            return Color(hex: "3B82F6")  // Blue
+        case .transportation:
+            return Color(hex: "10B981")  // Green
+        case .entertainment:
+            return Color(hex: "8B5CF6")  // Purple
+        case .shopping:
+            return Color(hex: "F59E0B")  // Orange
+        case .utilities:
+            return Color(hex: "EC4899")  // Pink
+        case .health:
+            return Color(hex: "6366F1")  // Indigo
+        case .housing:
+            return Color(hex: "14B8A6")  // Teal
+        case .travel:
+            return Color(hex: "EAB308")  // Yellow
+        case .other:
+            return Color(hex: "94A3B8")  // Gray
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .food:
+            return "fork.knife"
+        case .transportation:
+            return "car.fill"
+        case .entertainment:
+            return "tv.fill"
+        case .shopping:
+            return "cart.fill"
+        case .utilities:
+            return "bolt.fill"
+        case .health:
+            return "cross.case.fill"
+        case .housing:
+            return "house.fill"
+        case .travel:
+            return "airplane"
+        case .other:
+            return "tag.fill"
+        }
+    }
+    
+    init(rawValue: String) {
+        switch rawValue.uppercased() {
+        case _ where rawValue.contains("FOOD") || rawValue.contains("RESTAURANT"):
+            self = .food
+        case _ where rawValue.contains("TRANSPORT"):
+            self = .transportation
+        case _ where rawValue.contains("ENTERTAINMENT") || rawValue.contains("RECREATION"):
+            self = .entertainment
+        case _ where rawValue.contains("SHOPPING") || rawValue.contains("MERCHANDISE"):
+            self = .shopping
+        case _ where rawValue.contains("UTILITIES") || rawValue.contains("SERVICE"):
+            self = .utilities
+        case _ where rawValue.contains("HEALTH") || rawValue.contains("MEDICAL"):
+            self = .health
+        case _ where rawValue.contains("HOUSE") || rawValue.contains("RENT") || rawValue.contains("MORTGAGE"):
+            self = .housing
+        case _ where rawValue.contains("TRAVEL"):
+            self = .travel
+        default:
+            self = .other
+        }
     }
 } 

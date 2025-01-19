@@ -42,14 +42,29 @@ struct TransactionsView: View {
                     endDate: $viewModel.endDate
                 )
                 
-                // Transactions List
-                TransactionsList(transactions: filteredTransactions)
+                if viewModel.isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                } else if let error = viewModel.error {
+                    ErrorView(message: error) {
+                        Task {
+                            await viewModel.fetchTransactions()
+                        }
+                    }
+                } else {
+                    // Transactions List
+                    TransactionsList(transactions: filteredTransactions)
+                }
             }
             .padding(.vertical, 24)
         }
         .background(BackgroundView())
         .navigationTitle("Transactions")
         .navigationBarTitleDisplayMode(.inline)
+        .refreshable {
+            await viewModel.fetchTransactions()
+        }
     }
 }
 
@@ -319,6 +334,49 @@ struct DateRangePickerView: View {
         .background(Color(hex: "1E293B"))
         .cornerRadius(16)
         .padding()
+    }
+}
+
+// MARK: - Error View
+struct ErrorView: View {
+    let message: String
+    let retryAction: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundColor(Color(hex: "EF4444"))
+            
+            Text("Error Loading Transactions")
+                .font(.headline)
+                .foregroundColor(.white)
+            
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+            
+            Button(action: retryAction) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.clockwise")
+                    Text("Retry")
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(Color(hex: "3B82F6"))
+                .foregroundColor(.white)
+                .cornerRadius(8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(32)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(hex: "1E293B"))
+                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        )
+        .padding(.horizontal, 16)
     }
 }
 

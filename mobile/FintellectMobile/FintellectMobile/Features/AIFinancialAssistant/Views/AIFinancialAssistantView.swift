@@ -1,21 +1,68 @@
 import SwiftUI
 
 struct AIFinancialAssistantView: View {
-    @StateObject private var viewModel = AIFinancialAssistantViewModel()
+    @StateObject private var viewModel = AIDashboardAssistantViewModel()
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                PremiumBadge()
-                MainAssistantCard(viewModel: viewModel)
-                ProactiveInsightsSection(insights: viewModel.proactiveInsights)
-                LearningHubSection(modules: viewModel.learningModules)
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            HStack(spacing: 8) {
+                Label("AI Assistant", systemImage: "sparkles")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Text("BETA")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color(hex: "3B82F6"))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color(hex: "3B82F6").opacity(0.2))
+                    .cornerRadius(6)
+                
+                Button(action: { viewModel.isExpanded.toggle() }) {
+                    Image(systemName: viewModel.isExpanded ? "chevron.down" : "chevron.up")
+                        .foregroundColor(.gray)
+                        .padding(8)
+                        .background(Color(hex: "1E293B"))
+                        .clipShape(Circle())
+                }
             }
-            .padding(.vertical, 24)
+            
+            Text("Get personalized financial guidance through natural conversation")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            // Quick Actions
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(QuickAction.actions) { action in
+                        QuickActionButton(action: action) {
+                            Task {
+                                await viewModel.sendMessage(action.message)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Chat Area
+            if !viewModel.messages.isEmpty || viewModel.isExpanded {
+                ChatArea(viewModel: viewModel)
+            }
         }
-        .background(BackgroundView())
-        .navigationTitle("AI Assistant")
-        .navigationBarTitleDisplayMode(.inline)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(hex: "0F172A"))
+                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
+        )
+        .sheet(isPresented: $viewModel.isExpanded) {
+            ExpandedChatView(viewModel: viewModel)
+        }
     }
 }
 
@@ -229,16 +276,20 @@ struct ChatInput: View {
         HStack(spacing: 12) {
             TextField("Ask about your finances...", text: $currentMessage)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
+                .disabled(currentMessage.isEmpty)
             
             Button {
+                let message = currentMessage
+                currentMessage = "" // Clear input immediately
                 Task {
-                    await onSend(currentMessage)
+                    await onSend(message)
                 }
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 28))
                     .foregroundColor(Color(hex: "3B82F6"))
             }
+            .disabled(currentMessage.isEmpty)
         }
     }
 }
@@ -364,6 +415,114 @@ struct ChatMessageBubble: View {
         case .assistant, .system:
             return Color(hex: "E5E7EB")
         }
+    }
+}
+
+struct ChatBubble: View {
+    let message: ChatMessage
+    
+    var body: some View {
+        HStack {
+            if message.isUser {
+                Spacer()
+            }
+            
+            Text(message.content)
+                .padding(12)
+                .foregroundColor(.white)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B"))
+                )
+                .frame(maxWidth: 280, alignment: message.isUser ? .trailing : .leading)
+            
+            if !message.isUser {
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 8)
+    }
+}
+
+struct ChatArea: View {
+    @ObservedObject var viewModel: AIDashboardAssistantViewModel
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            ScrollView {
+                ScrollViewReader { proxy in
+                    LazyVStack(spacing: 12) {
+                        ForEach(viewModel.messages) { message in
+                            ChatBubble(message: message)
+                                .id(message.id)
+                        }
+                        
+                        if viewModel.isLoading {
+                            HStack(spacing: 4) {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Thinking...")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .onChange(of: viewModel.messages) { messages in
+                        if let lastMessage = messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxHeight: viewModel.isExpanded ? .infinity : 200)
+            
+            ChatInput(currentMessage: $viewModel.currentMessage) { message in
+                await viewModel.sendMessage(message)
+            }
+        }
+    }
+}
+
+@MainActor
+class AIDashboardAssistantViewModel: ObservableObject {
+    @Published var messages: [ChatMessage] = []
+    @Published var currentMessage = ""
+    @Published var isLoading = false
+    @Published var isExpanded = false
+    
+    private let aiService: AIServiceClient
+    
+    init(aiService: AIServiceClient = AIServiceClient()) {
+        self.aiService = aiService
+    }
+    
+    func sendMessage(_ message: String) async {
+        guard !message.isEmpty else { return }
+        
+        let userMessage = ChatMessage(content: message, isUser: true, timestamp: Date())
+        messages.append(userMessage)
+        isLoading = true
+        
+        do {
+            let response = try await aiService.chat(message: message)
+            let aiMessage = ChatMessage(content: response, isUser: false, timestamp: Date())
+            messages.append(aiMessage)
+        } catch {
+            print("Error in chat:", error)
+            let errorMessage = ChatMessage(
+                content: "I apologize, but I'm having trouble processing your request. Please try again.",
+                isUser: false,
+                timestamp: Date()
+            )
+            messages.append(errorMessage)
+        }
+        
+        isLoading = false
     }
 }
 

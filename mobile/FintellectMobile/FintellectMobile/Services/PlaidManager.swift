@@ -37,8 +37,8 @@ class PlaidManager: ObservableObject {
                let linkToken = json["link_token"] as? String {
                 print("[Plaid] Link token created successfully")
                 
-                try await withCheckedThrowingContinuation { continuation in
-                    let viewController = PLKPlaidLinkViewController(
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    let configuration = LinkConfiguration(
                         linkToken: linkToken,
                         onSuccess: { success in
                             print("[Plaid] Link success - public token: \(success.publicToken)")
@@ -59,7 +59,8 @@ class PlaidManager: ObservableObject {
                     )
                     
                     if let rootViewController = UIApplication.shared.windows.first?.rootViewController {
-                        rootViewController.present(viewController, animated: true)
+                        let linkViewController = LinkViewController(configuration: configuration)
+                        rootViewController.present(linkViewController, animated: true)
                     }
                 }
             }

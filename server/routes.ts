@@ -4,20 +4,21 @@ import { db } from "@db";
 import { users, goals, budgets, plaidTransactions } from "@db/schema";
 import { eq, desc, and, gte } from "drizzle-orm";
 import { insertUserSchema, plaidAccounts, plaidItems, type SelectGoal } from "@db/schema";
-import { generateFinancialInsights, chatWithAI } from "./services/ai";
-import { setupAuth } from "./auth";
-import { financialAdvisor } from "./services/ai/agents/FinancialAdvisorAgent";
-import { investmentAdvisor } from "./services/ai/agents/InvestmentStrategyAgent";
-import { budgetAnalyst } from "./services/ai/agents/BudgetAnalysisAgent";
+import { generateFinancialInsights, chatWithAI } from "./services/ai.js";
+import { setupAuth } from "./auth.js";
+import { financialAdvisor } from "./services/ai/agents/FinancialAdvisorAgent.js";
+import { investmentAdvisor } from "./services/ai/agents/InvestmentStrategyAgent.js";
+import { budgetAnalyst } from "./services/ai/agents/BudgetAnalysisAgent.js";
 import passport from "passport";
 import { IVerifyOptions } from "passport-local";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { PlaidService } from "./services/plaid";
-import plaidRouter from "./routes/plaid";
-import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent";
-import { financialTipAgent } from "./services/ai/agents/FinancialTipAgent";
-import mobileAuthRouter from './auth/mobile';
+import { PlaidService } from "./services/plaid.js";
+import plaidRouter from "./routes/plaid.js";
+import aiRouter from "./routes/ai.js";
+import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent.js";
+import { financialTipAgent } from "./services/ai/agents/FinancialTipAgent.js";
+import mobileAuthRouter from './auth/mobile.js';
 import { jwtAuth } from './middleware/jwtAuth.js';
 
 
@@ -51,6 +52,16 @@ export function registerRoutes(app: Express): Server {
     // For web requests, continue with session auth
     next();
   }, plaidRouter);
+
+  // Mount the AI router with JWT auth for mobile requests
+  app.use("/api/ai", (req, res, next) => {
+    // Check if it's a mobile request (has Authorization header)
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+      return jwtAuth(req, res, next);
+    }
+    // For web requests, continue with session auth
+    next();
+  }, aiRouter);
 
   app.post("/api/register", async (req, res, next) => {
     try {

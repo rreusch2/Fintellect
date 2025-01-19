@@ -11,6 +11,9 @@ interface AuthenticatedRequest extends Request {
   jwtPayload?: JWTPayload;
   user?: {
     id: number;
+    username?: string;
+    hasPlaidSetup?: boolean;
+    hasCompletedOnboarding?: boolean;
     [key: string]: any;
   };
 }
@@ -24,16 +27,9 @@ const chatbotAgent = new ChatbotAgent(model, knowledgeStore, dashboardAgent);
 router.get("/insights", async (req: AuthenticatedRequest, res) => {
   try {
     // Check for JWT auth first
-    if (!req.jwtPayload?.userId) {
-      // Fall back to session auth
-      if (!req.user?.id) {
-        console.log("[AI] Insights request without authentication");
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-    }
-
     const userId = req.jwtPayload?.userId || req.user?.id;
     if (!userId) {
+      console.log("[AI] Insights request without authentication");
       return res.status(401).json({ error: "Not authenticated" });
     }
 
@@ -46,20 +42,32 @@ router.get("/insights", async (req: AuthenticatedRequest, res) => {
   }
 });
 
+// Get dashboard insights
+router.get("/dashboard-insights", async (req: AuthenticatedRequest, res) => {
+  try {
+    // Check for JWT auth first
+    const userId = req.jwtPayload?.userId || req.user?.id;
+    if (!userId) {
+      console.log("[AI] Dashboard insights request without authentication");
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    console.log(`[AI] Getting dashboard insights for user ${userId}`);
+    const insights = await dashboardAgent.getInsights(userId);
+    res.json(insights);
+  } catch (error) {
+    console.error("Error getting dashboard insights:", error);
+    res.status(500).json({ error: "Failed to get dashboard insights" });
+  }
+});
+
 // Chat with AI assistant
 router.post("/chat", async (req: AuthenticatedRequest, res) => {
   try {
     // Check for JWT auth first
-    if (!req.jwtPayload?.userId) {
-      // Fall back to session auth
-      if (!req.user?.id) {
-        console.log("[AI] Chat request without authentication");
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-    }
-
     const userId = req.jwtPayload?.userId || req.user?.id;
     if (!userId) {
+      console.log("[AI] Chat request without authentication");
       return res.status(401).json({ error: "Not authenticated" });
     }
 

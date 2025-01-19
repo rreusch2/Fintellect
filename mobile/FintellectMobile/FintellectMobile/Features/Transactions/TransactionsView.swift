@@ -41,105 +41,115 @@ struct TransactionsView: View {
     
     var body: some View {
         NavigationView {
-            ZStack {
-                BackgroundView()
-                
-                VStack(spacing: 0) {
-                    // Stats Section
-                    VStack(spacing: 16) {
-                        HStack(spacing: 16) {
-                            StatCard(
-                                title: "Total Spending",
-                                value: viewModel.totalSpending.formatted(.currency(code: "USD")),
-                                icon: "dollarsign.circle.fill",
-                                color: .blue
-                            )
-                            
-                            if let topCategory = viewModel.topCategory {
+            ScrollView(showsIndicators: false) {
+                ZStack {
+                    BackgroundView()
+                    
+                    VStack(spacing: 24) {
+                        // Stats Section
+                        VStack(spacing: 16) {
+                            HStack(spacing: 16) {
                                 StatCard(
-                                    title: "Top Category",
-                                    value: topCategory.displayName,
-                                    icon: topCategory.icon,
-                                    color: topCategory.color
+                                    title: "Total Spending",
+                                    value: viewModel.totalSpending.formatted(.currency(code: "USD")),
+                                    icon: "dollarsign.circle.fill",
+                                    color: .blue
+                                )
+                                
+                                if let topCategory = viewModel.topCategory {
+                                    StatCard(
+                                        title: "Top Category",
+                                        value: topCategory.displayName,
+                                        icon: topCategory.icon,
+                                        color: topCategory.color
+                                    )
+                                }
+                            }
+                            
+                            HStack(spacing: 16) {
+                                StatCard(
+                                    title: "Average Transaction",
+                                    value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
+                                    icon: "chart.bar.fill",
+                                    color: .purple
+                                )
+                                
+                                StatCard(
+                                    title: "Total Transactions",
+                                    value: "\(viewModel.transactions.count)",
+                                    icon: "list.bullet.rectangle.fill",
+                                    color: .orange
                                 )
                             }
                         }
+                        .padding(.horizontal, 16)
                         
-                        HStack(spacing: 16) {
-                            StatCard(
-                                title: "Average Transaction",
-                                value: viewModel.averageTransaction.formatted(.currency(code: "USD")),
-                                icon: "chart.bar.fill",
-                                color: .purple
-                            )
-                            
-                            StatCard(
-                                title: "Total Transactions",
-                                value: "\(viewModel.transactions.count)",
-                                icon: "list.bullet.rectangle.fill",
-                                color: .orange
-                            )
-                        }
-                    }
-                    .padding()
-                    .background(Color(hex: "1E293B"))
-                    .cornerRadius(16)
-                    .padding()
-                    
-                    // Category Filter
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            CategoryFilterButton(
-                                title: "All",
-                                isSelected: selectedCategory == nil,
-                                color: .gray
-                            ) {
-                                selectedCategory = nil
-                            }
-                            
-                            ForEach(categories, id: \.self) { category in
+                        // Category Filter
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
                                 CategoryFilterButton(
-                                    title: category.displayName,
-                                    isSelected: selectedCategory == category,
-                                    color: category.color
+                                    title: "All",
+                                    isSelected: selectedCategory == nil,
+                                    color: .gray
                                 ) {
-                                    selectedCategory = category
+                                    selectedCategory = nil
+                                }
+                                
+                                ForEach(categories, id: \.self) { category in
+                                    CategoryFilterButton(
+                                        title: category.displayName,
+                                        isSelected: selectedCategory == category,
+                                        color: category.color
+                                    ) {
+                                        selectedCategory = category
+                                    }
                                 }
                             }
+                            .padding(.horizontal, 16)
                         }
-                        .padding(.horizontal)
-                    }
-                    .padding(.vertical, 8)
-                    .background(Color(hex: "1E293B"))
-                    
-                    // Transactions List
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if let error = viewModel.error {
-                        ErrorView(error: error) {
-                            Task {
-                                await viewModel.fetchTransactions()
+                        .padding(.vertical, 8)
+                        
+                        // Transactions List
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if let error = viewModel.error {
+                            ErrorView(error: error) {
+                                Task {
+                                    await viewModel.fetchTransactions()
+                                }
                             }
-                        }
-                    } else if viewModel.transactions.isEmpty {
-                        EmptyStateView()
-                    } else {
-                        List(filteredTransactions) { transaction in
-                            TransactionRow(transaction: transaction)
-                                .listRowBackground(Color(hex: "1E293B"))
-                        }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
-                        .refreshable {
-                            await viewModel.fetchTransactions()
+                        } else if viewModel.transactions.isEmpty {
+                            EmptyStateView()
+                        } else {
+                            VStack(spacing: 0) {
+                                ForEach(filteredTransactions) { transaction in
+                                    TransactionRow(transaction: transaction)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(Color(hex: "1E293B"))
+                                    
+                                    if transaction.id != filteredTransactions.last?.id {
+                                        Divider()
+                                            .background(Color(hex: "334155"))
+                                    }
+                                }
+                            }
+                            .background(Color(hex: "1E293B"))
+                            .cornerRadius(16)
+                            .padding(.horizontal, 16)
                         }
                     }
+                    .padding(.vertical, 24)
                 }
             }
+            .background(BackgroundView())
             .navigationTitle("Transactions")
             .navigationBarTitleDisplayMode(.inline)
             .foregroundColor(.white)
+            .refreshable {
+                await viewModel.fetchTransactions()
+            }
         }
     }
 }

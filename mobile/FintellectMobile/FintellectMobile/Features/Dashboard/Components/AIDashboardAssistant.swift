@@ -67,6 +67,7 @@ class AIDashboardAssistantViewModel: ObservableObject {
     @Published var currentMessage = ""
     @Published var isLoading = false
     @Published var isExpanded = false
+    @Published var error: String? = nil
     
     private let aiService: AIServiceClient
     
@@ -81,21 +82,48 @@ class AIDashboardAssistantViewModel: ObservableObject {
         messages.append(userMessage)
         currentMessage = ""
         isLoading = true
+        error = nil
         
         do {
+            print("[AI Dashboard] Sending message: \(message)")
             let response = try await aiService.chat(message: message)
+            print("[AI Dashboard] Received response: \(response.message)")
+            
             let aiMessage = ChatMessage(content: response.message, isUser: false, timestamp: Date())
             messages.append(aiMessage)
+        } catch let error as APIError {
+            print("[AI Dashboard] API Error: \(error)")
+            handleError(error)
         } catch {
-            let errorMessage = ChatMessage(
-                content: "I apologize, but I'm having trouble processing your request. Please try again.",
-                isUser: false,
-                timestamp: Date()
-            )
-            messages.append(errorMessage)
+            print("[AI Dashboard] Unknown Error: \(error)")
+            handleError(error)
         }
         
         isLoading = false
+    }
+    
+    private func handleError(_ error: Error) {
+        let errorMessage: String
+        if let apiError = error as? APIError {
+            switch apiError {
+            case .serverError(let message):
+                errorMessage = message
+            case .invalidResponse:
+                errorMessage = "Unable to connect to the AI service"
+            case .decodingError:
+                errorMessage = "Unable to process the AI response"
+            }
+        } else {
+            errorMessage = error.localizedDescription
+        }
+        
+        self.error = errorMessage
+        let systemMessage = ChatMessage(
+            content: "I apologize, but I'm having trouble processing your request. Please try again.",
+            isUser: false,
+            timestamp: Date()
+        )
+        messages.append(systemMessage)
     }
 }
 
@@ -216,15 +244,29 @@ struct ChatArea: View {
                         }
                         
                         if viewModel.isLoading {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 8) {
                                 ProgressView()
                                     .scaleEffect(0.8)
-                                Text("Thinking...")
+                                Text("AI is thinking...")
                                     .font(.caption)
                                     .foregroundColor(.gray)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding()
+                        }
+                        
+                        if let error = viewModel.error {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(Color(hex: "F59E0B"))
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundColor(Color(hex: "F59E0B"))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                            .background(Color(hex: "F59E0B").opacity(0.1))
+                            .cornerRadius(8)
                         }
                     }
                     .padding(.vertical, 8)
@@ -242,6 +284,7 @@ struct ChatArea: View {
             HStack(spacing: 12) {
                 TextField("Ask about your finances...", text: $viewModel.currentMessage)
                     .textFieldStyle(CustomTextFieldStyle())
+                    .disabled(viewModel.isLoading)
                 
                 Button {
                     Task {
@@ -250,7 +293,7 @@ struct ChatArea: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(Color(hex: "3B82F6"))
+                        .foregroundColor(viewModel.currentMessage.isEmpty || viewModel.isLoading ? Color(hex: "64748B") : Color(hex: "3B82F6"))
                         .frame(width: 44, height: 44)
                         .background(Color(hex: "1E293B"))
                         .clipShape(Circle())

@@ -42,39 +42,35 @@ class PlaidManager: ObservableObject {
             
             print("[Plaid] Link token created successfully")
             
-            // Create configuration
-            let linkConfiguration = LinkTokenConfiguration(token: linkToken)
+            // Create configuration with success handler
+            let linkConfiguration = LinkTokenConfiguration(
+                token: linkToken,
+                onSuccess: { [weak self] (success: LinkSuccess) in
+                    print("[Plaid] Link success")
+                    Task { @MainActor in
+                        await self?.handleSuccess(publicToken: success.publicToken)
+                    }
+                },
+                onExit: { [weak self] (exit: LinkExit) in
+                    print("[Plaid] Link exit: \(exit.error?.localizedDescription ?? "No error")")
+                    Task { @MainActor in
+                        self?.isPresentingLink = false
+                        if let error = exit.error?.localizedDescription {
+                            self?.error = error
+                        }
+                    }
+                },
+                onEvent: { (event: LinkEvent) in
+                    print("[Plaid] Link event: \(event.eventName)")
+                }
+            )
             
             // Create handler
-            let handler = Plaid.create(configuration: linkConfiguration)
-            
-            // Set up success handler
-            handler.onSuccess = { [weak self] success in
-                print("[Plaid] Link success")
-                Task { @MainActor in
-                    await self?.handleSuccess(publicToken: success.publicToken)
-                }
-            }
-            
-            // Set up exit handler
-            handler.onExit = { [weak self] exit in
-                print("[Plaid] Link exit: \(exit.error?.localizedDescription ?? "No error")")
-                Task { @MainActor in
-                    self?.isPresentingLink = false
-                    if let error = exit.error?.localizedDescription {
-                        self?.error = error
-                    }
-                }
-            }
-            
-            // Set up event handler
-            handler.onEvent = { event in
-                print("[Plaid] Link event: \(event.eventName)")
-            }
+            let handler = try Plaid.create(linkConfiguration)
             
             // Present the link
             await MainActor.run {
-                linkController = handler
+                linkController = LinkController(handler: handler)
                 isPresentingLink = true
             }
             

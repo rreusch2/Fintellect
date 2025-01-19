@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum TransactionCategory {
+enum TransactionCategory: Hashable, Equatable {
     case food(String)
     case transportation(String)
     case entertainment(String)
@@ -75,6 +75,41 @@ enum TransactionCategory {
             return "arrow.down.circle.fill"
         case .other:
             return "tag.fill"
+        }
+    }
+    
+    // Add custom hash function that only considers the case, not the associated value
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .food: hasher.combine(0)
+        case .transportation: hasher.combine(1)
+        case .entertainment: hasher.combine(2)
+        case .shopping: hasher.combine(3)
+        case .utilities: hasher.combine(4)
+        case .health: hasher.combine(5)
+        case .housing: hasher.combine(6)
+        case .travel: hasher.combine(7)
+        case .income: hasher.combine(8)
+        case .other: hasher.combine(9)
+        }
+    }
+    
+    // Add custom equality that only compares the case, not the associated value
+    static func == (lhs: TransactionCategory, rhs: TransactionCategory) -> Bool {
+        switch (lhs, rhs) {
+        case (.food, .food),
+             (.transportation, .transportation),
+             (.entertainment, .entertainment),
+             (.shopping, .shopping),
+             (.utilities, .utilities),
+             (.health, .health),
+             (.housing, .housing),
+             (.travel, .travel),
+             (.income, .income),
+             (.other, .other):
+            return true
+        default:
+            return false
         }
     }
 }

@@ -71,44 +71,6 @@ struct PriorityBadge: View {
     }
 }
 
-// MARK: - Stat Card
-struct StatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(color)
-                .frame(width: 40, height: 40)
-                .background(color.opacity(0.2))
-                .clipShape(Circle())
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                
-                Text(value)
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-            }
-            
-            Spacer()
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(hex: "0F172A"))
-                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
-        )
-    }
-}
-
 // MARK: - Insight Card
 struct InsightCard: View {
     let insight: AIInsight
@@ -140,14 +102,6 @@ struct InsightCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color(hex: "334155"), lineWidth: 1)
         )
-    }
-}
-
-// MARK: - Background View
-struct BackgroundView: View {
-    var body: some View {
-        Color(hex: "0A0F1A")
-            .ignoresSafeArea()
     }
 }
 

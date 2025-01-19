@@ -21,19 +21,24 @@ class APIClient {
     }
     
     func get(_ path: String) async throws -> Data {
+        print("[API] Making GET request to: \(path)")
         var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
         // Add auth header if token exists
         if let token = try? KeychainManager.getToken(forKey: "accessToken") {
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            print("[API] Adding auth header with token: \(String(token.prefix(20)))...")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            print("[API] No access token found for request")
         }
         
         return try await performRequest(request)
     }
     
     func post(_ path: String, body: [String: Any]) async throws -> Data {
+        print("[API] Making POST request to: \(path)")
         var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -41,19 +46,28 @@ class APIClient {
         
         // Add auth header if token exists
         if let token = try? KeychainManager.getToken(forKey: "accessToken") {
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            print("[API] Adding auth header with token: \(String(token.prefix(20)))...")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            print("[API] No access token found for request")
         }
         
         // Convert body to JSON data
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        print("[API] POST request to: \(path)")
         return try await performRequest(request)
     }
     
     private func performRequest(_ request: URLRequest, retryCount: Int = 0) async throws -> Data {
         if retryCount >= 3 {
+            print("[API] Max retry attempts reached (\(retryCount))")
             throw APIError.serverError("Max retry attempts reached")
+        }
+        
+        // Log request headers for debugging
+        print("[API] Request headers:")
+        request.allHTTPHeaders?.forEach { key, value in
+            print("[API] \(key): \(value)")
         }
         
         let (data, response) = try await session.data(for: request)
@@ -67,28 +81,44 @@ class APIClient {
         
         // Handle 401 Unauthorized
         if httpResponse.statusCode == 401 {
-            print("[API] Unauthorized - attempting token refresh")
-            if let newToken = try? await refreshToken() {
+            print("[API] Unauthorized - attempting token refresh (attempt \(retryCount + 1))")
+            
+            do {
+                guard let newToken = try await refreshToken() else {
+                    print("[API] Token refresh failed - no new token received")
+                    throw APIError.serverError("Token refresh failed")
+                }
+                
+                print("[API] Successfully obtained new token: \(String(newToken.prefix(20)))...")
+                
                 // Update the request with new token
                 var newRequest = request
                 newRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
                 
+                // Log the new request headers
+                print("[API] New request headers after token refresh:")
+                newRequest.allHTTPHeaders?.forEach { key, value in
+                    print("[API] \(key): \(value)")
+                }
+                
                 // Retry the request with new token
                 return try await performRequest(newRequest, retryCount: retryCount + 1)
-            } else {
-                throw APIError.serverError("Token refresh failed")
+            } catch {
+                print("[API] Error during token refresh: \(error)")
+                throw error
             }
         }
         
         // Handle error responses
         if httpResponse.statusCode >= 400 {
-            if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let errorMessage = errorJson["error"] as? String {
-                print("[API] Error response: \(errorMessage)")
-                throw APIError.serverError(errorMessage)
-            } else {
-                throw APIError.serverError("Unknown server error")
+            print("[API] Error response with status code: \(httpResponse.statusCode)")
+            if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                print("[API] Error response body: \(errorJson)")
+                if let errorMessage = errorJson["error"] as? String {
+                    throw APIError.serverError(errorMessage)
+                }
             }
+            throw APIError.serverError("Unknown server error")
         }
         
         return data
@@ -100,7 +130,7 @@ class APIClient {
             return nil
         }
         
-        print("[API] Attempting to refresh token")
+        print("[API] Attempting to refresh token using refresh token: \(String(refreshToken.prefix(20)))...")
         
         var request = URLRequest(url: URL(string: "\(baseURL)/api/auth/mobile/refresh")!)
         request.httpMethod = "POST"
@@ -111,20 +141,32 @@ class APIClient {
         
         let (data, response) = try await session.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let newAccessToken = json["accessToken"] as? String else {
-            print("[API] Token refresh failed")
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("[API] Invalid response type during token refresh")
             return nil
         }
         
-        // Save new access token
-        print("[API] Saving new access token")
-        KeychainManager.saveToken(newAccessToken, forKey: "accessToken")
-        print("[API] Token refreshed successfully")
+        print("[API] Token refresh response status: \(httpResponse.statusCode)")
         
-        return newAccessToken
+        if httpResponse.statusCode == 200,
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let newAccessToken = json["accessToken"] as? String {
+            print("[API] Successfully received new access token")
+            KeychainManager.saveToken(newAccessToken, forKey: "accessToken")
+            return newAccessToken
+        } else {
+            print("[API] Token refresh failed - Invalid response format")
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("[API] Response body: \(responseString)")
+            }
+            return nil
+        }
+    }
+}
+
+extension URLRequest {
+    var allHTTPHeaders: [String: String]? {
+        return self.allHTTPHeaderFields
     }
 }
 

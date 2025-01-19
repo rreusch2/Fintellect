@@ -38,26 +38,21 @@ class PlaidManager: ObservableObject {
                 print("[Plaid] Link token created successfully")
                 
                 // Create configuration
-                let configuration = LinkConfiguration(token: linkToken)
+                let configuration = PLKConfiguration(token: linkToken)
                 
-                let linkViewController = PLKPlaidLinkViewController(configuration: configuration) { [weak self] (linkSuccess: PLKLinkSuccess) in
-                    print("[Plaid] Link success - public token: \(linkSuccess.publicToken)")
-                    Task { [weak self] in
-                        await self?.exchangePublicToken(publicToken: linkSuccess.publicToken)
-                    }
-                } onExit: { [weak self] (linkExit: PLKLinkExit) in
-                    if let error = linkExit.error {
+                let handler = PLKHandler(configuration: configuration, delegate: nil)
+                handler.open(presentUsing: .viewController(UIApplication.shared.keyWindow?.rootViewController)) { [weak self] result in
+                    switch result {
+                    case .success(let success):
+                        print("[Plaid] Link success - public token: \(success.publicToken)")
+                        Task { [weak self] in
+                            await self?.exchangePublicToken(publicToken: success.publicToken)
+                        }
+                    case .failure(let error):
                         print("[Plaid] Link exit with error: \(error)")
                         self?.error = error.localizedDescription
-                    } else {
-                        print("[Plaid] Link exit without error")
                     }
                     self?.isLoading = false
-                }
-                
-                // Present Plaid Link
-                if let viewController = UIApplication.shared.keyWindow?.rootViewController {
-                    viewController.present(linkViewController, animated: true)
                 }
             }
         } catch {

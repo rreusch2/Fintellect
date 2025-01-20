@@ -156,7 +156,7 @@ struct AIDashboardAssistant: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Header
+            // Header with enhanced styling
             HStack(spacing: 8) {
                 Label("AI Assistant", systemImage: "sparkles")
                     .font(.headline)
@@ -167,52 +167,57 @@ struct AIDashboardAssistant: View {
                 Text("BETA")
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(Color(hex: "3B82F6"))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color(hex: "3B82F6").opacity(0.2))
-                    .cornerRadius(6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(hex: "3B82F6").opacity(0.2))
+                    )
+                    .foregroundColor(Color(hex: "3B82F6"))
                 
-                Button(action: { viewModel.isExpanded.toggle() }) {
-                    Image(systemName: viewModel.isExpanded ? "chevron.down" : "chevron.up")
-                        .foregroundColor(.gray)
-                        .padding(8)
-                        .background(Color(hex: "1E293B"))
-                        .clipShape(Circle())
+                Button {
+                    withAnimation {
+                        viewModel.isExpanded.toggle()
+                    }
+                } label: {
+                    Image(systemName: viewModel.isExpanded ? "chevron.up" : "chevron.down")
+                        .foregroundColor(Color(hex: "64748B"))
+                        .font(.system(size: 16, weight: .semibold))
                 }
             }
+            .padding(.horizontal)
             
+            // Description
             Text("Get personalized financial guidance through natural conversation")
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(Color(hex: "94A3B8"))
+                .padding(.horizontal)
             
-            // Quick Actions
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(QuickAction.actions) { action in
-                        QuickActionButton(action: action) {
-                            Task {
-                                await viewModel.sendMessage(action.message)
-                            }
+            // Quick Actions Grid with enhanced spacing
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 16) {
+                ForEach(QuickAction.actions) { action in
+                    QuickActionButton(action: action) {
+                        Task {
+                            await viewModel.sendMessage(action.message)
                         }
                     }
                 }
             }
+            .padding(.horizontal)
             
             // Chat Area
-            if !viewModel.messages.isEmpty || viewModel.isExpanded {
-                ChatArea(viewModel: viewModel)
-            }
+            ChatArea(viewModel: viewModel)
+                .padding(.horizontal)
         }
-        .padding(16)
+        .padding(.vertical, 16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 24)
                 .fill(Color(hex: "0F172A"))
-                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
+                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
         )
-        .sheet(isPresented: $viewModel.isExpanded) {
-            ExpandedChatView(viewModel: viewModel)
-        }
     }
 }
 
@@ -287,7 +292,11 @@ struct ChatArea: View {
                     }
                 }
             }
-            .frame(maxHeight: viewModel.isExpanded ? .infinity : 200)
+            .frame(maxHeight: viewModel.isExpanded ? .infinity : 300)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(hex: "1E293B").opacity(0.5))
+            )
             
             HStack(spacing: 12) {
                 TextField("Ask about your finances...", text: $viewModel.currentMessage)

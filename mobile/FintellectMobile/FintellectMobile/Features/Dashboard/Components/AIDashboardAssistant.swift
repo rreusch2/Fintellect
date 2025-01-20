@@ -292,6 +292,14 @@ struct ChatArea: View {
             HStack(spacing: 12) {
                 TextField("Ask about your finances...", text: $viewModel.currentMessage)
                     .textFieldStyle(CustomTextFieldStyle())
+                    .accentColor(Color(hex: "3B82F6"))
+                    .tint(Color(hex: "3B82F6"))
+                    .submitLabel(.send)
+                    .onSubmit {
+                        Task {
+                            await viewModel.sendMessage(viewModel.currentMessage)
+                        }
+                    }
                 
                 Button {
                     Task {
@@ -300,7 +308,8 @@ struct ChatArea: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(Color(hex: "3B82F6"))
+                        .foregroundColor(viewModel.currentMessage.isEmpty ? 
+                            Color(hex: "64748B") : Color(hex: "3B82F6"))
                         .frame(width: 44, height: 44)
                         .background(Color(hex: "1E293B"))
                         .clipShape(Circle())
@@ -566,5 +575,22 @@ struct CompactQuickActionButton: View {
             )
         }
         .buttonStyle(PressableButtonStyle())
+    }
+}
+
+// Add this new style struct
+struct CustomTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .padding(12)
+            .foregroundColor(.white)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(hex: "1E293B"))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color(hex: "334155"), lineWidth: 1)
+            )
     }
 } 

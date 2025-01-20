@@ -366,9 +366,9 @@ struct ChatBubble: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 if let title = section.title?.replacingOccurrences(of: "**", with: "") {
                                     Text(title)
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(Color(hex: "94A3B8"))
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding(.bottom, 4)
                                 }
                                 
                                 ForEach(section.items, id: \.self) { item in
@@ -382,10 +382,12 @@ struct ChatBubble: View {
                                         
                                         Text(formatMessageItem(item))
                                             .font(.body)
-                                            .foregroundColor(Color(hex: "94A3B8"))
+                                            .foregroundColor(Color(hex: "CBD5E1"))
+                                            .lineSpacing(4)
                                     }
                                 }
                             }
+                            .padding(.vertical, 8)
                             
                             if section != formatSections(message.content).last {
                                 Divider()
@@ -397,18 +399,19 @@ struct ChatBubble: View {
                         // Use simple text display for conversational responses
                         Text(formatMessageItem(message.content))
                             .font(.body)
-                            .foregroundColor(Color(hex: "94A3B8"))
+                            .foregroundColor(Color(hex: "CBD5E1"))
+                            .lineSpacing(4)
                     }
                 }
                 .padding(16)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(Color(hex: "1E293B"))
-                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                        .fill(Color(hex: "0F172A"))  // Darker background for contrast
+                        .shadow(color: Color(hex: "3B82F6").opacity(0.1), radius: 8, x: 0, y: 4)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        .stroke(Color(hex: "3B82F6").opacity(0.2), lineWidth: 1)  // Subtle blue border
                 )
                 .frame(maxWidth: 300, alignment: .leading)
             }

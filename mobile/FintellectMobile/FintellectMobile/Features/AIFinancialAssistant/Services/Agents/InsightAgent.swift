@@ -1,11 +1,14 @@
 import Foundation
 
 class InsightAgent: BaseAgent {
-    private let geminiProVision: GeminiService  // For chart/visual analysis
-    private let deepSeek: DeepSeekService       // For pattern detection & insights
-    private let gpt4: OpenAIService             // For complex financial advice
+    private let geminiProVision: GeminiService
+    private let deepSeek: DeepSeekService
+    private let gpt4: OpenAIService
     
     override init(aiService: AIServiceClient = AIServiceClient(), userId: Int) {
+        self.geminiProVision = GeminiService(apiKey: ProcessInfo.processInfo.environment["GEMINI_API_KEY"] ?? "")
+        self.deepSeek = DeepSeekService(apiKey: ProcessInfo.processInfo.environment["DEEPSEEK_API_KEY"] ?? "")
+        self.gpt4 = OpenAIService(apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? "")
         super.init(aiService: aiService, userId: userId)
     }
     

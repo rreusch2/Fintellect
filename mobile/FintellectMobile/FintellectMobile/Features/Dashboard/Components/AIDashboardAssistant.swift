@@ -156,7 +156,7 @@ struct AIDashboardAssistant: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Header with enhanced styling
+            // Header
             HStack(spacing: 8) {
                 Label("AI Assistant", systemImage: "sparkles")
                     .font(.headline)
@@ -167,37 +167,39 @@ struct AIDashboardAssistant: View {
                 Text("BETA")
                     .font(.caption2)
                     .fontWeight(.bold)
+                    .foregroundColor(Color(hex: "3B82F6"))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 4)
                             .fill(Color(hex: "3B82F6").opacity(0.2))
                     )
-                    .foregroundColor(Color(hex: "3B82F6"))
                 
                 Button {
                     withAnimation {
                         viewModel.isExpanded.toggle()
                     }
                 } label: {
-                    Image(systemName: viewModel.isExpanded ? "chevron.up" : "chevron.down")
+                    Image(systemName: viewModel.isExpanded ? "chevron.down" : "chevron.up")
                         .foregroundColor(Color(hex: "64748B"))
-                        .font(.system(size: 16, weight: .semibold))
+                        .frame(width: 24, height: 24)
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
             
             // Description
             Text("Get personalized financial guidance through natural conversation")
                 .font(.subheadline)
                 .foregroundColor(Color(hex: "94A3B8"))
-                .padding(.horizontal)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
             
-            // Quick Actions Grid with enhanced spacing
+            // Quick Actions Grid
             LazyVGrid(columns: [
                 GridItem(.flexible()),
                 GridItem(.flexible())
-            ], spacing: 16) {
+            ], spacing: 12) {
                 ForEach(QuickAction.actions) { action in
                     QuickActionButton(action: action) {
                         Task {
@@ -206,18 +208,24 @@ struct AIDashboardAssistant: View {
                     }
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 16)
             
             // Chat Area
             ChatArea(viewModel: viewModel)
-                .padding(.horizontal)
+                .padding(.horizontal, 16)
         }
-        .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color(hex: "0F172A"))
+                .fill(Color(hex: "1E293B"))
                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
+        .sheet(isPresented: $viewModel.isExpanded) {
+            ExpandedChatView(viewModel: viewModel)
+        }
     }
 }
 
@@ -293,10 +301,6 @@ struct ChatArea: View {
                 }
             }
             .frame(maxHeight: viewModel.isExpanded ? .infinity : 300)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(hex: "1E293B").opacity(0.5))
-            )
             
             HStack(spacing: 12) {
                 TextField("Ask about your finances...", text: $viewModel.currentMessage)

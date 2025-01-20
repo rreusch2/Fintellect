@@ -307,11 +307,11 @@ struct ChatArea: View {
                     
                     if viewModel.isLoading {
                         HStack(spacing: 4) {
-                            ForEach(0..<3) { i in
+                            ForEach(0..<3, id: \.self) { index in
                                 Circle()
                                     .fill(Color.gray.opacity(0.5))
                                     .frame(width: 8, height: 8)
-                                    .offset(y: sin(Double(i) * .pi / 2))
+                                    .animation(Animation.easeInOut(duration: 0.5).repeatForever().delay(0.2 * Double(index)))
                             }
                         }
                         .padding(.horizontal, 16)

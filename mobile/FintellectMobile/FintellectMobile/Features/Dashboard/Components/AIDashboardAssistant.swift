@@ -1,15 +1,5 @@
 import SwiftUI
 
-// MARK: - Button Style
-struct PressableButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .opacity(configuration.isPressed ? 0.9 : 1)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
-    }
-}
-
 // MARK: - Models
 struct QuickAction: Identifiable {
     let id = UUID()
@@ -275,7 +265,9 @@ struct QuickActionButton: View {
     let onTap: () -> Void
     
     var body: some View {
-        Button(action: onTap) {
+        Button {
+            onTap()
+        } label: {
             HStack(spacing: 8) {
                 Image(systemName: action.icon)
                     .font(.system(size: 16, weight: .semibold))
@@ -321,12 +313,13 @@ struct LoadingDotsView: View {
         .background(Color(hex: "1E293B"))
         .cornerRadius(16)
         .onAppear {
-            withAnimation(Animation.easeInOut(duration: 0.5).repeatForever()) {
+            withAnimation(
+                Animation
+                    .easeInOut(duration: 0.5)
+                    .repeatForever()
+            ) {
                 animating = true
             }
-        }
-        .onDisappear {
-            animating = false
         }
     }
 }
@@ -337,7 +330,9 @@ struct CompactQuickActionButton: View {
     let onTap: () -> Void
     
     var body: some View {
-        Button(action: onTap) {
+        Button {
+            onTap()
+        } label: {
             VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: action.icon)
                     .font(.system(size: 20, weight: .semibold))
@@ -398,12 +393,12 @@ struct ChatArea: View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .font(.body)
                 
-                Button(action: {
+                Button {
                     let message = viewModel.currentMessage
                     Task {
                         await viewModel.sendMessage(message)
                     }
-                }) {
+                } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 24))
                         .foregroundColor(viewModel.currentMessage.isEmpty ? .gray : Color(hex: "3B82F6"))

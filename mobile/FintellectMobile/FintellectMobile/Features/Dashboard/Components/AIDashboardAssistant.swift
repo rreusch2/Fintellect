@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Models
 struct QuickAction: Identifiable {
@@ -432,7 +433,14 @@ struct ChatBubble: View {
                     .background(
                         message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B")
                     )
-                    .cornerRadius(16, corners: message.isUser ? [.topLeft, .topRight, .bottomLeft] : [.topLeft, .topRight, .bottomRight])
+                    .clipShape(
+                        RoundedCorner(
+                            radius: 16,
+                            corners: message.isUser ? 
+                                [UIRectCorner.topLeft, .topRight, .bottomLeft] : 
+                                [UIRectCorner.topLeft, .topRight, .bottomRight]
+                        )
+                    )
                 
                 Text(message.timestamp.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
@@ -448,17 +456,11 @@ struct ChatBubble: View {
     }
 }
 
-// MARK: - Corner Radius Extension
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
-    }
-}
-
+// MARK: - Corner Radius Shape
 struct RoundedCorner: Shape {
     var radius: CGFloat = .infinity
     var corners: UIRectCorner = .allCorners
-    
+
     func path(in rect: CGRect) -> Path {
         let path = UIBezierPath(
             roundedRect: rect,

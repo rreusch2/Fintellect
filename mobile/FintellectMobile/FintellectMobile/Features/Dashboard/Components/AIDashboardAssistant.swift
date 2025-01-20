@@ -79,7 +79,12 @@ class AIDashboardAssistantViewModel: ObservableObject {
     func sendMessage(_ message: String) async {
         guard !message.isEmpty else { return }
         
-        let userMessage = ChatMessage(content: message, isUser: true, timestamp: Date())
+        // Create and immediately append the user message
+        let userMessage = ChatMessage(
+            content: message.trimmingCharacters(in: .whitespacesAndNewlines), 
+            isUser: true, 
+            timestamp: Date()
+        )
         messages.append(userMessage)
         currentMessage = ""
         isLoading = true

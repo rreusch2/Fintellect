@@ -293,6 +293,74 @@ struct QuickActionButton: View {
     }
 }
 
+// MARK: - Loading Animation View
+struct LoadingDotsView: View {
+    @State private var animating = false
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(Color.gray.opacity(0.5))
+                    .frame(width: 8, height: 8)
+                    .offset(y: animating ? -4 : 0)
+                    .animation(
+                        Animation.easeInOut(duration: 0.5)
+                            .repeatForever()
+                            .delay(0.2 * Double(index)),
+                        value: animating
+                    )
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color(hex: "1E293B"))
+        .cornerRadius(16)
+        .onAppear { animating = true }
+        .onDisappear { animating = false }
+    }
+}
+
+// MARK: - Compact Quick Action Button
+struct CompactQuickActionButton: View {
+    let action: QuickAction
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: action.icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(action.color)
+                    .frame(width: 32, height: 32)
+                    .background(action.bgColor)
+                    .clipShape(Circle())
+                
+                Text(action.label)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                
+                Text(action.description)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(hex: "1E293B"))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(action.color.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableButtonStyle())
+    }
+}
+
 // MARK: - Chat Area
 struct ChatArea: View {
     @ObservedObject var viewModel: AIDashboardAssistantViewModel
@@ -306,19 +374,8 @@ struct ChatArea: View {
                     }
                     
                     if viewModel.isLoading {
-                        HStack(spacing: 4) {
-                            ForEach(0..<3, id: \.self) { index in
-                                Circle()
-                                    .fill(Color.gray.opacity(0.5))
-                                    .frame(width: 8, height: 8)
-                                    .animation(Animation.easeInOut(duration: 0.5).repeatForever().delay(0.2 * Double(index)))
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color(hex: "1E293B"))
-                        .cornerRadius(16)
-                        .transition(.opacity)
+                        LoadingDotsView()
+                            .transition(.opacity)
                     }
                 }
                 .padding(.vertical, 8)
@@ -463,48 +520,5 @@ struct ExpandedChatView: View {
                 }
             }
         }
-    }
-}
-
-// Add a new compact version of the quick action button for the expanded view
-struct CompactQuickActionButton: View {
-    let action: QuickAction
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 12) {
-                    Image(systemName: action.icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(action.color)
-                        .frame(width: 36, height: 36)
-                        .background(action.bgColor)
-                        .clipShape(Circle())
-                    
-                    Text(action.label)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                }
-                
-                Text(action.description)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(hex: "1E293B"))
-                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(action.color.opacity(0.3), lineWidth: 1)
-            )
-        }
-        .buttonStyle(PressableButtonStyle())
     }
 } 

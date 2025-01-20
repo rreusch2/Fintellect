@@ -170,15 +170,28 @@ ${formattedContext}
 User Question: ${message}
 
 Guidelines for your response:
-1. Be extremely concise and brief,
-2. Provide information directly related to the user's question.
-3. Use specific numbers, percentages, and currency from their data.
-4. Provide a concise recommendation based on the context.
-5. Highlight 2-3 key points in bullet points.
-6. Avoid conversational language (no "hello", "sure").
-7. Use a friendly, professional tone.
-8. Format currency as $XX.XX.
-9. Keep your response under 150 words.
+1. Be extremely concise and brief
+2. Format key metrics and insights as bullet points with "-" (not "*")
+3. Format all currency values as "$XX.XX"
+4. Format all percentages with one decimal place
+5. Organize insights in order of importance
+6. For spending categories, include the percentage in parentheses
+7. Avoid using markdown formatting like **, __, or ##
+8. Keep your response under 150 words
+9. Use clear section breaks with empty lines
+
+Example format:
+Your monthly spending overview:
+- Food & Dining: $521.45 (32.5%)
+- Entertainment: $245.30 (15.3%)
+
+Key insights:
+- Your food spending increased by $125.50 this month
+- Savings rate is below target at 8.5%
+
+Recommendations:
+- Reduce dining out expenses by $200.00
+- Set up automatic savings of $300.00
 
 Remember to base your response only on the data provided in the context. If you can't answer something specifically, be honest about it.`;
 

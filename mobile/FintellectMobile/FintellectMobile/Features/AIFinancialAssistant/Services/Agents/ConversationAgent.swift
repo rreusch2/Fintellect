@@ -4,6 +4,10 @@ class ConversationAgent: BaseAgent {
     private var conversationHistory: [String] = []
     private let maxHistoryLength = 10
     
+    init(aiService: AIServiceClient = AIServiceClient(), userId: Int) {
+        super.init(aiService: aiService, userId: userId)
+    }
+    
     func analyzeIntent(_ input: String) async throws -> Intent {
         // Use Gemini to analyze intent
         let prompt = """

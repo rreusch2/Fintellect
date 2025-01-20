@@ -7,11 +7,12 @@ class AIAgentSystem {
     private let learningAgent: LearningAgent
     private let analyticsAgent: AnalyticsAgent
     
-    init() {
-        self.conversationAgent = ConversationAgent()
-        self.insightAgent = InsightAgent()
-        self.learningAgent = LearningAgent()
-        self.analyticsAgent = AnalyticsAgent()
+    init(userId: Int = 0) { // Default userId for testing
+        let aiService = AIServiceClient()
+        self.conversationAgent = ConversationAgent(aiService: aiService, userId: userId)
+        self.insightAgent = InsightAgent(aiService: aiService, userId: userId)
+        self.learningAgent = LearningAgent(aiService: aiService, userId: userId)
+        self.analyticsAgent = AnalyticsAgent(aiService: aiService, userId: userId)
     }
     
     func processUserInput(_ input: String) async throws -> AgentResponse {

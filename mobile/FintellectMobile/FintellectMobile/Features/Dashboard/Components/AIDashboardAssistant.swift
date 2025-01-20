@@ -359,6 +359,18 @@ struct ChatArea: View {
 struct ChatBubble: View {
     let message: ChatMessage
     
+    private func shouldFormatAsStructured(_ content: String) -> Bool {
+        let keywords = [
+            "Analysis", "Overview", "Insights", "Budget",
+            "Current", "Suggestions", "Quick Wins", "Spending",
+            "Recommendations", "Next Steps", "Categories"
+        ]
+        
+        return keywords.contains { keyword in
+            content.contains(keyword)
+        }
+    }
+    
     var body: some View {
         HStack {
             if message.isUser {
@@ -378,18 +390,13 @@ struct ChatBubble: View {
             } else {
                 // For AI responses, use the formatted sections
                 VStack(alignment: .leading, spacing: 4) {
-                    // Check if the content contains sections, otherwise display as plain text
-                    if message.content.contains("Analysis") || 
-                       message.content.contains("Overview") || 
-                       message.content.contains("Insights") ||
-                       message.content.contains("Budget") ||
-                       message.content.contains("Current") ||
-                       message.content.contains("Suggestions") {
+                    if shouldFormatAsStructured(message.content) {
                         // Use formatted sections for structured responses
                         ForEach(formatSections(message.content), id: \.self) { section in
                             VStack(alignment: .leading, spacing: 8) {
                                 if let title = section.title?.replacingOccurrences(of: "**", with: "")
-                                                              .replacingOccurrences(of: ":", with: "") {
+                                                              .replacingOccurrences(of: ":", with: "")
+                                                              .trimmingCharacters(in: .whitespaces) {
                                     Text(title)
                                         .font(.headline)
                                         .foregroundColor(.white)
@@ -431,12 +438,12 @@ struct ChatBubble: View {
                 .padding(16)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(Color(hex: "0F172A"))  // Darker background for contrast
+                        .fill(Color(hex: "0F172A"))
                         .shadow(color: Color(hex: "3B82F6").opacity(0.1), radius: 8, x: 0, y: 4)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color(hex: "3B82F6").opacity(0.2), lineWidth: 1)  // Subtle blue border
+                        .stroke(Color(hex: "3B82F6").opacity(0.2), lineWidth: 1)
                 )
                 .frame(maxWidth: 300, alignment: .leading)
             }

@@ -308,58 +308,78 @@ struct ChatArea: View {
 }
 
 // MARK: - Chat Bubble
- struct ChatBubble: View {
+struct ChatBubble: View {
     let message: ChatMessage
- 
+    
     var body: some View {
         HStack {
             if message.isUser {
                 Spacer()
             }
- 
+            
             Text(formatMessageContent(message.content))
-             .padding(12)
-             .foregroundColor(.white)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                   .fill(message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B"))
-                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-            )
-            .overlay(
-                 RoundedRectangle(cornerRadius: 16)
-                     .stroke(Color.white.opacity(0.1), lineWidth: 1)
-             )
-            .frame(maxWidth: 280, alignment: message.isUser ? .trailing : .leading)
-         
+                .padding(12)
+                .foregroundColor(.white)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B"))
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+                .frame(maxWidth: 280, alignment: message.isUser ? .trailing : .leading)
+            
             if !message.isUser {
-                 Spacer()
+                Spacer()
             }
-         }
-         .padding(.horizontal, 8)
-     }
+        }
+        .padding(.horizontal, 8)
+    }
     
     private func formatMessageContent(_ content: String) -> AttributedString {
-        var attributedString = AttributedString(content)
+        var attributedString = try? AttributedString(markdown: content)
         
-         // Bullet points
-         if let range = attributedString.range(of: "- ") {
-              attributedString.replaceSubrange(range, with: "\n- ")
-         }
-
-       // Bold numbers
-        if let regex = try? NSRegularExpression(pattern: "(\\$?\\d+\\.?\\d*)", options: []) {
-            let range = NSRange(location: 0, length: attributedString.characters.count)
-            regex.enumerateMatches(in: String(attributedString), options: [], range: range) { match, _, _ in
-                if let matchRange = match?.range {
-                    if let attributedRange = Range(matchRange, in: attributedString) {
-                     attributedString[attributedRange].font = .system(.body, design: .rounded).bold()
+        if attributedString == nil {
+            attributedString = AttributedString(content)
+        }
+        
+        var finalString = attributedString ?? AttributedString(content)
+        
+        // Format bullet points
+        let bulletPoints = content.components(separatedBy: "\n")
+            .map { line -> String in
+                if line.hasPrefix("- ") {
+                    return line // Keep existing bullet points
+                }
+                return line
+            }
+            .joined(separator: "\n")
+        
+        finalString = AttributedString(bulletPoints)
+        
+        // Bold numbers and currency
+        if let regex = try? NSRegularExpression(pattern: "\\$?\\d+(?:\\.\\d{2})?%?", options: []) {
+            let nsRange = NSRange(content.startIndex..<content.endIndex, in: content)
+            let matches = regex.matches(in: content, options: [], range: nsRange)
+            
+            for match in matches.reversed() {
+                if let range = Range(match.range, in: content) {
+                    let substring = content[range]
+                    var container = AttributeContainer()
+                    container.font = .system(.body, design: .rounded, weight: .bold)
+                    
+                    if let numberRange = finalString.range(of: String(substring)) {
+                        finalString[numberRange].setAttributes(container)
                     }
                 }
-             }
+            }
         }
-         return attributedString
+        
+        return finalString
     }
- }
+}
 
 // MARK: - Expanded Chat View
 struct ExpandedChatView: View {

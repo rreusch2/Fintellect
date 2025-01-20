@@ -62,20 +62,18 @@ export class ChatbotAgent {
 
   private static formatUserContext(context: UserContextData): string {
     const transactions = context.recentTransactions;
-    const monthlyIncome = context.monthlyIncome;
     
     // Calculate spending patterns
     const spendingByCategory = transactions.reduce((acc: Record<string, number>, t) => {
       if (t.amount > 0) { // Only count expenses
-        const category = t.category;
-        acc[category] = (acc[category] || 0) + t.amount;
+        const normalizedCategory = normalizeCategory(t.category);
+        acc[normalizedCategory] = (acc[normalizedCategory] || 0) + t.amount;
       }
       return acc;
     }, {});
 
-    // Calculate savings rate
+    // Calculate total expenses
     const totalExpenses = Object.values(spendingByCategory).reduce((a: number, b: number) => a + b, 0);
-    const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - totalExpenses) / monthlyIncome) * 100 : 0;
 
     // Calculate recurring transactions
     const merchantTransactions = transactions.reduce((acc: Record<string, number[]>, t) => {
@@ -87,13 +85,12 @@ export class ChatbotAgent {
     }, {});
 
     const recurringMerchants = Object.entries(merchantTransactions)
-      .filter(([_, amounts]) => amounts.length >= 2) // At least 2 transactions
+      .filter(([_, amounts]) => amounts.length >= 2)
       .map(([merchant, amounts]) => {
         const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
         const stdDev = Math.sqrt(
           amounts.reduce((sq, n) => sq + Math.pow(n - avg, 2), 0) / amounts.length
         );
-        // Consider recurring if standard deviation is less than 10% of average
         if (stdDev / avg < 0.1) {
           return {
             merchant,
@@ -109,10 +106,8 @@ export class ChatbotAgent {
     // Format the context for the AI
     return `
 User Financial Profile:
-- Monthly Income: $${(monthlyIncome/100).toFixed(2)}
 - Total Monthly Expenses: $${(totalExpenses/100).toFixed(2)}
-- Savings Rate: ${savingsRate.toFixed(1)}%
-- Total Balance Across Accounts: $${(context.totalBalance/100).toFixed(2)}
+- Total Balance: $${(context.totalBalance/100).toFixed(2)}
 
 Account Overview:
 ${context.accounts.map(account => 
@@ -128,14 +123,14 @@ ${Object.entries(spendingByCategory)
   })
   .join('\n')}
 
-Recurring Expenses:
+${recurringMerchants.length > 0 ? `Recurring Transactions:
 ${recurringMerchants.map(r => 
   `- ${r.merchant}: $${(r.averageAmount/100).toFixed(2)} (${r.frequency} times in 30 days)`
-).join('\n')}
+).join('\n')}` : ''}
 
-Recent Transaction History:
-${transactions.slice(0, 10).map(t => 
-  `- ${new Date(t.date).toLocaleDateString()}: ${t.merchantName || t.description} - $${(t.amount/100).toFixed(2)} (${t.category})`
+Recent Transactions:
+${transactions.slice(0, 5).map(t => 
+  `- ${new Date(t.date).toLocaleDateString()}: ${t.merchantName || t.description} - $${(t.amount/100).toFixed(2)} (${normalizeCategory(t.category)})`
 ).join('\n')}
 `.trim();
   }
@@ -145,23 +140,25 @@ ${transactions.slice(0, 10).map(t =>
       const userContext = await this.getUserContext(userId);
       const formattedContext = ChatbotAgent.formatUserContext(userContext);
 
-      const prompt = `You are an AI Financial Assistant helping a user understand their finances. Use the following context about their financial situation to provide a helpful, personalized response to their question.
+      const prompt = `You are a friendly and helpful AI Financial Assistant named Fin. Your goal is to help users understand their spending and make better financial decisions. Use the following context about their financial situation to provide a helpful, personalized response.
 
 ${formattedContext}
 
 User Question: ${message}
 
 Guidelines for your response:
-1. Be concise but informative
-2. Use specific numbers and percentages from their data
-3. Provide actionable advice when relevant
-4. Focus on patterns and trends in their spending
-5. Reference account balances and recurring expenses when applicable
-6. Use a friendly, professional tone
-7. Format currency as $XX.XX
-8. Keep your response under 250 words
+1. Be concise, friendly, and conversational
+2. Use specific numbers from their data but round to whole dollars for readability
+3. Provide 1-2 actionable suggestions when relevant
+4. Focus on spending patterns and potential optimizations
+5. Mention specific merchants or transactions when relevant
+6. Keep responses short and focused - aim for 2-3 sentences
+7. Format currency as $XX
+8. Avoid mentioning income or savings rate
+9. If suggesting budget changes, focus on specific categories or merchants
+10. Use emojis sparingly to add personality (max 1-2 per response)
 
-Remember to base your response only on the data provided in the context. If you can't answer something specifically, be honest about it.`;
+Remember to base your response only on the data provided. If you can't answer something specifically, be honest about it.`;
 
       const result = await model.generateContent(prompt);
       const response = result.response.text();
@@ -169,7 +166,7 @@ Remember to base your response only on the data provided in the context. If you 
       return response.trim();
     } catch (error) {
       console.error('Error in AI chat:', error);
-      return "I apologize, but I'm having trouble analyzing your financial data right now. Please try again in a moment.";
+      return "I'm having trouble analyzing your financial data right now. Please try again in a moment. 🤔";
     }
   }
 }

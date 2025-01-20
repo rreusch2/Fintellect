@@ -322,51 +322,52 @@ struct ChatBubble: View {
                 Spacer()
             }
             
-            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
-                // Message content with enhanced formatting
-                ForEach(formatSections(message.content), id: \.self) { section in
-                    VStack(alignment: .leading, spacing: 8) {
-                        if let title = section.title {
-                            Text(title)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(message.isUser ? .white : Color(hex: "94A3B8"))
-                        }
-                        
-                        ForEach(section.items, id: \.self) { item in
-                            HStack(alignment: .top, spacing: 8) {
-                                if item.hasPrefix("-") {
-                                    Circle()
-                                        .fill(message.isUser ? .white.opacity(0.5) : Color(hex: "3B82F6"))
-                                        .frame(width: 6, height: 6)
-                                        .padding(.top, 6)
+            // For user messages, use simple text display
+            if message.isUser {
+                Text(message.content)
+                    .padding(12)
+                    .foregroundColor(.white)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(hex: "3B82F6"))
+                    )
+                    .frame(maxWidth: 280, alignment: .trailing)
+            } else {
+                // For AI responses, use the formatted sections
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(formatSections(message.content), id: \.self) { section in
+                        VStack(alignment: .leading, spacing: 8) {
+                            if let title = section.title {
+                                Text(title)
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(Color(hex: "94A3B8"))
+                            }
+                            
+                            ForEach(section.items, id: \.self) { item in
+                                HStack(alignment: .top, spacing: 8) {
+                                    if item.hasPrefix("-") {
+                                        Circle()
+                                            .fill(Color(hex: "3B82F6"))
+                                            .frame(width: 6, height: 6)
+                                            .padding(.top, 6)
+                                    }
+                                    
+                                    Text(formatMessageItem(item))
+                                        .font(.body)
+                                        .foregroundColor(Color(hex: "94A3B8"))
                                 }
-                                
-                                Text(formatMessageItem(item))
-                                    .font(.body)
-                                    .foregroundColor(message.isUser ? .white : Color(hex: "94A3B8"))
                             }
                         }
-                    }
-                    
-                    if section != formatSections(message.content).last {
-                        Divider()
-                            .background(Color(hex: "334155"))
-                            .padding(.vertical, 8)
+                        
+                        if section != formatSections(message.content).last {
+                            Divider()
+                                .background(Color(hex: "334155"))
+                                .padding(.vertical, 8)
+                        }
                     }
                 }
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B"))
-                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
-            )
-            .frame(maxWidth: 300, alignment: message.isUser ? .trailing : .leading)
             
             if !message.isUser {
                 Spacer()

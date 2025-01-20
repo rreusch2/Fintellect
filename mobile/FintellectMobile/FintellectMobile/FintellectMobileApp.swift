@@ -12,6 +12,15 @@ struct FintellectMobileApp: App {
     @StateObject private var authViewModel = AuthViewModel()
     @AppStorage("hasSeenWelcome") private var hasSeenWelcome = false
     
+    // Initialize AI services
+    init() {
+        AIServiceFactory.shared.configureServices(
+            geminiKey: ProcessInfo.processInfo.environment["GEMINI_API_KEY"] ?? "",
+            openAIKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? "",
+            deepSeekKey: ProcessInfo.processInfo.environment["DEEPSEEK_API_KEY"] ?? ""
+        )
+    }
+    
     var body: some Scene {
         WindowGroup {
             Group {

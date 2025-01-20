@@ -1,5 +1,4 @@
 import SwiftUI
-import Shared
 
 // MARK: - Models
 struct QuickAction: Identifiable {

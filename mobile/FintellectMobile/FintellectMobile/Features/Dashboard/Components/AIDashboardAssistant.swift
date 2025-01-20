@@ -390,49 +390,41 @@ struct ChatBubble: View {
             } else {
                 // For AI responses, use the formatted sections
                 VStack(alignment: .leading, spacing: 4) {
-                    if shouldFormatAsStructured(message.content) {
-                        // Use formatted sections for structured responses
-                        ForEach(formatSections(message.content), id: \.self) { section in
-                            VStack(alignment: .leading, spacing: 8) {
-                                if let title = section.title?.replacingOccurrences(of: "**", with: "")
-                                                              .replacingOccurrences(of: ":", with: "")
-                                                              .trimmingCharacters(in: .whitespaces) {
-                                    Text(title)
-                                        .font(.headline)
-                                        .foregroundColor(.white)
-                                        .padding(.bottom, 4)
-                                }
-                                
-                                ForEach(section.items, id: \.self) { item in
-                                    HStack(alignment: .top, spacing: 8) {
-                                        if item.hasPrefix("•") || item.hasPrefix("-") {
-                                            Circle()
-                                                .fill(Color(hex: "3B82F6"))
-                                                .frame(width: 6, height: 6)
-                                                .padding(.top, 6)
-                                        }
-                                        
-                                        Text(formatMessageItem(item))
-                                            .font(.body)
-                                            .foregroundColor(Color(hex: "CBD5E1"))
-                                            .lineSpacing(4)
-                                    }
-                                }
+                    let sections = formatSections(message.content)
+                    ForEach(sections, id: \.self) { section in
+                        VStack(alignment: .leading, spacing: 8) {
+                            if let title = section.title?.replacingOccurrences(of: "**", with: "")
+                                                          .replacingOccurrences(of: ":", with: "")
+                                                          .trimmingCharacters(in: .whitespaces) {
+                                Text(title)
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding(.bottom, 4)
                             }
-                            .padding(.vertical, 8)
                             
-                            if section != formatSections(message.content).last {
-                                Divider()
-                                    .background(Color(hex: "334155"))
-                                    .padding(.vertical, 8)
+                            ForEach(section.items, id: \.self) { item in
+                                HStack(alignment: .top, spacing: 8) {
+                                    if item.hasPrefix("•") || item.hasPrefix("-") {
+                                        Circle()
+                                            .fill(Color(hex: "3B82F6"))
+                                            .frame(width: 6, height: 6)
+                                            .padding(.top, 6)
+                                    }
+                                    
+                                    Text(formatMessageItem(item))
+                                        .font(.body)
+                                        .foregroundColor(Color(hex: "CBD5E1"))
+                                        .lineSpacing(4)
+                                }
                             }
                         }
-                    } else {
-                        // Use simple text display for conversational responses
-                        Text(formatMessageItem(message.content))
-                            .font(.body)
-                            .foregroundColor(Color(hex: "CBD5E1"))
-                            .lineSpacing(4)
+                        .padding(.vertical, 8)
+                        
+                        if section != sections.last {
+                            Divider()
+                                .background(Color(hex: "334155"))
+                                .padding(.vertical, 8)
+                        }
                     }
                 }
                 .padding(16)
@@ -462,7 +454,7 @@ struct ChatBubble: View {
     }
     
     private func formatSections(_ content: String) -> [Section] {
-        let lines = content.components(separatedBy: "\n")
+        let lines = content.components(separatedBy: .newlines)
         var sections: [Section] = []
         var currentTitle: String?
         var currentItems: [String] = []
@@ -470,25 +462,39 @@ struct ChatBubble: View {
         for line in lines {
             let trimmedLine = line.trimmingCharacters(in: .whitespaces)
             
+            // Skip empty lines
             if trimmedLine.isEmpty {
                 if !currentItems.isEmpty {
                     sections.append(Section(title: currentTitle, items: currentItems))
                     currentItems = []
                     currentTitle = nil
                 }
-            } else if !trimmedLine.hasPrefix("•") && !trimmedLine.hasPrefix("-") {
+                continue
+            }
+            
+            // Check if line is a title (doesn't start with bullet points or spaces)
+            if !trimmedLine.hasPrefix("•") && !trimmedLine.hasPrefix("-") && !trimmedLine.hasPrefix(" ") {
                 if !currentItems.isEmpty {
                     sections.append(Section(title: currentTitle, items: currentItems))
                     currentItems = []
                 }
                 currentTitle = trimmedLine
             } else {
-                currentItems.append(trimmedLine)
+                // It's a content item
+                if !trimmedLine.isEmpty {
+                    currentItems.append(trimmedLine)
+                }
             }
         }
         
+        // Add the last section if there are remaining items
         if !currentItems.isEmpty {
             sections.append(Section(title: currentTitle, items: currentItems))
+        }
+        
+        // If no sections were created but we have content, create a single section
+        if sections.isEmpty && !content.isEmpty {
+            sections.append(Section(title: nil, items: [content]))
         }
         
         return sections

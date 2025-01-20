@@ -1,11 +1,11 @@
 import Foundation
 
 class AnalyticsAgent: BaseAgent {
-    init(aiService: AIServiceClient = AIServiceClient(), userId: Int) {
+    override init(aiService: AIServiceClient = AIServiceClient(), userId: Int) {
         super.init(aiService: aiService, userId: userId)
     }
     
-    func analyze(_ input: String) async throws -> AgentResponse {
+    override func processRequest(_ input: String, context: [String: Any]? = nil) async throws -> AgentResponse {
         let response = try await aiService.chat(message: input)
         
         return AgentResponse(

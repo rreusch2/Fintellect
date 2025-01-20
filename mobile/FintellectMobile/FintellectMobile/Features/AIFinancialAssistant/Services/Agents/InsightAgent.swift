@@ -5,11 +5,11 @@ class InsightAgent: BaseAgent {
     private let deepSeek: DeepSeekService       // For pattern detection & insights
     private let gpt4: OpenAIService             // For complex financial advice
     
-    init(aiService: AIServiceClient = AIServiceClient(), userId: Int) {
+    override init(aiService: AIServiceClient = AIServiceClient(), userId: Int) {
         super.init(aiService: aiService, userId: userId)
     }
     
-    func generateInsight(for input: String) async throws -> AgentResponse {
+    override func processRequest(_ input: String, context: [String: Any]? = nil) async throws -> AgentResponse {
         let response = try await aiService.chat(message: input)
         
         return AgentResponse(
@@ -40,5 +40,6 @@ class InsightAgent: BaseAgent {
         // Use Gemini Pro Vision for:
         // - Chart generation and analysis
         // - Visual data interpretation
+        return []
     }
 } 

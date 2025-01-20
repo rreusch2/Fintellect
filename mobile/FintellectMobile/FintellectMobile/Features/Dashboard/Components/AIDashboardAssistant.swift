@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 // MARK: - Models
 struct QuickAction: Identifiable {
@@ -14,7 +13,7 @@ struct QuickAction: Identifiable {
     static let actions = [
         QuickAction(
             label: "Analyze Spending",
-            message: "What are my top spending categories this month and where can I cut back?",
+            message: "Can you analyze my recent spending patterns and suggest areas for improvement?",
             icon: "chart.pie.fill",
             color: Color(hex: "3B82F6"),
             bgColor: Color(hex: "3B82F6").opacity(0.2),
@@ -22,7 +21,7 @@ struct QuickAction: Identifiable {
         ),
         QuickAction(
             label: "Budget Help",
-            message: "Based on my recent transactions, what would be a realistic monthly budget?",
+            message: "Help me create a budget based on my spending patterns",
             icon: "target",
             color: Color(hex: "10B981"),
             bgColor: Color(hex: "10B981").opacity(0.2),
@@ -30,7 +29,7 @@ struct QuickAction: Identifiable {
         ),
         QuickAction(
             label: "Savings Tips",
-            message: "Looking at my spending habits, what are 3 specific ways I could save money?",
+            message: "What are some personalized saving tips based on my transaction history?",
             icon: "dollarsign.circle.fill",
             color: Color(hex: "8B5CF6"),
             bgColor: Color(hex: "8B5CF6").opacity(0.2),
@@ -38,7 +37,7 @@ struct QuickAction: Identifiable {
         ),
         QuickAction(
             label: "Recurring Charges",
-            message: "Can you identify my monthly subscriptions and recurring bills?",
+            message: "Can you identify my recurring charges and suggest potential optimizations?",
             icon: "calendar",
             color: Color(hex: "F59E0B"),
             bgColor: Color(hex: "F59E0B").opacity(0.2),
@@ -77,56 +76,6 @@ class AIDashboardAssistantViewModel: ObservableObject {
         self.aiService = aiService
     }
     
-    private func formatCategory(_ category: String) -> String {
-        let categoryMap: [String: String] = [
-            "FOOD_AND_DRINK": "Food & Dining",
-            "GENERAL_MERCHANDISE": "Shopping",
-            "GENERAL_SERVICES": "Services",
-            "TRANSPORTATION": "Transportation",
-            "TRAVEL": "Travel",
-            "ENTERTAINMENT": "Entertainment",
-            "PERSONAL_CARE": "Personal Care",
-            "BILLS_AND_UTILITIES": "Bills & Utilities",
-            "LOAN_PAYMENTS": "Loan Payments",
-            "TRANSFER": "Transfers",
-            "SHOPPING": "Shopping",
-            "FINANCIAL": "Financial",
-            "BILLS": "Bills & Utilities",
-            "HOUSING": "Housing",
-            "MEDICAL": "Healthcare",
-            "EDUCATION": "Education",
-            "BUSINESS": "Business",
-            "SUBSCRIPTION": "Subscriptions"
-        ]
-        
-        return categoryMap[category] ?? category.replacingOccurrences(of: "_", with: " ").capitalized
-    }
-    
-    private func formatMessage(_ message: String) -> String {
-        var formattedMessage = message
-        
-        // Format category names
-        let categoryPattern = /[A-Z_]+(?=\s|:|,|\.|$)/
-        formattedMessage = formattedMessage.replacing(categoryPattern) { match in
-            formatCategory(String(match.0))
-        }
-        
-        // Remove savings rate references
-        let savingsRatePattern = /your current savings rate is \d+\.?\d*%\.?/i
-        formattedMessage = formattedMessage.replacing(savingsRatePattern, with: "")
-        
-        // Remove income references when zero
-        let zeroIncomePattern = /\*\*Income:\*\* \$0\.00|your monthly income of \$0\.00/i
-        formattedMessage = formattedMessage.replacing(zeroIncomePattern, with: "")
-        
-        // Clean up any double spaces or periods
-        formattedMessage = formattedMessage.replacing(/\s+/, with: " ")
-        formattedMessage = formattedMessage.replacing(/\.+/, with: ".")
-        formattedMessage = formattedMessage.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        return formattedMessage
-    }
-    
     func sendMessage(_ message: String) async {
         guard !message.isEmpty else { return }
         
@@ -137,16 +86,17 @@ class AIDashboardAssistantViewModel: ObservableObject {
         errorMessage = nil
         
         do {
+            // Try up to maxRetries times
             var lastError: Error?
             for attempt in 0...maxRetries {
                 do {
                     if attempt > 0 {
+                        // Add a small delay between retries
                         try await Task.sleep(nanoseconds: UInt64(attempt * 500_000_000))
                     }
                     
                     let response = try await aiService.chat(message: message)
-                    let formattedMessage = formatMessage(response.message)
-                    let aiMessage = ChatMessage(content: formattedMessage, isUser: false, timestamp: Date())
+                    let aiMessage = ChatMessage(content: response.message, isUser: false, timestamp: Date())
                     messages.append(aiMessage)
                     isLoading = false
                     return
@@ -157,6 +107,7 @@ class AIDashboardAssistantViewModel: ObservableObject {
                 }
             }
             
+            // If we get here, all retries failed
             throw lastError ?? APIError.serverError("Failed to get response after \(maxRetries) attempts")
             
         } catch let error as APIError {
@@ -266,9 +217,7 @@ struct QuickActionButton: View {
     let onTap: () -> Void
     
     var body: some View {
-        Button {
-            onTap()
-        } label: {
+        Button(action: onTap) {
             HStack(spacing: 8) {
                 Image(systemName: action.icon)
                     .font(.system(size: 16, weight: .semibold))
@@ -296,120 +245,64 @@ struct QuickActionButton: View {
     }
 }
 
-// MARK: - Loading Animation View
-struct LoadingDotsView: View {
-    @State private var animating = false
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<3, id: \.self) { index in
-                Circle()
-                    .fill(Color.gray.opacity(0.5))
-                    .frame(width: 8, height: 8)
-                    .offset(y: animating ? -4 : 0)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color(hex: "1E293B"))
-        .cornerRadius(16)
-        .onAppear {
-            withAnimation(
-                Animation
-                    .easeInOut(duration: 0.5)
-                    .repeatForever()
-            ) {
-                animating = true
-            }
-        }
-    }
-}
-
-// MARK: - Compact Quick Action Button
-struct CompactQuickActionButton: View {
-    let action: QuickAction
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button {
-            onTap()
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: action.icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(action.color)
-                    .frame(width: 32, height: 32)
-                    .background(action.bgColor)
-                    .clipShape(Circle())
-                
-                Text(action.label)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                
-                Text(action.description)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .lineLimit(2)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(hex: "1E293B"))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(action.color.opacity(0.3), lineWidth: 1)
-            )
-        }
-        .buttonStyle(PressableButtonStyle())
-    }
-}
-
 // MARK: - Chat Area
 struct ChatArea: View {
     @ObservedObject var viewModel: AIDashboardAssistantViewModel
+    private let scrollProxy = ScrollViewProxy.self
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             ScrollView {
-                LazyVStack(spacing: 16) {
-                    ForEach(viewModel.messages) { message in
-                        ChatBubble(message: message)
+                ScrollViewReader { proxy in
+                    LazyVStack(spacing: 12) {
+                        ForEach(viewModel.messages) { message in
+                            ChatBubble(message: message)
+                                .id(message.id)
+                        }
+                        
+                        if viewModel.isLoading {
+                            HStack(spacing: 4) {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Thinking...")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                        }
                     }
-                    
-                    if viewModel.isLoading {
-                        LoadingDotsView()
-                            .transition(.opacity)
+                    .padding(.vertical, 8)
+                    .onChange(of: viewModel.messages) { messages in
+                        if let lastMessage = messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
+                        }
                     }
                 }
-                .padding(.vertical, 8)
             }
-            .animation(.spring(), value: viewModel.messages)
+            .frame(maxHeight: viewModel.isExpanded ? .infinity : 200)
             
-            // Input Area
             HStack(spacing: 12) {
-                TextField("Ask a question...", text: $viewModel.currentMessage)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .font(.body)
+                TextField("Ask about your finances...", text: $viewModel.currentMessage)
+                    .textFieldStyle(CustomTextFieldStyle())
                 
                 Button {
-                    let message = viewModel.currentMessage
                     Task {
-                        await viewModel.sendMessage(message)
+                        await viewModel.sendMessage(viewModel.currentMessage)
                     }
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(viewModel.currentMessage.isEmpty ? .gray : Color(hex: "3B82F6"))
+                        .foregroundColor(Color(hex: "3B82F6"))
+                        .frame(width: 44, height: 44)
+                        .background(Color(hex: "1E293B"))
+                        .clipShape(Circle())
                 }
                 .disabled(viewModel.currentMessage.isEmpty || viewModel.isLoading)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 12)
-            .background(Color(hex: "1E293B"))
-            .cornerRadius(16)
+            .padding(.bottom, 8)
         }
     }
 }
@@ -421,53 +314,28 @@ struct ChatBubble: View {
     var body: some View {
         HStack {
             if message.isUser {
-                Spacer(minLength: 60)
+                Spacer()
             }
             
-            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
-                Text(message.content)
-                    .font(.body)
-                    .foregroundColor(message.isUser ? .white : .white.opacity(0.95))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B")
-                    )
-                    .clipShape(
-                        RoundedCorner(
-                            radius: 16,
-                            corners: message.isUser ? 
-                                [UIRectCorner.topLeft, .topRight, .bottomLeft] : 
-                                [UIRectCorner.topLeft, .topRight, .bottomRight]
-                        )
-                    )
-                
-                Text(message.timestamp.formatted(date: .omitted, time: .shortened))
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                    .padding(.horizontal, 4)
-            }
+            Text(message.content)
+                .padding(12)
+                .foregroundColor(.white)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B"))
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+                .frame(maxWidth: 280, alignment: message.isUser ? .trailing : .leading)
             
             if !message.isUser {
-                Spacer(minLength: 60)
+                Spacer()
             }
         }
-        .transition(.move(edge: message.isUser ? .trailing : .leading))
-    }
-}
-
-// MARK: - Corner Radius Shape
-struct RoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
+        .padding(.horizontal, 8)
     }
 }
 
@@ -517,5 +385,48 @@ struct ExpandedChatView: View {
                 }
             }
         }
+    }
+}
+
+// Add a new compact version of the quick action button for the expanded view
+struct CompactQuickActionButton: View {
+    let action: QuickAction
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    Image(systemName: action.icon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(action.color)
+                        .frame(width: 36, height: 36)
+                        .background(action.bgColor)
+                        .clipShape(Circle())
+                    
+                    Text(action.label)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                }
+                
+                Text(action.description)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(hex: "1E293B"))
+                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(action.color.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableButtonStyle())
     }
 } 

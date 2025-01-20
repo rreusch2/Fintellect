@@ -322,16 +322,62 @@ struct ChatBubble: View {
                 Spacer()
             }
             
-            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 8) {
+            // For user messages, use simple text display
+            if message.isUser {
                 Text(message.content)
-                    .fixedSize(horizontal: false, vertical: true) // Prevents truncation
                     .padding(12)
                     .foregroundColor(.white)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(message.isUser ? Color(hex: "3B82F6") : Color(hex: "1E293B"))
+                            .fill(Color(hex: "3B82F6"))
                     )
-                    .frame(maxWidth: 280, alignment: message.isUser ? .trailing : .leading)
+                    .frame(maxWidth: 280, alignment: .trailing)
+            } else {
+                // For AI responses, use the formatted sections
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(formatSections(message.content), id: \.self) { section in
+                        VStack(alignment: .leading, spacing: 8) {
+                            if let title = section.title?.replacingOccurrences(of: "**", with: "") {
+                                Text(title)
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(Color(hex: "94A3B8"))
+                            }
+                            
+                            ForEach(section.items, id: \.self) { item in
+                                HStack(alignment: .top, spacing: 8) {
+                                    if item.hasPrefix("•") || item.hasPrefix("-") {
+                                        Circle()
+                                            .fill(Color(hex: "3B82F6"))
+                                            .frame(width: 6, height: 6)
+                                            .padding(.top, 6)
+                                    }
+                                    
+                                    Text(formatMessageItem(item))
+                                        .font(.body)
+                                        .foregroundColor(Color(hex: "94A3B8"))
+                                }
+                            }
+                        }
+                        
+                        if section != formatSections(message.content).last {
+                            Divider()
+                                .background(Color(hex: "334155"))
+                                .padding(.vertical, 8)
+                        }
+                    }
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color(hex: "1E293B"))
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+                .frame(maxWidth: 300, alignment: .leading)
             }
             
             if !message.isUser {
@@ -339,6 +385,84 @@ struct ChatBubble: View {
             }
         }
         .padding(.horizontal, 8)
+    }
+    
+    // Helper struct for organizing message content
+    private struct Section: Hashable {
+        let title: String?
+        let items: [String]
+    }
+    
+    private func formatSections(_ content: String) -> [Section] {
+        let lines = content.components(separatedBy: "\n")
+        var sections: [Section] = []
+        var currentTitle: String?
+        var currentItems: [String] = []
+        
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            
+            if trimmedLine.isEmpty {
+                if !currentItems.isEmpty {
+                    sections.append(Section(title: currentTitle, items: currentItems))
+                    currentItems = []
+                    currentTitle = nil
+                }
+            } else if !trimmedLine.hasPrefix("•") && !trimmedLine.hasPrefix("-") {
+                if !currentItems.isEmpty {
+                    sections.append(Section(title: currentTitle, items: currentItems))
+                    currentItems = []
+                }
+                currentTitle = trimmedLine
+            } else {
+                currentItems.append(trimmedLine)
+            }
+        }
+        
+        if !currentItems.isEmpty {
+            sections.append(Section(title: currentTitle, items: currentItems))
+        }
+        
+        return sections
+    }
+    
+    private func formatMessageItem(_ item: String) -> AttributedString {
+        var attributedString = AttributedString(item.replacingOccurrences(of: "- ", with: "")
+                                                  .replacingOccurrences(of: "• ", with: ""))
+        
+        // Format currency
+        if let regex = try? NSRegularExpression(pattern: "\\$\\d+(?:,\\d{3})*\\.\\d{2}", options: []) {
+            let nsRange = NSRange(item.startIndex..<item.endIndex, in: item)
+            let matches = regex.matches(in: item, options: [], range: nsRange)
+            
+            for match in matches.reversed() {
+                if let range = Range(match.range, in: item) {
+                    let substring = item[range]
+                    if let matchRange = attributedString.range(of: String(substring)) {
+                        attributedString[matchRange].foregroundColor = Color(hex: "34D399")
+                        attributedString[matchRange].font = .system(.body, design: .rounded, weight: .bold)
+                    }
+                }
+            }
+        }
+        
+        // Format percentages
+        if let regex = try? NSRegularExpression(pattern: "\\d+\\.?\\d*%", options: []) {
+            let nsRange = NSRange(item.startIndex..<item.endIndex, in: item)
+            let matches = regex.matches(in: item, options: [], range: nsRange)
+            
+            for match in matches.reversed() {
+                if let range = Range(match.range, in: item) {
+                    let substring = item[range]
+                    if let matchRange = attributedString.range(of: String(substring)) {
+                        attributedString[matchRange].foregroundColor = Color(hex: "3B82F6")
+                        attributedString[matchRange].font = .system(.body, design: .rounded, weight: .bold)
+                    }
+                }
+            }
+        }
+        
+        return attributedString
     }
 }
 

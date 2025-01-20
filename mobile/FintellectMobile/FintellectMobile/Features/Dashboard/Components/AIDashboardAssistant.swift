@@ -79,31 +79,38 @@ class AIDashboardAssistantViewModel: ObservableObject {
     func sendMessage(_ message: String) async {
         guard !message.isEmpty else { return }
         
-        // Create and immediately append the user message
         let userMessage = ChatMessage(
             content: message.trimmingCharacters(in: .whitespacesAndNewlines), 
             isUser: true, 
             timestamp: Date()
         )
-        messages.append(userMessage)
-        currentMessage = ""
-        isLoading = true
-        errorMessage = nil
+        
+        await MainActor.run {
+            messages.append(userMessage)
+            currentMessage = ""
+            isLoading = true
+            errorMessage = nil
+        }
         
         do {
-            // Try up to maxRetries times
             var lastError: Error?
             for attempt in 0...maxRetries {
                 do {
                     if attempt > 0 {
-                        // Add a small delay between retries
                         try await Task.sleep(nanoseconds: UInt64(attempt * 500_000_000))
                     }
                     
                     let response = try await aiService.chat(message: message)
-                    let aiMessage = ChatMessage(content: response.message, isUser: false, timestamp: Date())
-                    messages.append(aiMessage)
-                    isLoading = false
+                    
+                    await MainActor.run {
+                        let aiMessage = ChatMessage(
+                            content: response.message,
+                            isUser: false,
+                            timestamp: Date()
+                        )
+                        self.messages.append(aiMessage)
+                        self.isLoading = false
+                    }
                     return
                 } catch {
                     lastError = error
@@ -112,16 +119,19 @@ class AIDashboardAssistantViewModel: ObservableObject {
                 }
             }
             
-            // If we get here, all retries failed
             throw lastError ?? APIError.serverError("Failed to get response after \(maxRetries) attempts")
             
         } catch let error as APIError {
-            handleError(error)
+            await MainActor.run {
+                handleError(error)
+                isLoading = false
+            }
         } catch {
-            handleError(APIError.serverError(error.localizedDescription))
+            await MainActor.run {
+                handleError(APIError.serverError(error.localizedDescription))
+                isLoading = false
+            }
         }
-        
-        isLoading = false
     }
     
     private func handleError(_ error: APIError) {
@@ -197,8 +207,8 @@ struct AIDashboardAssistant: View {
             
             // Quick Actions Grid
             LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
             ], spacing: 12) {
                 ForEach(QuickAction.actions) { action in
                     QuickActionButton(action: action) {
@@ -236,19 +246,29 @@ struct QuickActionButton: View {
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 8) {
-                Image(systemName: action.icon)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(action.color)
-                    .frame(width: 24, height: 24)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Image(systemName: action.icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(action.color)
+                        .frame(width: 24, height: 24)
+                    
+                    Text(action.label)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    
+                    Spacer(minLength: 0)
+                }
                 
-                Text(action.label)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
+                Text(action.description)
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "94A3B8"))
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color(hex: "1E293B"))
@@ -260,6 +280,7 @@ struct QuickActionButton: View {
             )
         }
         .buttonStyle(PressableButtonStyle())
+        .frame(height: 72) // Fixed height for consistency
     }
 }
 

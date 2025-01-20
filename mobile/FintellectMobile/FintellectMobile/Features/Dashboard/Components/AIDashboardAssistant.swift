@@ -335,36 +335,47 @@ struct ChatBubble: View {
             } else {
                 // For AI responses, use the formatted sections
                 VStack(alignment: .leading, spacing: 4) {
-                    ForEach(formatSections(message.content), id: \.self) { section in
-                        VStack(alignment: .leading, spacing: 8) {
-                            if let title = section.title?.replacingOccurrences(of: "**", with: "") {
-                                Text(title)
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(Color(hex: "94A3B8"))
-                            }
-                            
-                            ForEach(section.items, id: \.self) { item in
-                                HStack(alignment: .top, spacing: 8) {
-                                    if item.hasPrefix("•") || item.hasPrefix("-") {
-                                        Circle()
-                                            .fill(Color(hex: "3B82F6"))
-                                            .frame(width: 6, height: 6)
-                                            .padding(.top, 6)
-                                    }
-                                    
-                                    Text(formatMessageItem(item))
-                                        .font(.body)
+                    // Check if the content contains sections, otherwise display as plain text
+                    if message.content.contains("Analysis") || 
+                       message.content.contains("Overview") || 
+                       message.content.contains("Insights") {
+                        // Use formatted sections for structured responses
+                        ForEach(formatSections(message.content), id: \.self) { section in
+                            VStack(alignment: .leading, spacing: 8) {
+                                if let title = section.title?.replacingOccurrences(of: "**", with: "") {
+                                    Text(title)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
                                         .foregroundColor(Color(hex: "94A3B8"))
                                 }
+                                
+                                ForEach(section.items, id: \.self) { item in
+                                    HStack(alignment: .top, spacing: 8) {
+                                        if item.hasPrefix("•") || item.hasPrefix("-") {
+                                            Circle()
+                                                .fill(Color(hex: "3B82F6"))
+                                                .frame(width: 6, height: 6)
+                                                .padding(.top, 6)
+                                        }
+                                        
+                                        Text(formatMessageItem(item))
+                                            .font(.body)
+                                            .foregroundColor(Color(hex: "94A3B8"))
+                                    }
+                                }
+                            }
+                            
+                            if section != formatSections(message.content).last {
+                                Divider()
+                                    .background(Color(hex: "334155"))
+                                    .padding(.vertical, 8)
                             }
                         }
-                        
-                        if section != formatSections(message.content).last {
-                            Divider()
-                                .background(Color(hex: "334155"))
-                                .padding(.vertical, 8)
-                        }
+                    } else {
+                        // Use simple text display for conversational responses
+                        Text(formatMessageItem(message.content))
+                            .font(.body)
+                            .foregroundColor(Color(hex: "94A3B8"))
                     }
                 }
                 .padding(16)

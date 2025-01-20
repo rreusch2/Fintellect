@@ -2,91 +2,20 @@ import SwiftUI
 
 struct AIFinancialAssistantView: View {
     @StateObject private var viewModel = AIFinancialAssistantViewModel()
-    @Environment(\.dismiss) var dismiss
-    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("AI Assistant")
-                    .font(.headline)
-                
-                Spacer()
-                
-                Text("BETA")
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color(hex: "3B82F6"))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color(hex: "3B82F6").opacity(0.2))
-                    .cornerRadius(4)
-                
-                Button("Done") {
-                    dismiss()
-                }
-                .foregroundColor(Color(hex: "3B82F6"))
+        ScrollView {
+            VStack(spacing: 24) {
+                PremiumBadge()
+                MainAssistantCard(viewModel: viewModel)
+                ProactiveInsightsSection(insights: viewModel.proactiveInsights)
+                LearningHubSection(modules: viewModel.learningModules)
             }
-            .padding()
-            .background(colorScheme == .dark ? Color(hex: "111827") : .white)
-            
-            // Quick Actions
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(QuickAction.actions) { action in
-                        QuickActionButton(action: action) {
-                            Task {
-                                await viewModel.sendMessage(action.message)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-            }
-            
-            // Chat Messages
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    ForEach(viewModel.messages) { message in
-                        ChatBubble(message: message)
-                    }
-                    
-                    if viewModel.isLoading {
-                        HStack {
-                            LoadingDots()
-                            Spacer()
-                        }
-                        .padding(.horizontal, 8)
-                    }
-                }
-                .padding(.vertical, 8)
-            }
-            .background(colorScheme == .dark ? Color(hex: "111827") : Color(hex: "F9FAFB"))
-            
-            // Input
-            HStack(spacing: 12) {
-                TextField("Message Fin...", text: $viewModel.currentMessage)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(colorScheme == .dark ? Color(hex: "1F2937") : .white)
-                    .cornerRadius(20)
-                
-                Button {
-                    Task {
-                        await viewModel.sendMessage(viewModel.currentMessage)
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(Color(hex: "3B82F6"))
-                }
-                .disabled(viewModel.currentMessage.isEmpty || viewModel.isLoading)
-            }
-            .padding()
-            .background(colorScheme == .dark ? Color(hex: "111827") : .white)
+            .padding(.vertical, 24)
         }
+        .background(BackgroundView())
+        .navigationTitle("AI Assistant")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -434,64 +363,6 @@ struct ChatMessageBubble: View {
             return .white
         case .assistant, .system:
             return Color(hex: "E5E7EB")
-        }
-    }
-}
-
-struct ChatBubble: View {
-    let message: ChatMessage
-    @Environment(\.colorScheme) var colorScheme
-    
-    var body: some View {
-        HStack {
-            if message.isUser {
-                Spacer()
-            }
-            
-            Text(message.content)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(
-                    message.isUser ?
-                    Color(hex: "3B82F6") :
-                    (colorScheme == .dark ? Color(hex: "1F2937") : Color(hex: "F3F4F6"))
-                )
-                .foregroundColor(
-                    message.isUser ? .white :
-                    (colorScheme == .dark ? .white : .primary)
-                )
-                .cornerRadius(18)
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-            
-            if !message.isUser {
-                Spacer()
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-    }
-}
-
-struct LoadingDots: View {
-    @State private var currentDot = 0
-    let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<3) { index in
-                Circle()
-                    .fill(Color(hex: "3B82F6"))
-                    .frame(width: 6, height: 6)
-                    .scaleEffect(currentDot == index ? 1.2 : 0.8)
-                    .animation(.easeInOut(duration: 0.3), value: currentDot)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(hex: "1F2937"))
-        .cornerRadius(18)
-        .onReceive(timer) { _ in
-            currentDot = (currentDot + 1) % 3
         }
     }
 }

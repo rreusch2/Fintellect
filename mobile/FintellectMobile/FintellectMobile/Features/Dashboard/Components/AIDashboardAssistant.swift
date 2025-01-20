@@ -1,5 +1,15 @@
 import SwiftUI
 
+// MARK: - Button Style
+struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
 // MARK: - Models
 struct QuickAction: Identifiable {
     let id = UUID()
@@ -304,20 +314,20 @@ struct LoadingDotsView: View {
                     .fill(Color.gray.opacity(0.5))
                     .frame(width: 8, height: 8)
                     .offset(y: animating ? -4 : 0)
-                    .animation(
-                        Animation.easeInOut(duration: 0.5)
-                            .repeatForever()
-                            .delay(0.2 * Double(index)),
-                        value: animating
-                    )
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(Color(hex: "1E293B"))
         .cornerRadius(16)
-        .onAppear { animating = true }
-        .onDisappear { animating = false }
+        .onAppear {
+            withAnimation(Animation.easeInOut(duration: 0.5).repeatForever()) {
+                animating = true
+            }
+        }
+        .onDisappear {
+            animating = false
+        }
     }
 }
 
@@ -461,16 +471,6 @@ struct RoundedCorner: Shape {
             cornerRadii: CGSize(width: radius, height: radius)
         )
         return Path(path.cgPath)
-    }
-}
-
-// MARK: - Pressable Button Style
-struct PressableButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .opacity(configuration.isPressed ? 0.9 : 1)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 

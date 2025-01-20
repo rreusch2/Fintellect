@@ -66,45 +66,69 @@ export class ChatbotAgent {
     
     // Calculate spending patterns
     const spendingByCategory = transactions.reduce((acc: Record<string, number>, t) => {
-      if (t.amount > 0) { // Only count expenses
-        const category = t.category;
-        acc[category] = (acc[category] || 0) + t.amount;
-      }
-      return acc;
+        if (t.amount > 0) { // Only count expenses
+            const category = t.category;
+            acc[category] = (acc[category] || 0) + t.amount;
+        }
+        return acc;
     }, {});
+
+   //Find the biggest expense category
+    let largestCategory = null;
+    let largestAmount = 0;
+    for (const category in spendingByCategory){
+        if (spendingByCategory[category] > largestAmount){
+            largestAmount = spendingByCategory[category];
+            largestCategory = category;
+        }
+    }
+
+    // Calculate total expenses
+    const totalExpenses = Object.values(spendingByCategory).reduce((a: number, b: number) => a + b, 0);
 
     // Calculate savings rate
-    const totalExpenses = Object.values(spendingByCategory).reduce((a: number, b: number) => a + b, 0);
     const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - totalExpenses) / monthlyIncome) * 100 : 0;
 
-    // Calculate recurring transactions
+     // Calculate recurring transactions
     const merchantTransactions = transactions.reduce((acc: Record<string, number[]>, t) => {
-      if (t.merchantName && t.amount > 0) {
-        if (!acc[t.merchantName]) acc[t.merchantName] = [];
-        acc[t.merchantName].push(t.amount);
-      }
-      return acc;
+        if (t.merchantName && t.amount > 0) {
+          if (!acc[t.merchantName]) acc[t.merchantName] = [];
+           acc[t.merchantName].push(t.amount);
+        }
+         return acc;
+        }, {});
+
+      const recurringMerchants = Object.entries(merchantTransactions)
+          .filter(([_, amounts]) => amounts.length >= 2) // At least 2 transactions
+          .map(([merchant, amounts]) => {
+          const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+          const stdDev = Math.sqrt(
+              amounts.reduce((sq, n) => sq + Math.pow(n - avg, 2), 0) / amounts.length
+              );
+        // Consider recurring if standard deviation is less than 10% of average
+            if (stdDev / avg < 0.1) {
+                return {
+                merchant,
+                averageAmount: avg,
+                frequency: amounts.length
+            };
+           }
+            return null;
+            })
+         .filter((x): x is NonNullable<typeof x> => x !== null)
+          .sort((a, b) => b.averageAmount - a.averageAmount);
+
+    // Find recent transactions (Only 1 per category)
+    const recentTransactionByCategory = transactions.reduce((acc: Record<string, typeof plaidTransactions.$inferSelect>, t) => {
+        if (!acc[t.category]) {
+            acc[t.category] = t;
+        }
+        return acc;
     }, {});
 
-    const recurringMerchants = Object.entries(merchantTransactions)
-      .filter(([_, amounts]) => amounts.length >= 2) // At least 2 transactions
-      .map(([merchant, amounts]) => {
-        const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
-        const stdDev = Math.sqrt(
-          amounts.reduce((sq, n) => sq + Math.pow(n - avg, 2), 0) / amounts.length
-        );
-        // Consider recurring if standard deviation is less than 10% of average
-        if (stdDev / avg < 0.1) {
-          return {
-            merchant,
-            averageAmount: avg,
-            frequency: amounts.length
-          };
-        }
-        return null;
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null)
-      .sort((a, b) => b.averageAmount - a.averageAmount);
+  const recentTransactionDetails = Object.entries(recentTransactionByCategory).map(([category, t]) => {
+    return `- ${category}: ${t.merchantName || t.description} - $${(t.amount/100).toFixed(2)}`
+}).join('\n');
 
     // Format the context for the AI
     return `
@@ -113,53 +137,48 @@ User Financial Profile:
 - Total Monthly Expenses: $${(totalExpenses/100).toFixed(2)}
 - Savings Rate: ${savingsRate.toFixed(1)}%
 - Total Balance Across Accounts: $${(context.totalBalance/100).toFixed(2)}
-
-Account Overview:
-${context.accounts.map(account => 
-  `- ${account.name} (${account.type}): $${(account.currentBalance/100).toFixed(2)}`
-).join('\n')}
+- Largest Spending Category: ${largestCategory}
 
 Spending by Category (Last 30 Days):
 ${Object.entries(spendingByCategory)
-  .sort(([,a], [,b]) => b - a)
-  .map(([category, amount]) => {
-    const percentage = ((amount / totalExpenses) * 100).toFixed(1);
-    return `- ${category}: $${(amount/100).toFixed(2)} (${percentage}% of total)`;
-  })
-  .join('\n')}
+        .sort(([,a], [,b]) => b - a)
+        .map(([category, amount]) => {
+        const percentage = ((amount / totalExpenses) * 100).toFixed(1);
+        return `- ${category}: $${(amount/100).toFixed(2)} (${percentage}%)`;
+    })
+.join('\n')}
 
 Recurring Expenses:
-${recurringMerchants.map(r => 
-  `- ${r.merchant}: $${(r.averageAmount/100).toFixed(2)} (${r.frequency} times in 30 days)`
+${recurringMerchants.slice(0,3).map(r => // Show max 3 recurring expenses
+`- ${r.merchant}: $${(r.averageAmount/100).toFixed(2)} (${r.frequency} times in 30 days)`
 ).join('\n')}
-
-Recent Transaction History:
-${transactions.slice(0, 10).map(t => 
-  `- ${new Date(t.date).toLocaleDateString()}: ${t.merchantName || t.description} - $${(t.amount/100).toFixed(2)} (${t.category})`
-).join('\n')}
+    
+Recent Transactions (1 per category):
+${recentTransactionDetails}
 `.trim();
-  }
+}
 
   public async chat(userId: number, message: string): Promise<string> {
     try {
       const userContext = await this.getUserContext(userId);
       const formattedContext = ChatbotAgent.formatUserContext(userContext);
 
-      const prompt = `You are an AI Financial Assistant helping a user understand their finances. Use the following context about their financial situation to provide a helpful, personalized response to their question.
+      const prompt = `You are a concise AI Financial Assistant helping a user understand their finances. Use the following context about their financial situation to provide a helpful, personalized response to their question.
 
 ${formattedContext}
 
 User Question: ${message}
 
 Guidelines for your response:
-1. Be concise but informative
-2. Use specific numbers and percentages from their data
-3. Provide actionable advice when relevant
-4. Focus on patterns and trends in their spending
-5. Reference account balances and recurring expenses when applicable
-6. Use a friendly, professional tone
-7. Format currency as $XX.XX
-8. Keep your response under 250 words
+1. Be extremely concise and brief,
+2. Provide information directly related to the user's question.
+3. Use specific numbers, percentages, and currency from their data.
+4. Provide a concise recommendation based on the context.
+5. Highlight 2-3 key points in bullet points.
+6. Avoid conversational language (no "hello", "sure").
+7. Use a friendly, professional tone.
+8. Format currency as $XX.XX.
+9. Keep your response under 150 words.
 
 Remember to base your response only on the data provided in the context. If you can't answer something specifically, be honest about it.`;
 

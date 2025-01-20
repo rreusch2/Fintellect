@@ -202,124 +202,112 @@ ${transactions
       const formattedContext = ChatbotAgent.formatUserContext(userContext);
       let prompt = '';
 
-      // Determine if this is a quick action or custom message
-      if (message.includes("analyze my recent spending patterns")) {
-        prompt = `You are a financial analyst focusing on spending patterns. Analyze the following transaction data and provide specific insights:
+      // Match quick actions more accurately
+      if (message.toLowerCase().includes("analyze") && message.toLowerCase().includes("spending")) {
+        prompt = `You are a financial analyst. Analyze this transaction data concisely:
 
 ${formattedContext}
 
-Focus on:
-• Category breakdown with specific merchant insights
-• Month-over-month spending changes
-• Unusual spending patterns or large transactions
-• Category-specific recommendations
-
-Format your response as:
+Format your response in 3 short sections:
 Spending Analysis
-• Show top 3 spending categories with percentages and key merchants
-• Highlight any significant changes or patterns
+• Top 2-3 categories with percentages and frequent merchants
+• Notable spending patterns
 
 Key Insights
-• Focus on specific merchant patterns and frequency
-• Identify potential areas of overspending
+• Most significant merchant patterns
+• Areas of potential overspending
 
 Recommendations
-• Provide category-specific actionable tips
-• Suggest specific merchant alternatives or loyalty programs`;
+• 2-3 specific, actionable tips with merchant names
+• Focus on immediate savings opportunities
 
-      } else if (message.includes("create a budget")) {
-        prompt = `You are a budget planning specialist. Create a personalized budget based on this transaction data:
+Keep each section brief and focused on the most important insights.`;
+
+      } else if (message.toLowerCase().includes("budget") && message.toLowerCase().includes("help")) {
+        prompt = `You are a budget specialist. Create a quick budget plan:
 
 ${formattedContext}
 
-Focus on:
-• Actual spending patterns vs recommended allocations
-• Category-specific budget suggestions
-• Fixed vs variable expenses
-• Practical saving opportunities
+Format your response in 3 brief sections:
+Current Overview
+• Key spending categories and their percentages
+• Fixed vs variable expenses breakdown
 
-Format your response as:
-Current Spending Overview
-• Break down fixed vs variable expenses
-• Highlight key spending categories
+Budget Suggestions
+• 2-3 specific category allocations based on spending
+• Highlight areas needing adjustment
 
-Suggested Budget Allocation
-• Provide specific category budgets based on current spending
-• Include practical adjustment recommendations
+Next Steps
+• 2-3 immediate actions to implement this budget
+• Focus on largest spending categories
+
+Be specific but concise, using real merchant names and amounts.`;
+
+      } else if (message.toLowerCase().includes("saving") && message.toLowerCase().includes("tips")) {
+        prompt = `You are a savings advisor. Find specific saving opportunities:
+
+${formattedContext}
+
+Format your response in 3 short sections:
+Quick Wins
+• 2-3 immediate saving opportunities with specific merchants
+• Potential monthly savings amounts
+
+Merchant Comparisons
+• Compare prices at frequently visited places
+• Suggest specific alternatives
+
+Action Items
+• 2-3 specific steps to capture these savings
+• Focus on largest potential impact
+
+Use real merchant names and specific dollar amounts.`;
+
+      } else if (message.toLowerCase().includes("recurring") && message.toLowerCase().includes("charges")) {
+        prompt = `You are a subscription analyst. Review recurring charges:
+
+${formattedContext}
+
+Format your response in 3 brief sections:
+Current Subscriptions
+• List identified recurring payments
+• Highlight any concerning patterns
+
+Optimization Options
+• 2-3 specific opportunities to reduce costs
+• Potential duplicate or overlapping services
 
 Action Steps
-• List specific steps to implement the budget
-• Include category-specific saving strategies`;
+• 2-3 immediate steps to optimize charges
+• Specific savings estimates
 
-      } else if (message.includes("saving tips")) {
-        prompt = `You are a savings optimization specialist. Analyze this transaction data for saving opportunities:
-
-${formattedContext}
-
-Focus on:
-• Recurring expenses that could be reduced
-• Similar merchants with price differences
-• Frequency of specific transaction types
-• Potential loyalty program benefits
-
-Format your response as:
-Savings Opportunities
-• List specific merchants and potential savings
-• Compare similar merchant prices
-
-Quick Wins
-• Immediate actions for saving money
-• Specific loyalty programs or rewards to consider
-
-Long-term Strategies
-• Sustainable changes for ongoing savings
-• Category-specific optimization tips`;
-
-      } else if (message.includes("recurring charges")) {
-        prompt = `You are a subscription and recurring payment specialist. Analyze these transactions for recurring charges:
-
-${formattedContext}
-
-Focus on:
-• Identifying all recurring payments
-• Subscription overlap analysis
-• Price changes in recurring charges
-• Similar service consolidation opportunities
-
-Format your response as:
-Recurring Charges Overview
-• List all identified recurring payments
-• Highlight any price changes or variations
-
-Optimization Opportunities
-• Identify potential subscription overlaps
-• Suggest service consolidation options
-
-Action Plan
-• Specific steps to optimize recurring charges
-• Alternative service recommendations`;
+Focus on actual recurring transactions found in the data.`;
 
       } else {
-        // Custom message prompt
-        prompt = `You are a helpful financial assistant. The user asks: "${message}"
+        // Custom message prompt - keep it conversational and specific
+        prompt = `You are a friendly financial assistant. The user asks: "${message}"
 
 ${formattedContext}
 
-Provide a natural, conversational response that:
-1. Directly addresses their specific question
-2. Uses their actual transaction data for context
-3. Gives personalized, actionable advice
-4. Maintains a friendly, helpful tone
+Provide a brief, natural response that:
+1. Directly answers their question using their transaction data
+2. Mentions specific merchants and amounts
+3. Gives 1-2 actionable suggestions
+4. Stays friendly and conversational
 
-Focus on being specific and relevant to their question while referencing their actual spending patterns and merchants.
-Avoid generic advice - use their real transaction data to provide insights.
-Format the response in a natural, conversational way rather than using strict sections.`;
+Keep the response under 100 words and focus on their specific question.
+Use bullet points only if it helps clarity.
+Reference actual merchants and transactions from their data.`;
       }
 
       const result = await model.generateContent(prompt);
       const response = result.response.text();
       
-      return response.trim();
+      // Post-process to ensure consistent formatting
+      return response.trim()
+        .replace(/\*\*/g, '')  // Remove any asterisks
+        .replace(/_/g, '')     // Remove any underscores
+        .replace(/\n\n\n+/g, '\n\n'); // Remove excessive line breaks
     } catch (error) {
       console.error('Error in AI chat:', error);
       return "I apologize, but I'm having trouble analyzing your transaction data right now. Please try again in a moment.";

@@ -46,7 +46,7 @@ actor AIServiceClient {
 // MARK: - Response Models
 struct AIResponse: Codable {
     let message: String
-    let type: String
+    let type: String?
     let metadata: AIMetadata?
 }
 

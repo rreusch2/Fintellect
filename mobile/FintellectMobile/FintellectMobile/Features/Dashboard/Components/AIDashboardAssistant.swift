@@ -381,11 +381,15 @@ struct ChatBubble: View {
                     // Check if the content contains sections, otherwise display as plain text
                     if message.content.contains("Analysis") || 
                        message.content.contains("Overview") || 
-                       message.content.contains("Insights") {
+                       message.content.contains("Insights") ||
+                       message.content.contains("Budget") ||
+                       message.content.contains("Current") ||
+                       message.content.contains("Suggestions") {
                         // Use formatted sections for structured responses
                         ForEach(formatSections(message.content), id: \.self) { section in
                             VStack(alignment: .leading, spacing: 8) {
-                                if let title = section.title?.replacingOccurrences(of: "**", with: "") {
+                                if let title = section.title?.replacingOccurrences(of: "**", with: "")
+                                                              .replacingOccurrences(of: ":", with: "") {
                                     Text(title)
                                         .font(.headline)
                                         .foregroundColor(.white)

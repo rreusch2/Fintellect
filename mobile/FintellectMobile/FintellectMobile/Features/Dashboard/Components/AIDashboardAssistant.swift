@@ -1,4 +1,5 @@
 import SwiftUI
+import Shared
 
 // MARK: - Models
 struct QuickAction: Identifiable {
@@ -575,22 +576,5 @@ struct CompactQuickActionButton: View {
             )
         }
         .buttonStyle(PressableButtonStyle())
-    }
-}
-
-// Add this new style struct
-struct CustomTextFieldStyle: TextFieldStyle {
-    func _body(configuration: TextField<Self._Label>) -> some View {
-        configuration
-            .padding(12)
-            .foregroundColor(.white)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(hex: "1E293B"))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color(hex: "334155"), lineWidth: 1)
-            )
     }
 } 

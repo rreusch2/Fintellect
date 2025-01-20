@@ -64,20 +64,22 @@ export class ChatbotAgent {
     const transactions = context.recentTransactions;
     
     // Enhanced transaction analysis
-    const transactionAnalysis = transactions.reduce((acc: {
-        byMerchant: Record<string, { 
-            total: number; 
-            count: number; 
-            dates: Date[]; 
-            transactions: Array<{amount: number; date: Date}> 
+    interface TransactionAnalysis {
+        byMerchant: Record<string, {
+            total: number;
+            count: number;
+            dates: Date[];
+            transactions: Array<{amount: number; date: Date}>;
         }>;
-        byCategory: Record<string, { 
-            total: number; 
-            transactions: Array<{amount: number; date: Date; merchantName?: string}> 
+        byCategory: Record<string, {
+            total: number;
+            transactions: Array<{amount: number; date: Date; merchantName?: string}>;
         }>;
         totalSpent: number;
         lastWeekTotal: number;
-    }>, t => {
+    }
+
+    const transactionAnalysis = transactions.reduce((acc: TransactionAnalysis, t) => {
         if (t.amount > 0) { // Only count expenses
             const transactionDate = new Date(t.date);
             const oneWeekAgo = new Date();
@@ -86,9 +88,9 @@ export class ChatbotAgent {
             // Merchant analysis
             if (t.merchantName) {
                 if (!acc.byMerchant[t.merchantName]) {
-                    acc.byMerchant[t.merchantName] = { 
-                        total: 0, 
-                        count: 0, 
+                    acc.byMerchant[t.merchantName] = {
+                        total: 0,
+                        count: 0,
                         dates: [],
                         transactions: []
                     };
@@ -122,9 +124,9 @@ export class ChatbotAgent {
             }
         }
         return acc;
-    }, { 
-        byMerchant: {}, 
-        byCategory: {}, 
+    }, {
+        byMerchant: {},
+        byCategory: {},
         totalSpent: 0,
         lastWeekTotal: 0
     });

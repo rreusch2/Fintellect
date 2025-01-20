@@ -1,7 +1,11 @@
 import Foundation
+import SwiftUI
 
 class AIServiceClient {
+    static let shared = AIServiceClient()
     private let baseURL = APIClient.shared.baseURL
+    
+    private init() {}
     
     func chat(message: String) async throws -> (message: String, metadata: [String: Any]?) {
         print("[AI] Sending chat message: \(message)")

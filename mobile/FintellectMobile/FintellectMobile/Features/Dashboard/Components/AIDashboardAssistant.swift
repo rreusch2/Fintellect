@@ -1,4 +1,9 @@
 import SwiftUI
+import Foundation
+
+@_exported import struct FintellectMobile.AIInsight
+@_exported import struct FintellectMobile.ChatMessage
+@_exported import struct FintellectMobile.AIWorkflow
 
 // MARK: - Models
 struct QuickAction: Identifiable {
@@ -71,7 +76,7 @@ class AIDashboardAssistantViewModel: ObservableObject {
     
     private let aiService: AIServiceClient
     
-    init(aiService: AIServiceClient = AIServiceClient()) {
+    init(aiService: AIServiceClient = AIServiceClient.shared) {
         self.aiService = aiService
     }
     

@@ -200,40 +200,121 @@ ${transactions
     try {
       const userContext = await this.getUserContext(userId);
       const formattedContext = ChatbotAgent.formatUserContext(userContext);
+      let prompt = '';
 
-      const prompt = `You are a concise AI Financial Assistant analyzing real transaction data. Focus on providing specific, personalized insights about spending patterns and merchant-specific recommendations.
+      // Determine if this is a quick action or custom message
+      if (message.includes("analyze my recent spending patterns")) {
+        prompt = `You are a financial analyst focusing on spending patterns. Analyze the following transaction data and provide specific insights:
 
 ${formattedContext}
 
-User Question: ${message}
+Focus on:
+• Category breakdown with specific merchant insights
+• Month-over-month spending changes
+• Unusual spending patterns or large transactions
+• Category-specific recommendations
 
-Guidelines for your response:
-1. Use clean sections without asterisks or underscores
-2. Group merchant insights with their relevant categories
-3. Keep all related information together in the same section
-4. Use bullet points with "•" for sub-items
-5. Format currency values in green
-6. Keep full sentences without truncation
-7. Use these section names exactly:
-   - Spending Analysis
-   - Key Insights
-   - Recommendations
-
-Format example:
+Format your response as:
 Spending Analysis
-• Food & Dining ($521.45)
-  - Dunkin: 12 visits, avg $4.75
-  - Starbucks: 8 visits, avg $5.25
+• Show top 3 spending categories with percentages and key merchants
+• Highlight any significant changes or patterns
 
 Key Insights
-• Your coffee purchases average $35/week
-• Weekend dining costs 40% more than weekday meals
+• Focus on specific merchant patterns and frequency
+• Identify potential areas of overspending
 
 Recommendations
-• Consider Dunkin rewards program to save ~$15/month
-• Combine coffee runs to reduce total visits
+• Provide category-specific actionable tips
+• Suggest specific merchant alternatives or loyalty programs`;
 
-Remember to group related merchants and insights together in their categories.`;
+      } else if (message.includes("create a budget")) {
+        prompt = `You are a budget planning specialist. Create a personalized budget based on this transaction data:
+
+${formattedContext}
+
+Focus on:
+• Actual spending patterns vs recommended allocations
+• Category-specific budget suggestions
+• Fixed vs variable expenses
+• Practical saving opportunities
+
+Format your response as:
+Current Spending Overview
+• Break down fixed vs variable expenses
+• Highlight key spending categories
+
+Suggested Budget Allocation
+• Provide specific category budgets based on current spending
+• Include practical adjustment recommendations
+
+Action Steps
+• List specific steps to implement the budget
+• Include category-specific saving strategies`;
+
+      } else if (message.includes("saving tips")) {
+        prompt = `You are a savings optimization specialist. Analyze this transaction data for saving opportunities:
+
+${formattedContext}
+
+Focus on:
+• Recurring expenses that could be reduced
+• Similar merchants with price differences
+• Frequency of specific transaction types
+• Potential loyalty program benefits
+
+Format your response as:
+Savings Opportunities
+• List specific merchants and potential savings
+• Compare similar merchant prices
+
+Quick Wins
+• Immediate actions for saving money
+• Specific loyalty programs or rewards to consider
+
+Long-term Strategies
+• Sustainable changes for ongoing savings
+• Category-specific optimization tips`;
+
+      } else if (message.includes("recurring charges")) {
+        prompt = `You are a subscription and recurring payment specialist. Analyze these transactions for recurring charges:
+
+${formattedContext}
+
+Focus on:
+• Identifying all recurring payments
+• Subscription overlap analysis
+• Price changes in recurring charges
+• Similar service consolidation opportunities
+
+Format your response as:
+Recurring Charges Overview
+• List all identified recurring payments
+• Highlight any price changes or variations
+
+Optimization Opportunities
+• Identify potential subscription overlaps
+• Suggest service consolidation options
+
+Action Plan
+• Specific steps to optimize recurring charges
+• Alternative service recommendations`;
+
+      } else {
+        // Custom message prompt
+        prompt = `You are a helpful financial assistant. The user asks: "${message}"
+
+${formattedContext}
+
+Provide a natural, conversational response that:
+1. Directly addresses their specific question
+2. Uses their actual transaction data for context
+3. Gives personalized, actionable advice
+4. Maintains a friendly, helpful tone
+
+Focus on being specific and relevant to their question while referencing their actual spending patterns and merchants.
+Avoid generic advice - use their real transaction data to provide insights.
+Format the response in a natural, conversational way rather than using strict sections.`;
+      }
 
       const result = await model.generateContent(prompt);
       const response = result.response.text();

@@ -2,18 +2,18 @@ import Foundation
 
 class APIClient {
     static let shared = APIClient()
-    private let baseURL: String
+    
+    #if DEBUG
+    private let baseURL = "http://192.168.1.98:5001"  // Your WiFi IP address
+    #else
+    private let baseURL = "https://your-production-url.com"
+    #endif
+    
     private let session: URLSession
     private let retryQueue = DispatchQueue(label: "com.fintellect.apiretry")
     private var lastTokenRefresh: Date?
     
     private init() {
-        #if DEBUG
-        self.baseURL = "http://216.39.74.173:5001"  // Remove /api since it's included in request paths
-        #else
-        self.baseURL = "https://api.fintellect.app" // Production URL
-        #endif
-        
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         self.session = URLSession(configuration: config)

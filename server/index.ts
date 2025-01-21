@@ -150,9 +150,8 @@ async function startServer() {
       setupStatic(app);
     }
 
-    const PORT = parseInt(process.env.PORT || '5001');
-    server.listen(PORT, "0.0.0.0", () => {
-      log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+    app.listen(5001, '0.0.0.0', () => {
+      console.log('Server running on http://0.0.0.0:5001');
     });
 
     return server;

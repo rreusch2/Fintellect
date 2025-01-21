@@ -71,18 +71,6 @@ struct AIHubView: View {
                     }
                     .padding(.horizontal)
                 }
-                
-                // Add Test View Navigation
-                NavigationLink(destination: AIFinancialAssistantTestView()) {
-                    HStack {
-                        Image(systemName: "hammer.fill")
-                        Text("Test AI Assistant")
-                    }
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                }
             }
             .padding(.vertical, 24)
         }

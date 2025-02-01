@@ -1,19 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { anthropic, MODEL_NAMES, generateContent } from '../config/anthropic.js';
 import { db } from "@db";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { eq, desc, and, gte } from "drizzle-orm";
 import { plaidTransactions, users, plaidAccounts } from "@db/schema.js";
 import { normalizeCategory } from '../store/CategoryMap.js';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ 
-  model: "gemini-pro",
-  generationConfig: {
-    maxOutputTokens: 1000,
-    temperature: 0.7,
-    topP: 0.8,
-    topK: 40,
-  }
-});
 
 export interface DashboardInsight {
   type: "saving" | "spending" | "investment" | "budget";
@@ -164,23 +153,15 @@ Focus on:
 
 Use proper category names and be specific about amounts and percentages when relevant.`;
 
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      const responseText = await generateContent(prompt);
       
       try {
-        // Clean up the response text to handle markdown formatting
-        const cleanJson = responseText
-          .replace(/```json\n?/i, '') // Remove opening markdown (case insensitive)
-          .replace(/```/g, '')        // Remove all markdown blocks
-          .trim();                    // Remove extra whitespace
-
-        const response = JSON.parse(cleanJson);
+        const response = JSON.parse(responseText);
         return response.insights;
       } catch (jsonError) {
         console.error('Error parsing AI response:', jsonError);
         console.log('Raw AI response:', responseText);
         
-        // Return basic insights based on the data we have
         return this.generateFallbackInsights(userContext);
       }
     } catch (error) {

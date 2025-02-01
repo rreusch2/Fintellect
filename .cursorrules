@@ -60,7 +60,7 @@ environment:
   workflow:
     - "Code on Cursor on Windows 11 PC."
     - "'gpush' (custom PowerShell function) for 'git add .', 'git commit -m \"Update\"', and 'git push origin ios-development'."
-    - "MacinCloud:"
+    - "MacBook Air: - just got set up on Macbook laptop and we previously used MacinCloud."
       - "Option 1 (Direct): Open Xcode, use Source Control (⌘⇧P) to pull."
       - "Option 2 (Traditional): Open Cursor, pull, then open in Xcode."
     - "On MacinCloud, start Node.js backend with 'npm run dev', test SwiftUI app in Xcode simulator."

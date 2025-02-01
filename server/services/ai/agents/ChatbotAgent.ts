@@ -3,6 +3,9 @@ import { db } from "@db";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { plaidTransactions, users, plaidAccounts } from "@db/schema.js";
 import { normalizeCategory } from '../store/CategoryMap.js';
+import { anthropic, MODEL_NAMES, generateContent } from '../config/anthropic.js';
+import { knowledgeStore } from "../store/KnowledgeStore.js";
+import { DashboardInsightsAgent } from "./DashboardInsightsAgent.js";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const model = genAI.getGenerativeModel({ 
@@ -23,6 +26,18 @@ interface UserContextData {
 }
 
 export class ChatbotAgent {
+  private dashboardAgent: DashboardInsightsAgent;
+  private knowledgeStore: typeof knowledgeStore;
+
+  constructor(
+    _model: typeof anthropic,
+    knowledgeStore: typeof knowledgeStore,
+    dashboardAgent: DashboardInsightsAgent
+  ) {
+    this.knowledgeStore = knowledgeStore;
+    this.dashboardAgent = dashboardAgent;
+  }
+
   private async getUserContext(userId: number): Promise<UserContextData> {
     // Get user data
     const user = await db.query.users.findFirst({
@@ -199,120 +214,24 @@ ${transactions
   public async chat(userId: number, message: string): Promise<string> {
     try {
       const userContext = await this.getUserContext(userId);
-      const formattedContext = ChatbotAgent.formatUserContext(userContext);
-      let prompt = '';
+      const contextStr = ChatbotAgent.formatUserContext(userContext);
 
-      // Match quick actions more accurately
-      if (message.toLowerCase().includes("analyze") && message.toLowerCase().includes("spending")) {
-        prompt = `You are a financial analyst. Analyze this transaction data concisely:
+      const prompt = `As an AI Financial Assistant, help this user with their financial query. Use the following context about their finances:
 
-${formattedContext}
+${contextStr}
 
-Format your response in 3 short sections:
-Spending Analysis
-• Top 2-3 categories with percentages and frequent merchants
-• Notable spending patterns
+User Query: "${message}"
 
-Key Insights
-• Most significant merchant patterns
-• Areas of potential overspending
+Provide a helpful, specific response based on their actual financial data. Include specific numbers and insights when relevant.`;
 
-Recommendations
-• 2-3 specific, actionable tips with merchant names
-• Focus on immediate savings opportunities
+      const response = await generateContent(prompt);
+      return response;
 
-Keep each section brief and focused on the most important insights.`;
-
-      } else if (message.toLowerCase().includes("budget") && message.toLowerCase().includes("help")) {
-        prompt = `You are a budget specialist. Create a quick budget plan:
-
-${formattedContext}
-
-Format your response in 3 brief sections:
-Current Overview
-• Key spending categories and their percentages
-• Fixed vs variable expenses breakdown
-
-Budget Suggestions
-• 2-3 specific category allocations based on spending
-• Highlight areas needing adjustment
-
-Next Steps
-• 2-3 immediate actions to implement this budget
-• Focus on largest spending categories
-
-Be specific but concise, using real merchant names and amounts.`;
-
-      } else if (message.toLowerCase().includes("saving") && message.toLowerCase().includes("tips")) {
-        prompt = `You are a savings advisor. Find specific saving opportunities:
-
-${formattedContext}
-
-Format your response in 3 short sections:
-Quick Wins
-• 2-3 immediate saving opportunities with specific merchants
-• Potential monthly savings amounts
-
-Merchant Comparisons
-• Compare prices at frequently visited places
-• Suggest specific alternatives
-
-Action Items
-• 2-3 specific steps to capture these savings
-• Focus on largest potential impact
-
-Use real merchant names and specific dollar amounts.`;
-
-      } else if (message.toLowerCase().includes("recurring") && message.toLowerCase().includes("charges")) {
-        prompt = `You are a subscription analyst. Review recurring charges:
-
-${formattedContext}
-
-Format your response in 3 brief sections:
-Current Subscriptions
-• List identified recurring payments
-• Highlight any concerning patterns
-
-Optimization Options
-• 2-3 specific opportunities to reduce costs
-• Potential duplicate or overlapping services
-
-Action Steps
-• 2-3 immediate steps to optimize charges
-• Specific savings estimates
-
-Focus on actual recurring transactions found in the data.`;
-
-      } else {
-        // Custom message prompt - keep it conversational and specific
-        prompt = `You are a friendly financial assistant. The user asks: "${message}"
-
-${formattedContext}
-
-Provide a brief, natural response that:
-1. Directly answers their question using their transaction data
-2. Mentions specific merchants and amounts
-3. Gives 1-2 actionable suggestions
-4. Stays friendly and conversational
-
-Keep the response under 100 words and focus on their specific question.
-Use bullet points only if it helps clarity.
-Reference actual merchants and transactions from their data.`;
-      }
-
-      const result = await model.generateContent(prompt);
-      const response = result.response.text();
-      
-      // Post-process to ensure consistent formatting
-      return response.trim()
-        .replace(/\*\*/g, '')  // Remove any asterisks
-        .replace(/_/g, '')     // Remove any underscores
-        .replace(/\n\n\n+/g, '\n\n'); // Remove excessive line breaks
     } catch (error) {
-      console.error('Error in AI chat:', error);
-      return "I apologize, but I'm having trouble analyzing your transaction data right now. Please try again in a moment.";
+      console.error('Error in chat:', error);
+      return "I apologize, but I'm having trouble processing your request at the moment. Please try again later.";
     }
   }
 }
 
-export const chatbot = new ChatbotAgent(); 
+export const chatbot = new ChatbotAgent(model, knowledgeStore, new DashboardInsightsAgent()); 

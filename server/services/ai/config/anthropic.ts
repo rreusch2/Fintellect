@@ -12,7 +12,7 @@ export const defaultModelConfig = {
 
 // Export model names for easy reference
 export const MODEL_NAMES = {
-  CLAUDE_3_SONNET: 'claude-3-sonnet-20240229',
+  CLAUDE_3_SONNET: 'claude-3-5-sonnet-20241022',
   CLAUDE_3_HAIKU: 'claude-3-haiku-20240307'
 } as const;
 

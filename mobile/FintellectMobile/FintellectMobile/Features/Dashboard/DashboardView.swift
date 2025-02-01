@@ -2,7 +2,6 @@ import SwiftUI
 import Charts
 import Foundation
 import Models
-@_exported import struct FintellectMobile.AIInsight
 
 enum InsightType: String, CaseIterable {
     case spending = "Analyze Spending"

@@ -1,7 +1,5 @@
 import SwiftUI
 import Foundation
-import Models
-@_exported import struct FintellectMobile.AIInsight
 
 struct InsightsView: View {
     let insights: [AIInsight]

@@ -16,6 +16,26 @@ struct AIInsight: Codable, Identifiable {
     let modelVersion: String?
     let responseMetrics: ResponseMetrics?
     
+    init(
+        type: String,
+        title: String,
+        description: String,
+        priority: String = "MEDIUM",
+        impact: String? = nil,
+        confidence: Double? = nil,
+        category: String? = nil,
+        badge: String? = nil
+    ) {
+        self.type = type
+        self.title = title
+        self.description = description
+        self.priority = priority
+        self.impact = impact
+        self.confidence = confidence
+        self.category = category
+        self.badge = badge
+    }
+    
     enum CodingKeys: String, CodingKey {
         case type, title, description, priority, impact, confidence, category, badge
         case modelVersion = "model_version"
@@ -33,9 +53,7 @@ struct AIInsight: Codable, Identifiable {
                 impact: "$73.24 monthly savings potential",
                 confidence: 0.95,
                 category: "FOOD_AND_DRINK",
-                badge: "ACTION NEEDED",
-                modelVersion: nil,
-                responseMetrics: nil
+                badge: "ACTION NEEDED"
             ),
             AIInsight(
                 type: "budget",
@@ -45,9 +63,7 @@ struct AIInsight: Codable, Identifiable {
                 impact: "Budget optimization opportunity",
                 confidence: 0.9,
                 category: "BUDGET",
-                badge: "REVIEW",
-                modelVersion: nil,
-                responseMetrics: nil
+                badge: "REVIEW"
             ),
             AIInsight(
                 type: "saving",
@@ -57,9 +73,7 @@ struct AIInsight: Codable, Identifiable {
                 impact: "$239.40 monthly savings potential",
                 confidence: 0.85,
                 category: "OPTIMIZATION",
-                badge: "OPPORTUNITY",
-                modelVersion: nil,
-                responseMetrics: nil
+                badge: "OPPORTUNITY"
             )
         ]
     }

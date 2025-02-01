@@ -1,5 +1,4 @@
 import SwiftUI
-import Foundation
 
 struct InsightsView: View {
     let insights: [AIInsight]

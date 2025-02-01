@@ -1,8 +1,16 @@
-import { ollamaAI } from "../config/gemini.ts";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { knowledgeStore, type UserContext } from "../store/KnowledgeStore";
 
-// Initialize AI with Ollama
-const model = ollamaAI;
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const model = genAI.getGenerativeModel({ 
+  model: "gemini-pro",
+  generationConfig: {
+    maxOutputTokens: 800,
+    temperature: 0.6, // More focused on precise analysis
+    topP: 0.8,
+    topK: 40,
+  }
+});
 
 export interface BudgetAnalysis {
   overview: {

@@ -1,10 +1,19 @@
-import { ollamaAI, MODEL_NAMES } from "./ai/config/gemini.ts";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "@db";
 import { plaidTransactions, insights } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 
-// Initialize Ollama AI with safety limits
-const model = ollamaAI;
+// Initialize Gemini API with safety limits
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const model = genAI.getGenerativeModel({ 
+  model: "gemini-pro",
+  generationConfig: {
+    maxOutputTokens: 1000,
+    temperature: 0.7,
+    topP: 0.8,
+    topK: 40,
+  }
+});
 
 // Simple in-memory cache for responses
 const responseCache = new Map<string, { response: any; timestamp: number }>();
@@ -487,7 +496,16 @@ Response Format:
       recentTrends
     });
 
-    const result = await model.generateContent(contextPrompt);
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: contextPrompt }]}],
+      generationConfig: {
+        maxOutputTokens: 2000,
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40
+      }
+    });
+
     const text = result.response.text();
     const parsed = JSON.parse(text);
 

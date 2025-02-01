@@ -1,80 +1,22 @@
-import axios from 'axios';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export const MODEL_NAMES = {
-  DEEPSEEK_R1: 'deepseek-r1:14b',
-} as const;
-
-export const OLLAMA_CONFIG = {
-  baseURL: 'http://localhost:11434',
-  maxTokens: 1000,
-  temperature: 0.7,
-  topP: 0.8,
-  topK: 40,
-} as const;
-
-export class OllamaAI {
-  private model: string;
-  private config: typeof OLLAMA_CONFIG;
-
-  constructor(model = MODEL_NAMES.DEEPSEEK_R1, config = OLLAMA_CONFIG) {
-    this.model = model;
-    this.config = config;
-  }
-
-  async generateContent(prompt: string) {
-    try {
-      console.log('[Ollama] Sending request:', {
-        model: this.model,
-        endpoint: `${this.config.baseURL}/api/completion`,
-        prompt: prompt.substring(0, 100) + '...' // Log truncated prompt
-      });
-
-      const response = await axios.post(
-        `${this.config.baseURL}/api/completion`,
-        {
-          model: this.model,
-          prompt,
-          stream: false,
-          raw: true,
-          options: {
-            temperature: this.config.temperature,
-            top_p: this.config.topP,
-            top_k: this.config.topK,
-            num_predict: this.config.maxTokens
-          }
-        },
-        {
-          timeout: 30000
-        }
-      );
-
-      console.log('[Ollama] Response received:', {
-        status: response.status,
-        hasResponse: !!response.data?.response
-      });
-
-      if (!response.data?.response) {
-        throw new Error('No response data from Ollama');
-      }
-
-      return {
-        response: {
-          text: () => response.data.response,
-        },
-      };
-    } catch (error) {
-      console.error('[Ollama] Error generating content:', error);
-      if (axios.isAxiosError(error)) {
-        console.error('[Ollama] Request details:', {
-          status: error.response?.status,
-          data: error.response?.data,
-          message: error.message
-        });
-      }
-      throw error;
-    }
-  }
+if (!process.env.GOOGLE_API_KEY) {
+  console.warn("[AI] Warning: GOOGLE_API_KEY not found in environment variables");
 }
 
-// Initialize with local Ollama instance
-export const ollamaAI = new OllamaAI(); 
+// Initialize the Gemini API client
+export const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+
+// Configure default model settings
+export const defaultModelConfig = {
+  temperature: 0.7,
+  topK: 40,
+  topP: 0.95,
+  maxOutputTokens: 1024,
+};
+
+// Export model names for easy reference
+export const MODEL_NAMES = {
+  GEMINI_PRO: "gemini-pro",
+  GEMINI_PRO_VISION: "gemini-pro-vision",
+} as const; 

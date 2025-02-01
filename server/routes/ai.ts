@@ -2,7 +2,7 @@ import { Router } from "express";
 import { ChatbotAgent } from "../services/ai/agents/ChatbotAgent.js";
 import { DashboardInsightsAgent } from "../services/ai/agents/DashboardInsightsAgent.js";
 import { knowledgeStore } from "../services/ai/store/KnowledgeStore.js";
-import { ollamaAI } from "../services/ai/config/gemini.ts";
+import { genAI, MODEL_NAMES } from "../services/ai/config/gemini.js";
 import type { Request } from "express";
 import type { JWTPayload } from "../middleware/jwtAuth.js";
 
@@ -19,7 +19,7 @@ interface AuthenticatedRequest extends Request {
 }
 
 const router = Router();
-const model = ollamaAI;
+const model = genAI.getGenerativeModel({ model: MODEL_NAMES.GEMINI_PRO });
 const dashboardAgent = new DashboardInsightsAgent();
 const chatbotAgent = new ChatbotAgent(model, knowledgeStore, dashboardAgent);
 

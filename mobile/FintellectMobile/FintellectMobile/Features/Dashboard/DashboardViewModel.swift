@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Models
+@_exported import struct FintellectMobile.AIInsight
 
 // MARK: - Models
 struct TransactionSummary: Codable {

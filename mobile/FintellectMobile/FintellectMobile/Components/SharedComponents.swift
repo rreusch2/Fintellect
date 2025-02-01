@@ -1,5 +1,6 @@
 import SwiftUI
-import Models
+import Foundation
+@_exported import struct FintellectMobile.AIInsight
 
 struct CardView<Content: View>: View {
     let content: Content

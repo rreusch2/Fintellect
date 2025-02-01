@@ -1,19 +1,12 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ollamaAI } from "../config/gemini.ts";
 import { db } from "@db";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { plaidTransactions, users, plaidAccounts } from "@db/schema.js";
 import { normalizeCategory } from '../store/CategoryMap.js';
+import { knowledgeStore, type UserContext } from "../store/KnowledgeStore";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ 
-  model: "gemini-pro",
-  generationConfig: {
-    maxOutputTokens: 1000,
-    temperature: 0.7,
-    topP: 0.8,
-    topK: 40,
-  }
-});
+// Initialize AI with Ollama
+const model = ollamaAI;
 
 export interface DashboardInsight {
   type: "saving" | "spending" | "investment" | "budget";
@@ -120,8 +113,7 @@ ${Object.entries(spendingByCategory)
   .map(([category, amount]) => {
     const percentage = ((amount / totalExpenses) * 100).toFixed(1);
     return `- ${category}: $${(amount/100).toFixed(2)} (${percentage}% of total)`;
-  })
-  .join('\n')}
+  }).join('\n')}
 
 Weekly Spending Trends:
 ${weeklyTrend.join('\n')}
@@ -129,8 +121,7 @@ ${weeklyTrend.join('\n')}
 Recent Transactions:
 ${transactions.slice(0, 5).map(t => 
   `- ${new Date(t.date).toLocaleDateString()}: ${t.merchantName || t.description} - $${(t.amount/100).toFixed(2)} (${t.category})`
-).join('\n')}
-`.trim();
+).join('\n')}`.trim();
   }
 
   public async getInsights(userId: number): Promise<DashboardInsight[]> {
@@ -260,4 +251,4 @@ Use proper category names and be specific about amounts and percentages when rel
   }
 }
 
-export const dashboardInsights = new DashboardInsightsAgent(); 
+export const dashboardInsights = new DashboardInsightsAgent();

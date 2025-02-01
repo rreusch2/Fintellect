@@ -23,19 +23,39 @@ export class OllamaAI {
 
   async generateContent(prompt: string) {
     try {
+      console.log('[Ollama] Sending request:', {
+        model: this.model,
+        endpoint: `${this.config.baseURL}/api/completion`,
+        prompt: prompt.substring(0, 100) + '...' // Log truncated prompt
+      });
+
       const response = await axios.post(
-        `${this.config.baseURL}/api/generate`,
+        `${this.config.baseURL}/api/completion`,
         {
           model: this.model,
           prompt,
+          stream: false,
+          raw: true,
           options: {
             temperature: this.config.temperature,
             top_p: this.config.topP,
             top_k: this.config.topK,
-          },
-          stream: false
+            num_predict: this.config.maxTokens
+          }
+        },
+        {
+          timeout: 30000
         }
       );
+
+      console.log('[Ollama] Response received:', {
+        status: response.status,
+        hasResponse: !!response.data?.response
+      });
+
+      if (!response.data?.response) {
+        throw new Error('No response data from Ollama');
+      }
 
       return {
         response: {
@@ -43,7 +63,14 @@ export class OllamaAI {
         },
       };
     } catch (error) {
-      console.error('Error generating content with Ollama:', error);
+      console.error('[Ollama] Error generating content:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('[Ollama] Request details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message
+        });
+      }
       throw error;
     }
   }

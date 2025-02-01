@@ -1,4 +1,4 @@
-import { ollamaAI, MODEL_NAMES } from "./ai/config/ollama.js";
+import { ollamaAI, MODEL_NAMES } from "./ai/config/gemini.ts";
 import { db } from "@db";
 import { plaidTransactions, insights } from "@db/schema";
 import { eq, desc } from "drizzle-orm";

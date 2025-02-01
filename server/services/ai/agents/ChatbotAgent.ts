@@ -1,19 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "@db";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { plaidTransactions, users, plaidAccounts } from "@db/schema.js";
 import { normalizeCategory } from '../store/CategoryMap.js';
+import { ollamaAI } from "../config/gemini.ts";
+import { knowledgeStore, type UserContext } from "../store/KnowledgeStore";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ 
-  model: "gemini-pro",
-  generationConfig: {
-    maxOutputTokens: 2000,
-    temperature: 0.7,
-    topP: 0.8,
-    topK: 40,
-  }
-});
+const model = ollamaAI;
 
 interface UserContextData {
   monthlyIncome: number;

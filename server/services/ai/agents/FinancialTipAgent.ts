@@ -1,16 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ollamaAI } from "../config/gemini.ts";
 import { knowledgeStore } from "../store/KnowledgeStore";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ 
-  model: "gemini-pro",
-  generationConfig: {
-    maxOutputTokens: 500,
-    temperature: 0.7,
-    topP: 0.8,
-    topK: 40,
-  }
-});
+// Initialize AI with Ollama
+const model = ollamaAI;
 
 interface TipContext {
   totalBalance: number;

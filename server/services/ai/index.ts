@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ollamaAI } from "./config/gemini.ts";
 import { SAVINGS_ANALYSIS_PROMPT } from "./prompts/transaction-insights";
 import { knowledgeStore } from "./store/KnowledgeStore";
 import { db } from "@db";
@@ -6,8 +6,8 @@ import { plaidTransactions } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 import { normalizeCategory } from "./store/CategoryMap";
 
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY || '');
+// Initialize AI with Ollama
+const model = ollamaAI;
 
 export async function generateSavingsTips(userId: number) {
   try {
@@ -43,10 +43,9 @@ export async function generateSavingsTips(userId: number) {
         .map(([category, amount]) => `${category}: $${(amount/100).toFixed(2)}`)
         .join('\n'));
 
-    // Generate response using Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Generate response using Ollama
     const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const response = result.response;
     const text = response.text();
 
     // Format the response

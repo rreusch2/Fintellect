@@ -1,7 +1,6 @@
 import SwiftUI
 import Charts
 import Foundation
-import Models
 
 enum InsightType: String, CaseIterable {
     case spending = "Analyze Spending"

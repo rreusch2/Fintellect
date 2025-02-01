@@ -179,7 +179,7 @@ tech_stack:
     - "Node.js + Express + TypeScript."
     - "Drizzle ORM."
     - "Plaid API for financial data."
-    - "**Google Gemini API** for AI features."
+    - "**Anthropic API** for AI features." (We are using Claude 3.5 Sonnet and working on replacing Google Gemini with Anthropic right now.)
   database:
     - "PostgreSQL (Neon.tech) - users, transactions, goals, budgets."
 
@@ -193,7 +193,7 @@ current_state:
     - "Plaid integration (account linking, transaction syncing)."
     - "User data population in the app."
   in_progress:
-    - "**Google Gemini AI integration**."
+    - "**Anthropic API integration**."
     - "Using `AIDashboardAgent` with backend `ChatbotAgent` on the Dashboard."
     - "Using `DashboardInsightsAgent` for AI Financial Insights."
     - "**Resolving 401 Unauthorized errors in AI responses**."
@@ -252,10 +252,7 @@ development:
   local:
     - backend_url: "http://127.0.0.1:5001"
     - web_url: "http://localhost:5173"
-  macincloud:
-    - backend_url: "https://216.39.74.172:5001"
-    - ssl: "Self-signed certificates (dev)"
-
+  
 # -----------------------------------------------------------
 # Code Organization
 # -----------------------------------------------------------
@@ -289,7 +286,7 @@ security:
 # AI Integration Details
 # -----------------------------------------------------------
 ai_integration:
-  technology: "Google Gemini"
+  technology: "Anthropic API (Claude 3.5 Sonnet) - we are in the process of replacing Google Gemini that was here before with Anthropic."
   agents:
     - "**AIDashboardAgent (SwiftUI):**"
       - "Used in the Dashboard view."

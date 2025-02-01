@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Models
 
 // MARK: - Models
 struct TransactionSummary: Codable {
@@ -42,35 +43,6 @@ struct TransactionSummary: Codable {
             status: nil,
             message: nil
         )
-    }
-    #endif
-}
-
-struct AIInsight: Codable, Identifiable {
-    let id = UUID()
-    let type: String
-    let title: String
-    let description: String
-    
-    #if DEBUG
-    static var demoInsights: [AIInsight] {
-        [
-            AIInsight(
-                type: "HIGH",
-                title: "High Food & Drink Spending",
-                description: "Your food and dining expenses are $366.18 (22.9% of total spending). Consider setting a monthly budget of $292.94 to save $73.24 per month."
-            ),
-            AIInsight(
-                type: "MEDIUM",
-                title: "Top Spending Categories",
-                description: "Your highest spending areas are: UTILITIES $594.96 (37.3%) FOOD AND DRINK $366.18 (22.9%) SHOPPING $314.92 (19.7%)"
-            ),
-            AIInsight(
-                type: "HIGH",
-                title: "Monthly Budget Optimization",
-                description: "Based on your spending patterns, here's a recommended monthly budget: Essential expenses $1410.65 (70.7%) Potential monthly savings: $239.40 by optimizing essential expenses."
-            )
-        ]
     }
     #endif
 }

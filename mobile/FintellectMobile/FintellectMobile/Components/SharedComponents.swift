@@ -1,4 +1,5 @@
 import SwiftUI
+import Models
 
 struct CardView<Content: View>: View {
     let content: Content

@@ -167,7 +167,17 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { username, password } = req.body;
+      const { username, email, password } = req.body;
+
+      // Validate required fields
+      if (!username || !email || !password) {
+        return res.status(400).send("Username, email, and password are required");
+      }
+
+      // Validate email format
+      if (!email.includes('@')) {
+        return res.status(400).send("Invalid email format");
+      }
 
       // Check if user already exists
       const [existingUser] = await db
@@ -180,6 +190,17 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Username already exists");
       }
 
+      // Check if email already exists
+      const [existingEmail] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingEmail) {
+        return res.status(400).send("Email already exists");
+      }
+
       // Hash the password
       const hashedPassword = await crypto.hash(password);
 
@@ -188,6 +209,7 @@ export function setupAuth(app: Express) {
         .insert(users)
         .values({
           username,
+          email,
           password: hashedPassword,
           hasPlaidSetup: false,
           hasCompletedOnboarding: false,
@@ -201,9 +223,11 @@ export function setupAuth(app: Express) {
         }
         // Return user data with the response
         return res.json({
+          success: true,
           user: {
             id: newUser.id,
             username: newUser.username,
+            email: newUser.email,
             hasCompletedOnboarding: newUser.hasCompletedOnboarding,
             hasPlaidSetup: newUser.hasPlaidSetup
           }

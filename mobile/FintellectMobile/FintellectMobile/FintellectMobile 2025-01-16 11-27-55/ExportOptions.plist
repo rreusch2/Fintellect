@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>destination</key>
+	<string>export</string>
+	<key>manifest</key>
+	<dict>
+		<key>appURL</key>
+		<string>https://fintellect.com/app/FintellectMobile.ipa</string>
+		<key>displayImageURL</key>
+		<string>https://fintellect.com/app/display.png</string>
+		<key>fullSizeImageURL</key>
+		<string>https://fintellect.com/app/full.png</string>
+	</dict>
+	<key>method</key>
+	<string>release-testing</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>teamID</key>
+	<string>5HP4X6G5VH</string>
+	<key>thinning</key>
+	<string>&lt;none&gt;</string>
+</dict>
+</plist>

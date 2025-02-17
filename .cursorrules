@@ -1,0 +1,313 @@
+title: "Fintellect - SwiftUI, Node.js, and Google Gemini AI Integration"
+description: "Context rules for integrating SwiftUI iOS frontend with Node.js backend, PostgreSQL database, and Google Gemini for AI features."
+
+# -----------------------------------------------------------
+# Project Overview
+# -----------------------------------------------------------
+project_overview:
+  name: "Fintellect"
+  summary: >
+    Fintellect is an AI-powered financial management platform providing budgeting, goal tracking, transaction categorization, and personalized financial insights. 
+    It integrates a SwiftUI mobile app with a Node.js + PostgreSQL backend, leverages Plaid for financial data, and now incorporates Google Gemini for advanced AI capabilities.
+
+# -----------------------------------------------------------
+# Dynamic Rules Maintenance
+# -----------------------------------------------------------
+rules_maintenance:
+  auto_update: true
+  trigger_events:
+    - "New API endpoints or changes"
+    - "Component additions or modifications"
+    - "Integration of new services (especially AI)"
+    - "Architecture or pattern changes"
+    - "New dependencies or tech stack updates"
+    - "Security protocol changes"
+    - "Workflow or process updates"
+    - "Recurring issues and their solutions"
+    - "New development environment configurations"
+  update_responsibilities:
+    - "AI agents should proactively update this file without being prompted."
+    - "Updates should follow significant changes or additions to the codebase."
+    - "Each update must include clear documentation of changes and their implications."
+    - "Previous rules should be preserved unless explicitly marked as obsolete."
+    - "Organize changes into appropriate sections."
+    - "Maintain a version history in comments for significant changes."
+  update_format:
+    - "Use clear, consistent YAML formatting."
+    - "Include detailed descriptions for complex changes."
+    - "Group related changes in appropriate sections."
+    - "Add new sections when existing ones don't fit."
+    - "Include examples where helpful."
+    - "Add migration notes if changes affect existing code."
+
+# -----------------------------------------------------------
+# Important Notes - Current Focus: AI Integration
+# -----------------------------------------------------------
+important_notes:
+  - "Authentication, onboarding, Plaid integration, and transaction syncing are now fully functional."
+  - "The current focus is integrating Google Gemini AI into the mobile app."
+  - "The 'Dashboard' uses 'AIDashboardAgent' which interacts with the 'ChatbotAgent' in the backend."
+  - "The 'AI Financial Insights' dashboard section uses the 'DashboardInsightsAgent' in the backend."
+  - "The AI agent MUST understand the project structure, existing files, and functionality to avoid 'Invalid redeclaration' errors and other conflicts."
+  - "This AI agent can search, analyze, and edit files across all folders without explicit instructions. It MUST avoid redundant or conflicting code."
+  - "Currently troubleshooting 401 Unauthorized errors in AI responses."
+
+# -----------------------------------------------------------
+# Environment & Workflow
+# -----------------------------------------------------------
+environment:
+  operating_system: "Windows 11 PC and MacinCloud (macOS)"
+  workflow:
+    - "Code on Cursor on Windows 11 PC."
+    - "'gpush' (custom PowerShell function) for 'git add .', 'git commit -m \"Update\"', and 'git push origin ios-development'."
+    - "MacBook Air: - just got set up on Macbook laptop and we previously used MacinCloud."
+      - "Option 1 (Direct): Open Xcode, use Source Control (⌘⇧P) to pull."
+      - "Option 2 (Traditional): Open Cursor, pull, then open in Xcode."
+    - "On MacinCloud, start Node.js backend with 'npm run dev', test SwiftUI app in Xcode simulator."
+  xcode_shortcuts:
+    - "⌘⇧P (Win/Alt + Shift + P): Pull changes"
+    - "⌘⌥C (Win/Alt + Alt/Win + C): Commit changes"
+    - "⌘⌥X (Win/Alt + Alt/Win + X): Push changes"
+    - "⌘2 (Win/Alt + 2): Source Control navigator"
+  windows_keyboard_mapping:
+    - "Command (⌘) = Windows key (⊞) or Alt"
+    - "Option (⌥) = Alt or Windows key (whichever not used for ⌘)"
+    - "Control (⌃) = Control"
+    - "Shift (⇧) = Shift"
+  optimization_tips:
+    - "Enable 'Refresh local status automatically' in Xcode Source Control prefs."
+    - "Enable 'Refresh server status automatically' in Xcode Source Control prefs."
+    - "Set up SSH keys on MacinCloud to avoid re-entering credentials."
+    - "Use Xcode's Source Control navigator for quick access to changes."
+
+# -----------------------------------------------------------
+# Directory Structure
+# -----------------------------------------------------------
+folders:
+  - client: "React/TypeScript web frontend (TanStack Query, Tailwind CSS, Framer Motion)."
+  - server: "Node.js + Express + TypeScript backend (Drizzle ORM, Passport.js, Plaid, Google Gemini integration)."
+  - db: "PostgreSQL schema and migrations (Neon.tech) - users, transactions, goals, budgets."
+  - mobile: "SwiftUI iOS app (MVVM) interacting with backend APIs."
+
+# -----------------------------------------------------------
+# Project Tree (Abbreviated)
+# -----------------------------------------------------------
+project_tree: >
+📦 Fintellect
+├── 📂 mobile
+│   └── 📂 FintellectMobile
+│       └── 📂 Features
+│           ├── 📂 AIFinancialAssistant
+│           │   ├── 📂 Views
+│           │   │   ├── 📄 AIFinancialAssistantView.swift
+│           │   │   └── 📄 ExpandedChatView.swift
+│           │   ├── 📂 Components
+│           │   │   ├── 📄 ChatBubble.swift
+│           │   │   ├── 📄 ChatInput.swift
+│           │   │   └── 📄 QuickActionButton.swift
+│           │   ├── 📂 Models
+│           │   │   └── 📄 ChatMessage.swift
+│           │   └── 📂 ViewModels
+│           │       └── 📄 AIFinancialAssistantViewModel.swift
+│           └── 📂 Dashboard
+│               ├── 📂 Components
+│               │   └── 📄 AIDashboardAssistant.swift
+│               └── 📂 ViewModels
+│                   └── 📄 DashboardViewModel.swift
+├── 📂 server
+│   ├── 📂 services
+│   │   └── 📂 ai
+│   │       ├── 📂 agents
+│   │       │   ├── 📄 ChatbotAgent.ts
+│   │       │   └── 📄 DashboardInsightsAgent.ts
+│   │       ├── 📂 config
+│   │       │   └── 📄 gemini.ts
+│   │       └── 📄 index.ts
+│   ├── 📂 routes
+│   │   └── 📄 ai.ts
+│   └── 📄 index.ts
+└── 📂 db
+    ├── 📄 schema.ts
+    └── 📄 index.ts
+    
+
+# -----------------------------------------------------------
+# Error Prevention Rules - **High Priority**
+# -----------------------------------------------------------
+strict_rules:
+  - "**NEVER** define a struct, class, enum, variable, or function if one with the same name exists. **ALWAYS** search and reuse existing definitions."
+  - "**BEFORE** creating code, **THOROUGHLY** analyze relevant files in 'mobile', 'server', and 'db' for consistency with existing structures and naming."
+  - "When modifying code, **VERIFY** the impact on all dependents. Use Swift's type system and compiler checks."
+  - "**DO NOT** introduce new dependencies without justification and understanding their impact."
+  - "**PRIORITIZE** built-in Swift/SwiftUI features over third-party libraries."
+  - "If a needed Model, function, or component is missing, **ASK** before creating it, so we can decide the best action together."
+  - "Focus on resolving the **401 Unauthorized errors** currently affecting AI responses. Pay close attention to token handling and API requests related to `ChatbotAgent` and `DashboardInsightsAgent`."
+
+# -----------------------------------------------------------
+# File & Folder Rules
+# -----------------------------------------------------------
+cursor_rules:
+  - "Never create files/folders if they exist. Ask if unsure."
+  - "Avoid 'Invalid redeclaration' by referencing existing models/enums/classes."
+  - "Analyze files for consistency before creating/editing code."
+  - "Ensure consistent API contracts between mobile, web, and server."
+  - "Ask for clarification instead of making assumptions."
+
+# -----------------------------------------------------------
+# Best Practices & AI Behavior
+# -----------------------------------------------------------
+behavior:
+  - "Single source of truth for backend data shared across mobile and web."
+  - "SwiftUI best practices: MVVM, async/await, @Published for state."
+  - "Follow Apple's Human Interface Guidelines, align with Fintellect web app's design."
+  - "Meaningful debugging logs when implementing new features."
+
+enhancements:
+  - "Append ideas/suggestions to 'C:\\Users\\reidr\\OneDrive\\Desktop\\APP Rep\\doc.txt'."
+  - "Propose optimizations for performance, scalability, or UX."
+  - "Detailed comments in generated code to explain functionality."
+
+# -----------------------------------------------------------
+# Technology Stack
+# -----------------------------------------------------------
+tech_stack:
+  frontend:
+    - "SwiftUI (iOS, MVVM)."
+    - "React (TypeScript) for web."
+    - "Tailwind CSS, Framer Motion, Wouter, shadcn/ui for React UI."
+  backend:
+    - "Node.js + Express + TypeScript."
+    - "Drizzle ORM."
+    - "Plaid API for financial data."
+    - "**Anthropic API** for AI features." (We are using Claude 3.5 Sonnet and working on replacing Google Gemini with Anthropic right now.)
+  database:
+    - "PostgreSQL (Neon.tech) - users, transactions, goals, budgets."
+
+# -----------------------------------------------------------
+# Current State & Next Steps
+# -----------------------------------------------------------
+current_state:
+  completed:
+    - "Auth integration (JWT for mobile, session-based for web)."
+    - "Onboarding flow."
+    - "Plaid integration (account linking, transaction syncing)."
+    - "User data population in the app."
+  in_progress:
+    - "**Anthropic API integration**."
+    - "Using `AIDashboardAgent` with backend `ChatbotAgent` on the Dashboard."
+    - "Using `DashboardInsightsAgent` for AI Financial Insights."
+    - "**Resolving 401 Unauthorized errors in AI responses**."
+  next_steps:
+    - "**Fix authorization issues:**"
+      - "Ensure proper token handling in API requests to AI agents."
+      - "Verify token refresh mechanism."
+      - "Add detailed error logging around AI API calls."
+    - "Test AI integration with actual Plaid data."
+    - "Verify response formatting and parsing from AI agents."
+    - "Add robust error handling and user feedback for AI interactions."
+
+# -----------------------------------------------------------
+# Data Currently in Use
+# -----------------------------------------------------------
+current_data:
+  - "Plaid Transactions (last 30 days)"
+  - "Account balances and types"
+  - "Monthly income"
+  - "Spending categories and patterns"
+  - "Recurring transactions"
+  - "Weekly spending trends"
+
+# -----------------------------------------------------------
+# Mobile App Architecture (MVVM)
+# -----------------------------------------------------------
+mobile_architecture:
+  pattern: "MVVM"
+  key_components:
+    - "Views: SwiftUI, modern design system."
+    - "ViewModels: @MainActor, state, business logic."
+    - "Models: Codable structs."
+    - "Services: APIClient, KeychainManager."
+
+# -----------------------------------------------------------
+# Authentication (JWT & Session-Based)
+# -----------------------------------------------------------
+auth_flow:
+  implementation:
+    - "JWT for mobile."
+    - "Session-based for web."
+    - "Secure token storage in iOS Keychain."
+  token_config:
+    - access_token_expiry: "15m"
+    - refresh_token_expiry: "7d"
+  endpoints:
+    - "/api/auth/mobile/login"
+    - "/api/auth/mobile/register"
+    - "/api/auth/mobile/refresh"
+    - "/api/auth/mobile/verify"
+
+# -----------------------------------------------------------
+# Development Environment URLs
+# -----------------------------------------------------------
+development:
+  local:
+    - backend_url: "http://127.0.0.1:5001"
+    - web_url: "http://localhost:5173"
+  
+# -----------------------------------------------------------
+# Code Organization
+# -----------------------------------------------------------
+code_structure:
+  mobile:
+    - "Features/: Feature modules (MVVM)."
+    - "Services/: APIClient, KeychainManager."
+    - "Models/: Shared data models."
+    - "Utils/: Helpers, extensions."
+  server:
+    - "auth/: Authentication (mobile JWT support)."
+    - "routes/: API endpoints by feature."
+    - "middleware/: JWT verification, etc."
+    - "services/: Business logic, external integrations (Plaid, **Gemini**)."
+
+# -----------------------------------------------------------
+# Security Considerations
+# -----------------------------------------------------------
+security:
+  mobile:
+    - "Secure token storage (Keychain)."
+    - "HTTPS for all API calls."
+    - "Token refresh."
+  server:
+    - "JWT secret management."
+    - "CORS configuration."
+    - "Rate limiting (pending)."
+    - "Security headers."
+
+# -----------------------------------------------------------
+# AI Integration Details
+# -----------------------------------------------------------
+ai_integration:
+  technology: "Anthropic API (Claude 3.5 Sonnet) - we are in the process of replacing Google Gemini that was here before with Anthropic."
+  agents:
+    - "**AIDashboardAgent (SwiftUI):**"
+      - "Used in the Dashboard view."
+      - "Communicates with the `ChatbotAgent` in the backend."
+      - "Provides general financial assistance and chat-based interactions."
+    - "**DashboardInsightsAgent (Backend):**"
+      - "Powers the 'AI Financial Insights' section."
+      - "Performs in-depth analysis of user's financial data."
+      - "Generates insights, trends, and recommendations."
+  current_issues:
+    - "**401 Unauthorized errors** when interacting with AI agents."
+  troubleshooting_focus:
+    - "Verify JWT token is correctly included in headers for AI API requests."
+    - "Check if the token has expired or is invalid."
+    - "Ensure the backend is properly validating the token."
+    - "Add comprehensive logging on both the client and server sides to track the flow of requests and responses."
+
+# -----------------------------------------------------------
+# Final Notes
+# -----------------------------------------------------------
+notes: >
+  The project has successfully transitioned to a multi-platform solution. Mobile development prioritizes user experience and security.
+  The current focus is on integrating Google Gemini AI and resolving the 401 errors.
+  All new features and changes MUST be documented here to maintain consistency.

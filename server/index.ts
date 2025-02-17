@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
-import { setupAuth } from "./auth";
+import { setupAuth } from "./auth.js";
 import { db } from "@db";
 import { sql } from "drizzle-orm";
-import { setupStatic, log } from "./static";
-import { requireHTTPS, setSecurityHeaders } from "./middleware/secure";
+import { setupStatic, log } from "./static.js";
+import { requireHTTPS, setSecurityHeaders } from "./middleware/secure.js";
 import cors from "cors";
 
 console.log('Environment Check:');
@@ -30,57 +30,43 @@ const allowedOrigins = [
 ];
 
 if (process.env.NODE_ENV === 'development') {
-  allowedOrigins.push('http://localhost:5173');
+  allowedOrigins.push(
+    'http://localhost:5173',
+    'http://localhost:5001',
+    'capacitor://localhost',
+    'http://localhost',
+    'http://216.39.74.173:5001'  // Add MacinCloud URL
+  );
 }
 
-app.use(cors({
+// Configure CORS
+const corsOptions = {
   origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+  exposedHeaders: ['Authorization'],
+};
+
+// Apply CORS pre-flight options
+app.options('*', cors(corsOptions));
+
+// Apply CORS to all routes
+app.use(cors(corsOptions));
 
 // Add security headers
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
   next();
 });
-
-// Initialize the server with database connection and authentication
-async function startServer() {
-  try {
-    let connected = false;
-    let retries = 3;
-    
-    while (!connected && retries > 0) {
-      try {
-        await db.execute(sql`SELECT NOW()`);
-        connected = true;
-        log('Database connection established successfully');
-        log('Setting up server configuration...');
-      } catch (dbError) {
-        retries--;
-        if (retries === 0) {
-          console.error('Database connection error:', dbError);
-          throw new Error('Failed to connect to database after multiple attempts');
-        }
-        log(`Database connection failed, retrying... (${retries} attempts remaining)`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-
-    setupAuth(app);
-    log('Authentication setup complete');
-
-    return true;
-  } catch (error) {
-    console.error("Error starting server:", error);
-    return false;
-  }
-}
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -111,31 +97,69 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  const server = registerRoutes(app);
+// Initialize the server with database connection and authentication
+async function startServer() {
+  try {
+    let connected = false;
+    let retries = 3;
+    
+    while (!connected && retries > 0) {
+      try {
+        await db.execute(sql`SELECT NOW()`);
+        connected = true;
+        log('Database connection established successfully');
+        log('Setting up server configuration...');
+      } catch (dbError) {
+        retries--;
+        if (retries === 0) {
+          console.error('Database connection error:', dbError);
+          throw new Error('Failed to connect to database after multiple attempts');
+        }
+        log(`Database connection failed, retrying... (${retries} attempts remaining)`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
-    throw err;
-  });
+    // Setup authentication before routes
+    setupAuth(app);
+    log('Authentication setup complete');
 
-  if (process.env.NODE_ENV === "development") {
-    const { setupVite } = await import("./vite.js");
-    await setupVite(app, server);
-  } else {
-    setupStatic(app);
-  }
+    // Register API routes after auth setup
+    const server = registerRoutes(app);
 
-  const PORT = process.env.PORT || 5001;
-  const serverStarted = await startServer();
-  if (serverStarted) {
-    server.listen(PORT, "0.0.0.0", () => {
-      log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+    // Error handling middleware
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
+      throw err;
     });
-  } else {
-    log('Failed to start server');
-    process.exit(1);
+
+    // Setup web app after API routes
+    if (process.env.NODE_ENV === "development") {
+      const { setupVite } = await import("./vite.js");
+      // Only apply Vite middleware to non-API routes
+      app.use((req, res, next) => {
+        if (req.path.startsWith('/api')) {
+          next();
+        } else {
+          setupVite(app, server);
+        }
+      });
+    } else {
+      setupStatic(app);
+    }
+
+    app.listen(5001, '0.0.0.0', () => {
+      console.log('Server running on http://0.0.0.0:5001');
+    });
+
+    return server;
+  } catch (error) {
+    console.error("Error starting server:", error);
+    return false;
   }
-})();
+}
+
+// Start the server
+startServer();

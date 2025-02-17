@@ -32,6 +32,7 @@ async function migrateAll() {
       CREATE TABLE users (
         id SERIAL PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         has_plaid_setup BOOLEAN DEFAULT FALSE NOT NULL,
@@ -42,7 +43,8 @@ async function migrateAll() {
         remember_token TEXT,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         legal_consent JSONB,
-        consent_version VARCHAR(10)
+        consent_version VARCHAR(10),
+        investment_profile JSONB
       );
     `);
 

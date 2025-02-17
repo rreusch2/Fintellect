@@ -26,33 +26,69 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePageTitle } from "@/hooks/use-page-title";
 
-const authSchema = z.object({
+const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string(),
+  rememberMe: z.boolean().optional().default(false),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+const loginSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(1, "Password is required"),
   rememberMe: z.boolean().optional().default(false),
 });
 
-type AuthForm = z.infer<typeof authSchema>;
+type RegisterForm = z.infer<typeof registerSchema>;
+type LoginForm = z.infer<typeof loginSchema>;
 
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { login, register, refetch } = useUser();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [showRegister, setShowRegister] = useState(false);
 
-  const form = useForm<AuthForm>({
-    resolver: zodResolver(authSchema),
+  const loginForm = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
       password: "",
+      rememberMe: false,
     },
   });
 
-  const handleSubmit = async (values: AuthForm, isLogin: boolean) => {
+  const registerForm = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      username: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      rememberMe: false,
+    },
+    mode: "onChange",
+  });
+
+  // Track form validation status
+  const { isValid: isRegisterValid } = registerForm.formState;
+  const watchPassword = registerForm.watch("password");
+  const watchConfirmPassword = registerForm.watch("confirmPassword");
+  const watchEmail = registerForm.watch("email");
+
+  // Validation states
+  const isPasswordLengthValid = watchPassword?.length >= 8;
+  const isPasswordsMatch = watchPassword === watchConfirmPassword && watchConfirmPassword !== "";
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(watchEmail || "");
+
+  const handleLogin = async (values: LoginForm) => {
     setIsLoading(true);
     try {
-      const { rememberMe, ...authData } = values;
-      const result = await (isLogin ? login({ ...authData, rememberMe }) : register(authData));
+      const result = await login(values);
       
       if (!result.ok) {
         throw new Error(result.message);
@@ -60,24 +96,48 @@ export default function AuthPage() {
 
       toast({
         title: "Success!",
-        description: isLogin ? "Welcome back!" : "Account created successfully",
+        description: "Welcome back!",
+      });
+
+      // Force a refetch of user data
+      await refetch();
+      
+      // Check user status
+      if (result.user?.hasCompletedOnboarding) {
+        setLocation("/dashboard");
+      } else {
+        window.location.href = '/onboarding';
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (values: RegisterForm) => {
+    setIsLoading(true);
+    try {
+      const result = await register(values);
+      
+      if (!result.ok) {
+        throw new Error(result.message);
+      }
+
+      toast({
+        title: "Success!",
+        description: "Account created successfully",
       });
 
       // Force a refetch of user data
       await refetch();
       
       // For new registrations, explicitly navigate to onboarding
-      if (!isLogin) {
-        window.location.href = '/onboarding';  // Use window.location instead of setLocation
-        return;
-      }
-      
-      // For login, check user status
-      if (result.user?.hasCompletedOnboarding) {
-        setLocation("/dashboard");
-      } else {
-        window.location.href = '/onboarding';  // Use window.location for consistency
-      }
+      window.location.href = '/onboarding';
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -101,7 +161,6 @@ export default function AuthPage() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[100px] animate-float-medium"></div>
       </div>
 
-      {/* Keep the existing card structure but enhance its styling */}
       <Card className="w-full max-w-md bg-gray-900/50 backdrop-blur-sm border-gray-800 relative z-10">
         <CardHeader>
           <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400">
@@ -113,30 +172,23 @@ export default function AuthPage() {
         </CardHeader>
 
         <CardContent>
-          <Tabs defaultValue="login">
+          <Tabs defaultValue="login" onValueChange={(value) => setShowRegister(value === "register")}>
             <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-800/50">
-              <TabsTrigger 
-                value="login" 
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-              >
+              <TabsTrigger value="login" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                 Login
               </TabsTrigger>
-              <TabsTrigger 
-                value="register"
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-              >
+              <TabsTrigger value="register" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                 Register
               </TabsTrigger>
             </TabsList>
 
-            {/* Keep existing form structure but enhance input styling */}
+            {/* Login Tab Content */}
             <TabsContent value="login">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((v) => handleSubmit(v, true))}>
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(handleLogin)}>
                   <div className="space-y-4">
-                    {/* Keep existing form fields but enhance their styling */}
                     <FormField
-                      control={form.control}
+                      control={loginForm.control}
                       name="username"
                       render={({ field }) => (
                         <FormItem>
@@ -152,7 +204,7 @@ export default function AuthPage() {
                       )}
                     />
                     <FormField
-                      control={form.control}
+                      control={loginForm.control}
                       name="password"
                       render={({ field }) => (
                         <FormItem>
@@ -170,7 +222,7 @@ export default function AuthPage() {
                     />
                     <div className="flex items-center space-x-2 mb-4">
                       <FormField
-                        control={form.control}
+                        control={loginForm.control}
                         name="rememberMe"
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-center space-x-2">
@@ -193,46 +245,124 @@ export default function AuthPage() {
                       className="w-full bg-blue-600 hover:bg-blue-700 transition-colors" 
                       disabled={isLoading}
                     >
-                      Login
+                      {isLoading ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Logging in...</span>
+                        </div>
+                      ) : (
+                        "Login"
+                      )}
                     </Button>
                   </div>
                 </form>
               </Form>
             </TabsContent>
 
-            {/* Apply the same styling to the register tab */}
+            {/* Register Tab Content */}
             <TabsContent value="register">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((v) => handleSubmit(v, false))}>
+              <Form {...registerForm}>
+                <form onSubmit={registerForm.handleSubmit(handleRegister)}>
                   <div className="space-y-4">
                     <FormField
-                      control={form.control}
+                      control={registerForm.control}
                       name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Username</FormLabel>
+                          <FormLabel className="text-gray-200">Username</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input 
+                              {...field} 
+                              className="bg-gray-800/50 border-gray-700 focus:border-blue-500"
+                              placeholder="Choose a username"
+                            />
                           </FormControl>
-                          <FormMessage />
                         </FormItem>
                       )}
                     />
                     <FormField
-                      control={form.control}
-                      name="password"
+                      control={registerForm.control}
+                      name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <FormLabel className="text-gray-200">Email</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} />
+                            <Input 
+                              type="email" 
+                              {...field} 
+                              className="bg-gray-800/50 border-gray-700 focus:border-blue-500"
+                              placeholder="Enter your email"
+                            />
                           </FormControl>
-                          <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      Register
+                    <FormField
+                      control={registerForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-200">Password</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="password" 
+                              {...field} 
+                              className="bg-gray-800/50 border-gray-700 focus:border-blue-500"
+                              placeholder="Create a password"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-200">Confirm Password</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="password" 
+                              {...field} 
+                              className="bg-gray-800/50 border-gray-700 focus:border-blue-500"
+                              placeholder="Confirm your password"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Requirements List */}
+                    {showRegister && (
+                      <div className="space-y-2 mt-4">
+                        <RequirementRow
+                          text="Password must be at least 8 characters"
+                          isMet={isPasswordLengthValid}
+                        />
+                        <RequirementRow
+                          text="Passwords must match"
+                          isMet={isPasswordsMatch}
+                        />
+                        <RequirementRow
+                          text="Valid email address required"
+                          isMet={isEmailValid}
+                        />
+                      </div>
+                    )}
+
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-blue-600 hover:bg-blue-700 transition-colors" 
+                      disabled={isLoading || !isRegisterValid}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Creating Account...</span>
+                        </div>
+                      ) : (
+                        "Create Account"
+                      )}
                     </Button>
                   </div>
                 </form>
@@ -241,6 +371,17 @@ export default function AuthPage() {
           </Tabs>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function RequirementRow({ text, isMet }: { text: string; isMet: boolean }) {
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${isMet ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20 text-gray-500'}`}>
+        {isMet ? '✓' : '○'}
+      </div>
+      <span className={isMet ? 'text-green-500' : 'text-gray-500'}>{text}</span>
     </div>
   );
 }

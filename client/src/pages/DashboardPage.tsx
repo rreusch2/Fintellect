@@ -8,7 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import FinanceOverview from "@/components/Dashboard/FinanceOverview";
 import { SpendingDistributionChart } from "@/components/Transactions/SpendingDistributionChart";
-import AIFinancialInsights from "@/components/Dashboard/AIFinancialInsights";
+import AIFinancialTip from "@/components/Dashboard/AIFinancialTip";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -331,9 +331,9 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* AI Financial Insights */}
+            {/* AI Financial Tip of the Day */}
             <div className="w-full">
-              <AIFinancialInsights />
+              <AIFinancialTip />
             </div>
           </motion.div>
 

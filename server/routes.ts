@@ -4,18 +4,22 @@ import { db } from "@db";
 import { users, goals, budgets, plaidTransactions } from "@db/schema";
 import { eq, desc, and, gte } from "drizzle-orm";
 import { insertUserSchema, plaidAccounts, plaidItems, type SelectGoal } from "@db/schema";
-import { generateFinancialInsights, chatWithAI } from "./services/ai";
-import { setupAuth } from "./auth";
-import { financialAdvisor } from "./services/ai/agents/FinancialAdvisorAgent";
-import { investmentAdvisor } from "./services/ai/agents/InvestmentStrategyAgent";
-import { budgetAnalyst } from "./services/ai/agents/BudgetAnalysisAgent";
+import { generateFinancialInsights, chatWithAI } from "./services/ai.js";
+import { setupAuth } from "./auth.js";
+import { financialAdvisor } from "./services/ai/agents/FinancialAdvisorAgent.js";
+import { investmentAdvisor } from "./services/ai/agents/InvestmentStrategyAgent.js";
+import { budgetAnalyst } from "./services/ai/agents/BudgetAnalysisAgent.js";
 import passport from "passport";
 import { IVerifyOptions } from "passport-local";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { PlaidService } from "./services/plaid";
-import plaidRouter from "./routes/plaid";
-import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent";
+import { PlaidService } from "./services/plaid.js";
+import plaidRouter from "./routes/plaid.js";
+import aiRouter from "./routes/ai.js";
+import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent.js";
+import { financialTipAgent } from "./services/ai/agents/FinancialTipAgent.js";
+import mobileAuthRouter from './auth/mobile.js';
+import { jwtAuth } from './middleware/jwtAuth.js';
 
 
 const scryptAsync = promisify(scrypt);
@@ -31,8 +35,33 @@ export function registerRoutes(app: Express): Server {
   // Setup authentication middleware and routes
   setupAuth(app);
 
-  // Mount the Plaid router
-  app.use("/api/plaid", plaidRouter);
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Mount the mobile auth router first
+  app.use("/api/auth/mobile", mobileAuthRouter);
+
+  // Mount the Plaid router with JWT auth for mobile requests
+  app.use("/api/plaid", (req, res, next) => {
+    // Check if it's a mobile request (has Authorization header)
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+      return jwtAuth(req, res, next);
+    }
+    // For web requests, continue with session auth
+    next();
+  }, plaidRouter);
+
+  // Mount the AI router with JWT auth for mobile requests
+  app.use("/api/ai", (req, res, next) => {
+    // Check if it's a mobile request (has Authorization header)
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+      return jwtAuth(req, res, next);
+    }
+    // For web requests, continue with session auth
+    next();
+  }, aiRouter);
 
   app.post("/api/register", async (req, res, next) => {
     try {
@@ -876,6 +905,29 @@ export function registerRoutes(app: Express): Server {
       console.error("Error getting dashboard insights:", error);
       res.status(500).json({
         error: "Failed to get insights",
+        details: process.env.NODE_ENV === "development" ? error.message : undefined
+      });
+    }
+  });
+
+  // Add this near your other AI endpoints
+  app.post("/api/ai/financial-tip", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not logged in");
+    }
+
+    try {
+      const { context } = req.body;
+      if (!context) {
+        return res.status(400).send("Context is required");
+      }
+
+      const tip = await financialTipAgent.generateTip(req.user.id, context);
+      res.json(tip);
+    } catch (error) {
+      console.error("Error generating financial tip:", error);
+      res.status(500).json({
+        error: "Failed to generate tip",
         details: process.env.NODE_ENV === "development" ? error.message : undefined
       });
     }

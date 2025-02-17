@@ -1,0 +1,43 @@
+{
+  "configurations" : [
+    {
+      "id" : "698167C2-DC2C-4F84-A262-38C0AE89640C",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "environmentVariableEntries" : [
+      {
+        "key" : "SERVER_URL",
+        "value" : "http:\/\/216.39.74.172:5001"
+      }
+    ],
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:FintellectMobile.xcodeproj",
+      "identifier" : "06164DB62D3633FC001F5AE8",
+      "name" : "FintellectMobile"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:FintellectMobile.xcodeproj",
+        "identifier" : "06164DC62D3633FD001F5AE8",
+        "name" : "FintellectMobileTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:FintellectMobile.xcodeproj",
+        "identifier" : "06164DD02D3633FD001F5AE8",
+        "name" : "FintellectMobileUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

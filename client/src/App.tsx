@@ -14,6 +14,8 @@ import InvestmentStrategyPage from "./pages/InvestmentStrategyPage";
 import GoalsPage from "./pages/GoalsPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import TermsPage from "./pages/legal/TermsPage";
+import ThrivePage from "./pages/ai/ThrivePage";
+import SentinelPage from "./pages/ai/SentinelPage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
@@ -63,6 +65,8 @@ function App() {
       <Route path="/ai/assistant" component={AIAssistantPage} />
       <Route path="/ai/budget" component={AIBudgetPage} />
       <Route path="/ai/investment" component={InvestmentStrategyPage} />
+      <Route path="/ai/thrive" component={ThrivePage} />
+      <Route path="/ai/sentinel" component={SentinelPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/profile" component={ProfileSettingsPage} />
       <Route>

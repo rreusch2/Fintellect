@@ -1,0 +1,50 @@
+# Math/Reasoning Qualification Test Answers
+
+## Question 1
+4
+
+I approached this by calculating when the hour and minute hands would meet after 3:20 AM. The hour hand moves at 0.5 degrees per minute, while the minute hand moves at 6 degrees per minute, giving a relative velocity of 5.5 degrees per minute.
+
+At 3:20 AM, the hour hand is at (3 × 30) + (20 × 0.5) = 90 + 10 = 100 degrees. The minute hand is at 20 × 6 = 120 degrees. The angular difference is 120 - 100 = 20 degrees.
+
+With a relative velocity of 5.5 degrees per minute, it will take 20 ÷ 5.5 = 3.636... minutes for the hands to meet. Rounding to the nearest minute gives 4 minutes, so they'll meet at 3:24 AM.
+
+## Question 2
+9
+
+To solve this problem, I needed to find the remainder when a number consisting of "147" repeated 841 times is divided by 11.
+
+I first analyzed what happens when we divide 147 by 11. Using the alternating sum method for divisibility by 11 (1-4+7=4), I found that 147 gives a remainder of 4 when divided by 11.
+
+For 841 repetitions, I needed to find (4 × 841) mod 11. Since 841 = 77×11 - 6, we have 841 ≡ -6 (mod 11).
+
+Therefore, 4 × 841 ≡ 4 × (-6) ≡ -24 ≡ 9 (mod 11).
+
+So the remainder when the number 147147147... (841 times) is divided by 11 is 9.
+
+## Question 3
+0.136
+
+This is an exponential growth problem where the rate of growth is proportional to the amount present. I used the exponential growth formula: A(t) = A₀ × e^(kt), where k is the growth constant.
+
+Given that there were 0.4 grams at noon and 1.6 grams at 9:00 PM (9 hours later), I first calculated the growth constant:
+1.6 = 0.4 × e^(9k)
+4 = e^(9k)
+ln(4) = 9k
+k = ln(4)/9 ≈ 0.1540
+
+Then, I calculated the amount at 5:00 AM, which is 7 hours before noon:
+A(-7) = 0.4 × e^(-7 × 0.1540) = 0.4 × e^(-1.0782) = 0.4 × 0.3402 ≈ 0.1361
+
+Rounded to three decimal places: 0.136 grams.
+
+## Question 4
+32
+
+This problem involves counting possible division pathways for 5 people with constraints. Since Kai and Wen cannot be in the same subgroup after the first division, I analyzed all possible initial splits.
+
+I considered all possible distributions of the other 3 people (let's call them A, B, C) between Kai's group and Wen's group. For each distribution, I calculated the number of ways to further divide each subgroup until everyone is alone.
+
+For example, if Kai is with person A and Wen is with persons B and C after the first split, I counted how many ways we can continue dividing {K,A} and {W,B,C} until everyone is alone.
+
+By systematically analyzing all possible distributions and subsequent divisions, I determined there are 32 possible division pathways that satisfy all constraints.

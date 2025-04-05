@@ -1,20 +1,18 @@
-import type { Config } from 'drizzle-kit';
+import { defineConfig } from 'drizzle-kit';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-const url = new URL(process.env.DATABASE_URL!);
-
-export default {
+export default defineConfig({
   schema: './db/schema.ts',
   out: './db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    host: url.hostname,
-    port: parseInt(url.port),
-    user: url.username,
-    password: url.password,
-    database: url.pathname.slice(1),
+    host: 'ep-icy-bread-a5zav1yt.us-east-2.aws.neon.tech',
+    port: 5432,
+    user: 'neondb_owner',
+    password: process.env.DB_PASSWORD,
+    database: 'neondb',
     ssl: true
   },
-} satisfies Config;
+});
 

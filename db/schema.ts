@@ -2,6 +2,7 @@ import { pgTable, text, serial, integer, timestamp, jsonb, boolean, varchar, ind
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").unique().notNull(),
@@ -104,6 +105,12 @@ export const usersRelations = relations(users, ({ many }) => ({
   plaidAccounts: many(plaidAccounts),
   plaidTransactions: many(plaidTransactions),
   insights: many(insights),
+  // Use string references instead of direct references
+  researchPreferences: many("research_preferences"),
+  researchSchedules: many("research_schedules"),
+  researchResults: many("research_results"),
+  alertConfigs: many("alert_config"),
+  alertHistory: many("alert_history"),
 }));
 
 export const plaidItemsRelations = relations(plaidItems, ({ one, many }) => ({
@@ -236,3 +243,5 @@ export const selectGoalSchema = createSelectSchema(goals);
 
 export type SelectGoal = typeof goals.$inferSelect;
 export type InsertGoal = typeof goals.$inferInsert;
+
+export * from "./sentinel-schema.js";

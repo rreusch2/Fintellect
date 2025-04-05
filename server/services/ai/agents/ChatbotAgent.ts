@@ -7,17 +7,6 @@ import { anthropic, MODEL_NAMES, generateContent } from '../config/anthropic.js'
 import { knowledgeStore } from "../store/KnowledgeStore.js";
 import { DashboardInsightsAgent } from "./DashboardInsightsAgent.js";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ 
-  model: "gemini-pro",
-  generationConfig: {
-    maxOutputTokens: 2000,
-    temperature: 0.7,
-    topP: 0.8,
-    topK: 40,
-  }
-});
-
 interface UserContextData {
   monthlyIncome: number;
   recentTransactions: typeof plaidTransactions.$inferSelect[];
@@ -30,7 +19,6 @@ export class ChatbotAgent {
   private knowledgeStore: typeof knowledgeStore;
 
   constructor(
-    _model: typeof anthropic,
     knowledgeStore: typeof knowledgeStore,
     dashboardAgent: DashboardInsightsAgent
   ) {
@@ -216,22 +204,16 @@ ${transactions
       const userContext = await this.getUserContext(userId);
       const contextStr = ChatbotAgent.formatUserContext(userContext);
 
-      const prompt = `As an AI Financial Assistant, help this user with their financial query. Use the following context about their finances:
+      const prompt = `As an AI Financial Assistant, help this user with their financial query. Use the following context about their finances:\n\n${contextStr}\n\nUser Query: \"${message}\"\n\nProvide a helpful, specific response based on their actual financial data. Include specific numbers and insights when relevant. Be conversational and empathetic.`;
 
-${contextStr}
-
-User Query: "${message}"
-
-Provide a helpful, specific response based on their actual financial data. Include specific numbers and insights when relevant.`;
-
-      const response = await generateContent(prompt);
+      const response = await generateContent(prompt, 2000, 0.7);
       return response;
 
-    } catch (error) {
-      console.error('Error in chat:', error);
-      return "I apologize, but I'm having trouble processing your request at the moment. Please try again later.";
+    } catch (error: any) {
+      console.error(`[ChatbotAgent] Error processing chat for userId ${userId}:`, error?.message || error);
+      return "I apologize, but I encountered an issue while processing your request. The technical team has been notified. Please try again shortly.";
     }
   }
 }
 
-export const chatbot = new ChatbotAgent(model, knowledgeStore, new DashboardInsightsAgent()); 
+export const chatbot = new ChatbotAgent(knowledgeStore, new DashboardInsightsAgent()); 

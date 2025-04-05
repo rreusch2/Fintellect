@@ -23,6 +23,7 @@ export default function PlaidLink({
   variant = "default",
   children 
 }: PlaidLinkProps) {
+  console.log('PlaidLink component mounted');
   const [isLoading, setIsLoading] = useState(false);
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -31,72 +32,92 @@ export default function PlaidLink({
 
   // Load Plaid script
   useEffect(() => {
-    const loadScript = async () => {
-      // If script is already loaded, we're done
-      if (document.querySelector('script[src*="link-initialize.js"]')) {
+    console.log('PlaidLink: Running script loading useEffect');
+    if (window.Plaid) {
+      console.log('PlaidLink: Plaid script already loaded');
+      setScriptLoaded(true);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+    script.async = true;
+    let scriptLoadPromise: Promise<void> | null = new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('PlaidLink: Plaid script finished loading (onload)');
         setScriptLoaded(true);
-        return;
-      }
+        scriptLoadPromise = null;
+        resolve();
+      };
+      script.onerror = (error) => {
+        console.error('PlaidLink: Plaid script failed to load (onerror)', error);
+        setScriptLoaded(false);
+        scriptLoadPromise = null;
+        reject(error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load Plaid. Please refresh the page."
+        });
+      };
+      document.head.appendChild(script);
+    });
 
-      // If script is currently loading, wait for it
-      if (isScriptLoading && scriptLoadPromise) {
-        await scriptLoadPromise;
-        setScriptLoaded(true);
-        return;
-      }
-
-      // Start loading the script
-      isScriptLoading = true;
-      scriptLoadPromise = new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
-        script.onload = () => {
-          setScriptLoaded(true);
-          isScriptLoading = false;
-          resolve();
-        };
-        script.onerror = (error) => {
-          isScriptLoading = false;
-          scriptLoadPromise = null;
-          reject(error);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to load Plaid. Please refresh the page."
-          });
-        };
-        document.head.appendChild(script);
-      });
-
-      try {
-        await scriptLoadPromise;
-      } catch (error) {
-        console.error("Error loading Plaid script:", error);
-      }
+    const checkScriptLoad = async () => {
+        try {
+            console.log('PlaidLink: Awaiting script load promise...');
+            await scriptLoadPromise;
+            console.log('PlaidLink: Script load promise resolved.');
+        } catch (error) {
+            console.error("PlaidLink: Error awaiting script load promise:", error);
+        }
     };
 
-    loadScript();
+    checkScriptLoad();
+
   }, [toast]);
 
   // Get link token
   useEffect(() => {
+    console.log('PlaidLink: Running link token useEffect. scriptLoaded:', scriptLoaded);
     if (!scriptLoaded) return;
 
     const getLinkToken = async () => {
+      console.log('PlaidLink: Attempting to get link token...');
       try {
         const response = await fetch("/api/plaid/create-link-token", {
           method: "POST",
           credentials: "include",
         });
 
+        console.log('PlaidLink: Fetched link token. Status:', response.status, 'OK:', response.ok);
+
         if (!response.ok) {
-          throw new Error("Failed to create link token");
+          let errorBody = 'Unknown error';
+          try {
+            errorBody = await response.text();
+            console.error('PlaidLink: Link token fetch !ok response body:', errorBody);
+            const errorJson = JSON.parse(errorBody);
+            errorBody = errorJson.message || errorJson.error || JSON.stringify(errorJson);
+          } catch (parseErr) { /* Ignore if response isn't JSON or text */ }
+          throw new Error(`Failed to create link token (Status: ${response.status}). ${errorBody}`);
         }
 
-        const { link_token } = await response.json();
+        const data = await response.json();
+        console.log('PlaidLink: Link token response JSON:', data);
+        
+        const link_token = data?.linkToken;
+
+        if (!link_token) {
+           console.error('PlaidLink: link_token not found in response data (looking for linkToken).', data);
+           throw new Error('Link token (linkToken) not found in response from server.');
+        }
+
+        console.log('PlaidLink: Link Token Received:', link_token);
         setLinkToken(link_token);
+
       } catch (error) {
-        console.error("Error creating link token:", error);
+        console.error("PlaidLink: Error inside getLinkToken:", error);
         toast({
           variant: "destructive",
           title: "Error",

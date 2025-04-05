@@ -7,14 +7,16 @@ import {
   Bot, 
   Brain, 
   CircleDollarSign, 
-  Calculator,
   Sparkles,
   Rocket,
   MessageSquarePlus,
   Shield,
   Clock,
   Zap,
-  Lock
+  Lock,
+  Target,
+  ClipboardList,
+  Search
 } from "lucide-react";
 import { AIDisclaimer } from "@/components/legal/AIDisclaimer";
 import { motion } from "framer-motion";
@@ -41,44 +43,79 @@ const aiServices = [
     status: "active"
   },
   {
-    title: "AI Investment Strategist",
-    description: "Harness the power of AI to analyze your financial profile and create personalized investment strategies. Get dynamic portfolio recommendations, risk assessments, and market insights tailored to your goals.",
+    title: "Vertex - Investment Strategist",
+    description: "Your sharp, analytical strategist. Combines market data with your risk tolerance and goals to deliver personalized investment intelligence and portfolio optimization.",
     icon: Brain,
     features: [
-      "Smart portfolio optimization",
-      "AI risk analysis",
-      "Real-time market insights",
-      "Intelligent goal planning"
+      "Data-driven portfolio analysis",
+      "Personalized risk assessment",
+      "Investment opportunity identification",
+      "Tax-efficiency strategies"
     ],
-    route: "/ai/investment",
+    route: "/ai/vertex",
     color: "bg-purple-500/10 text-purple-400",
+    status: "active"
+  },
+  {
+    title: "Thrive - Expense Optimizer",
+    description: "Your resourceful, practical ally for spending. Analyzes spending patterns in context of your lifestyle to find savings opportunities that respect your priorities.",
+    icon: CircleDollarSign,
+    features: [
+      "Contextual spending analysis",
+      "Subscription value assessment",
+      "Personalized savings opportunities",
+      "Bill negotiation insights"
+    ],
+    route: "/ai/thrive",
+    color: "bg-green-500/10 text-green-400",
+    status: "active"
+  },
+  {
+    title: "Summit - Goal Coach",
+    description: "Your motivational, supportive coach for achieving financial milestones. Tracks progress, adapts to your style, and keeps you engaged with your goals.",
+    icon: Target,
+    features: [
+      "Personalized goal tracking",
+      "Motivational progress insights",
+      "Adaptive milestone planning",
+      "Celebration of achievements"
+    ],
+    route: "/ai/summit",
+    color: "bg-orange-500/10 text-orange-400",
+    status: "active"
+  },
+  {
+    title: "Horizon - Financial Planner",
+    description: "Your wise, forward-thinking guide. Creates comprehensive, long-term financial plans reflecting your life goals, values, and financial journey.",
+    icon: ClipboardList,
+    features: [
+      "Holistic financial projections",
+      "Life event planning (retirement, etc.)",
+      "Value-based goal alignment",
+      "Long-term scenario analysis"
+    ],
+    route: "/ai/horizon",
+    color: "bg-teal-500/10 text-teal-400",
+    status: "active"
+  },
+  {
+    title: "Sentinel - Research Intelligence",
+    description: "Your autonomous research agent that monitors markets, news, and various data sources based on your preferences. Receive timely, actionable insights about potential opportunities and risks.",
+    icon: Search,
+    features: [
+      "Scheduled market research",
+      "Data-driven insights",
+      "News and trend analysis",
+      "Customizable alert system"
+    ],
+    route: "/ai/sentinel",
+    color: "bg-indigo-500/10 text-indigo-400",
     status: "active"
   }
 ];
 
 const upcomingFeatures = [
-  {
-    title: "AI Budget Analyst",
-    description: "Advanced AI-powered analysis of your spending patterns with predictive insights and intelligent optimization suggestions.",
-    icon: CircleDollarSign,
-    features: [
-      "AI-driven spending analysis",
-      "Smart budget optimization",
-      "Automated savings detection"
-    ],
-    color: "bg-green-500/10 text-green-400"
-  },
-  {
-    title: "AI Tax Strategist",
-    description: "Intelligent tax optimization and planning powered by advanced AI analysis of your financial data.",
-    icon: Calculator,
-    features: [
-      "AI tax optimization",
-      "Smart deduction finder",
-      "Proactive tax planning"
-    ],
-    color: "bg-orange-500/10 text-orange-400"
-  }
+  // This array is now empty. We can add future planned features here later.
 ];
 
 const aiStats = [

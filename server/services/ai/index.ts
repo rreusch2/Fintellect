@@ -71,3 +71,7 @@ export async function generateSavingsTips(userId: number) {
 }
 
 // ... other existing functions ... 
+
+// Add SentinelAgent to exports
+export * from './agents/ThriveAgent.js';
+export * from './agents/SentinelAgent.js'; 

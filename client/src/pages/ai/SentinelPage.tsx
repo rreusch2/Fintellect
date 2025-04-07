@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
@@ -16,6 +16,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, Bookmark, Bell, BookX, CheckCircle, Calendar, Clock, Settings, ArrowRight, RefreshCw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from '@/components/ui/separator';
+
+// Import new components
+import TerminalOutput from '@/features/Sentinel/components/TerminalOutput';
+import AgentActivityLog from '@/features/Sentinel/components/AgentActivityLog';
 
 // Interfaces based on the database schema
 interface ResearchPreference {
@@ -47,6 +52,11 @@ interface ResearchPreference {
     keywordCooccurrence?: boolean;
     summarization?: boolean;
   };
+  scheduleSettings?: {
+    scheduleType?: string;
+    timezone?: string;
+  };
+  customInstructions?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,6 +115,35 @@ interface Alert {
   isActioned: boolean;
   createdAt: string;
 }
+
+// Define LogLine interface
+interface LogLine {
+  id: number; 
+  // Consolidate types for clarity
+  type: 'agent_status' | 'terminal_stdout' | 'terminal_stderr' | 'user_command' | 'task_summary' | 'task_error' | 'system_info' | 'system_error';
+  data: string;
+  // Optional fields for completion messages
+  files?: { name: string, path: string }[];
+  suggestions?: { short: string, full: string }[];
+}
+
+// Temporary state for raw string inputs
+interface PreferenceFormInputs {
+  topicsInput: string;
+  keywordsInput: string;
+  tickersInput: string;
+  customInstructionsInput: string;
+  // Keep structured data for toggles and selections
+  assetClasses: string[];
+  specificAssets: ResearchPreference['specificAssets'];
+  dataSources: ResearchPreference['dataSources'];
+  analysisTypes: ResearchPreference['analysisTypes'];
+  scheduleSettings?: ResearchPreference['scheduleSettings'];
+  isActive: boolean;
+  id?: number; // For updates
+}
+
+const WS_COMMAND_URL = 'ws://localhost:5001/ws/sentinel/execute';
 
 // API functions
 const fetchPreferences = async (): Promise<ResearchPreference[]> => {
@@ -213,9 +252,11 @@ export default function SentinelPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showNewPreferenceForm, setShowNewPreferenceForm] = useState(false);
-  const [newPreference, setNewPreference] = useState<Partial<ResearchPreference>>({
-    topics: [],
-    keywords: [],
+  const [preferenceForm, setPreferenceForm] = useState<PreferenceFormInputs>({
+    topicsInput: '',
+    keywordsInput: '',
+    tickersInput: '',
+    customInstructionsInput: '',
     assetClasses: [],
     specificAssets: {},
     dataSources: {
@@ -234,19 +275,152 @@ export default function SentinelPage() {
       keywordCooccurrence: false,
       summarization: true,
     },
+    scheduleSettings: {
+        scheduleType: 'daily',
+        timezone: 'UTC'
+    },
     isActive: true,
   });
-  const [runningResearch, setRunningResearch] = useState<boolean>(false);
+
+  // New state to track active research run
+  const [activeResearchRun, setActiveResearchRun] = useState<{ preferenceId: number } | null>(null);
+
+  // --- WebSocket State --- 
+  const [logs, setLogs] = useState<LogLine[]>([]);
+  const [isWsConnected, setIsWsConnected] = useState(false);
+  const ws = useRef<WebSocket | null>(null);
+  const nextLogId = useRef(0); 
+  // ----------------------
+
+  // --- WebSocket Logic --- 
+  const addLog = useCallback((logEntry: Omit<LogLine, 'id'>) => {
+    setLogs((prevLogs) => [
+      ...prevLogs.slice(-200), 
+      { ...logEntry, id: nextLogId.current++ }, // Add ID here
+    ]);
+  }, []);
+
+  useEffect(() => {
+    // Ensure we don't create multiple connections if effect runs twice
+    if (ws.current) {
+        console.log("[WebSocket Effect] Already connecting/connected.");
+        return;
+    }
+
+    console.log(`Attempting to connect command WebSocket: ${WS_COMMAND_URL}`);
+    addLog({ type: 'system_info', data: `Connecting command channel to ${WS_COMMAND_URL}...` });
+    
+    let localWs = new WebSocket(WS_COMMAND_URL);
+    ws.current = localWs; // Assign to ref immediately
+    let isClosing = false; // Flag to prevent double close/error logs
+
+    localWs.onopen = () => {
+      if (isClosing) return; // Ignore if cleanup already started
+      console.log('Command WebSocket Connected');
+      setIsWsConnected(true);
+      addLog({ type: 'system_info', data: 'Command channel connected.' });
+    };
+
+    localWs.onclose = (event) => {
+      if (isClosing) return; // Ignore if cleanup already started
+      console.log('Command WebSocket Disconnected', event.reason, `(Code: ${event.code})`);
+      setIsWsConnected(false);
+      ws.current = null; // Clear ref on close
+      addLog({ type: 'system_error', data: `Command channel disconnected: ${event.reason || 'Unknown reason'} (Code: ${event.code})` });
+    };
+
+    localWs.onerror = (error) => {
+      if (isClosing) return; // Ignore if cleanup already started
+      console.error('Command WebSocket Error:', error);
+      setIsWsConnected(false);
+      ws.current = null; // Clear ref on error
+      addLog({ type: 'system_error', data: 'Command channel connection error.' });
+    };
+
+    localWs.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        console.log("Command WS Message:", message);
+        
+        // Handle specific message types from backend
+        switch (message.type) {
+          case 'agent_status':
+          case 'terminal_stdout':
+          case 'terminal_stderr':
+            addLog({ type: message.type, data: message.message || message.data });
+            break;
+          case 'task_complete':
+            addLog({
+              type: 'task_summary', 
+              data: message.summary || 'Task completed successfully.', 
+              files: message.files || [], 
+              suggestions: message.suggestions || []
+            });
+             // Maybe add a visual separator log?
+             addLog({ type: 'system_info', data: '--- End of Task ---' });
+            break;
+          case 'task_error':
+             addLog({
+               type: 'task_error', 
+               data: message.summary || 'Task failed.'
+             });
+              addLog({ type: 'system_info', data: '--- End of Task (Error) ---' });
+            break;
+          // Ignore internal status messages like container_ready if we added them
+          // case 'status': 
+          //   if (message.event === 'container_ready') { /* Handled by agent status now */ } 
+          //   else { addLog({ type: 'system_info', data: message.message }); }
+          //   break;
+          default:
+             addLog({ type: 'system_info', data: `Received unhandled message format: ${event.data}` });
+        }
+
+      } catch (e) {
+        console.error("Failed to parse command WebSocket message:", e);
+        addLog({ type: 'system_info', data: `Received raw message: ${event.data}` });
+      }
+    };
+
+    // Cleanup function refined
+    return () => {
+      isClosing = true; // Signal that cleanup is in progress
+      if (localWs) {
+          console.log("Closing command WebSocket connection (Cleanup)...", `State: ${localWs.readyState}`);
+          // Only close if it's in connecting or open state
+          if (localWs.readyState === WebSocket.CONNECTING || localWs.readyState === WebSocket.OPEN) {
+             localWs.close();
+          }
+      }
+      // Ensure ref is cleared if it still points to this instance
+      if (ws.current === localWs) {
+          ws.current = null;
+      }
+    };
+  }, [addLog]); // addLog is stable due to useCallback
+
+  const handleSendCommand = useCallback((command: string) => {
+    if (command.trim() && ws.current && ws.current.readyState === WebSocket.OPEN) {
+      addLog({ type: 'user_command', data: command.trim() }); // Log user command
+      ws.current.send(JSON.stringify({ command: command.trim() }));
+      // Don't clear completion state here anymore, it's part of logs
+    } else if (!isWsConnected) {
+      addLog({ type: 'system_error', data: 'Command channel not connected. Cannot send command.' });
+    }
+  }, [isWsConnected, addLog]);
+  // ------------------------
 
   // Queries
   const { 
     data: preferences, 
     isLoading: isLoadingPreferences,
+    isSuccess: isPreferencesSuccess,
     error: preferencesError
   } = useQuery<ResearchPreference[]>({
     queryKey: ['sentinelPreferences'],
     queryFn: fetchPreferences,
   });
+
+  console.log("Preferences Data from useQuery:", preferences);
 
   const { 
     data: results, 
@@ -294,9 +468,7 @@ export default function SentinelPage() {
         title: "Success",
         description: "Research completed successfully",
       });
-      setRunningResearch(false);
-      // Switch to results tab
-      setActiveTab('results');
+      setActiveResearchRun(null);
     },
     onError: (error) => {
       toast({
@@ -304,16 +476,21 @@ export default function SentinelPage() {
         title: "Error",
         description: `Failed to run research: ${error.message}`,
       });
-      setRunningResearch(false);
+      setActiveResearchRun(null);
     },
   });
 
   // Event Handlers
   const handleSubmitPreference = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Parse comma-separated strings into arrays
+    const topics = preferenceForm.topicsInput.split(',').map(t => t.trim()).filter(t => t);
+    const keywords = preferenceForm.keywordsInput.split(',').map(k => k.trim()).filter(k => k);
+    const tickers = preferenceForm.tickersInput.split(',').map(t => t.trim().toUpperCase()).filter(t => t);
+
     // Validate required fields
-    if (!newPreference.topics || newPreference.topics.length === 0) {
+    if (topics.length === 0) {
       toast({
         variant: "destructive",
         title: "Validation Error",
@@ -321,54 +498,61 @@ export default function SentinelPage() {
       });
       return;
     }
-    
-    // Create a copy with all the required fields
-    const completePreference = {
-      ...newPreference,
-      // Ensure these objects exist
-      specificAssets: newPreference.specificAssets || {},
-      dataSources: newPreference.dataSources || {
-        newsApis: true,
-        marketData: true,
+
+    // Create the final preference object to send to the backend
+    const preferenceData: Partial<ResearchPreference> = {
+      id: preferenceForm.id,
+      topics,
+      keywords,
+      assetClasses: preferenceForm.assetClasses,
+      specificAssets: {
+        ...preferenceForm.specificAssets,
+        tickers,
       },
-      analysisTypes: newPreference.analysisTypes || {
-        sentiment: true,
-        trendAnalysis: true,
-      },
+      dataSources: preferenceForm.dataSources,
+      analysisTypes: preferenceForm.analysisTypes,
+      scheduleSettings: preferenceForm.scheduleSettings,
+      customInstructions: preferenceForm.customInstructionsInput.trim() || undefined,
+      isActive: preferenceForm.isActive,
     };
-    
+
     // Submit the data
-    createPreferenceMutation.mutate(completePreference);
+    createPreferenceMutation.mutate(preferenceData);
   };
 
+  // Handle Run Research function
   const handleRunResearch = (preferenceId: number) => {
-    setRunningResearch(true);
+    if (activeResearchRun) {
+      toast({
+        title: "Research in Progress",
+        description: "Please wait for the current research to complete",
+      });
+      return;
+    }
+
+    // Set the active research run
+    setActiveResearchRun({ preferenceId });
+    
+    // Run the research mutation
     runResearchMutation.mutate(preferenceId);
   };
 
-  const handleTopicsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const topics = e.target.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
-    setNewPreference(prev => ({ ...prev, topics }));
+  const handleInputChange = (field: keyof PreferenceFormInputs) => (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    setPreferenceForm(prev => ({ ...prev, [field]: e.target.value }));
   };
 
-  const handleKeywordsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const keywords = e.target.value.split(',').map(k => k.trim()).filter(k => k.length > 0);
-    setNewPreference(prev => ({ ...prev, keywords }));
-  };
-
-  const handleTickersChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const tickers = e.target.value.split(',').map(t => t.trim().toUpperCase()).filter(t => t.length > 0);
-    setNewPreference(prev => ({ 
-      ...prev, 
-      specificAssets: { 
-        ...prev.specificAssets,
-        tickers
-      }
+  const handleAssetClassToggle = (asset: string, checked: boolean | 'indeterminate') => {
+    if (typeof checked !== 'boolean') return;
+    setPreferenceForm(prev => ({
+      ...prev,
+      assetClasses: checked
+        ? [...(prev.assetClasses || []), asset]
+        : prev.assetClasses?.filter(a => a !== asset) || []
     }));
   };
 
-  const handleDataSourceToggle = (source: string, value: boolean) => {
-    setNewPreference(prev => ({
+  const handleDataSourceToggle = (source: keyof ResearchPreference['dataSources'], value: boolean) => {
+    setPreferenceForm(prev => ({
       ...prev,
       dataSources: {
         ...prev.dataSources,
@@ -377,12 +561,22 @@ export default function SentinelPage() {
     }));
   };
 
-  const handleAnalysisTypeToggle = (type: string, value: boolean) => {
-    setNewPreference(prev => ({
+  const handleAnalysisTypeToggle = (type: keyof ResearchPreference['analysisTypes'], value: boolean) => {
+    setPreferenceForm(prev => ({
       ...prev,
       analysisTypes: {
         ...prev.analysisTypes,
         [type]: value
+      }
+    }));
+  };
+
+  const handleScheduleSelectChange = (field: 'scheduleType' | 'timezone', value: string) => {
+    setPreferenceForm(prev => ({
+      ...prev,
+      scheduleSettings: {
+        ...(prev.scheduleSettings || {}),
+        [field]: value,
       }
     }));
   };
@@ -399,6 +593,36 @@ export default function SentinelPage() {
     return "text-yellow-500";
   };
 
+  // --- Side effect to set initial tab based on preferences ---
+  useEffect(() => {
+    if (isPreferencesSuccess && preferences !== undefined) {
+       if (preferences.length === 0 && !showNewPreferenceForm && !activeResearchRun) { // Don't switch if running
+            setActiveTab('preferences');
+            setShowNewPreferenceForm(true);
+            console.log("No preferences found, setting active tab to 'preferences'.");
+       } 
+    }
+  }, [isPreferencesSuccess, preferences, showNewPreferenceForm, activeResearchRun]); // Add activeResearchRun dependency
+
+  // --- Side effect to switch tab when research starts/stops ---
+  useEffect(() => {
+    if (activeResearchRun) {
+       setActiveTab('running'); // Switch to running tab when a run starts
+       // Clear logs from previous run when starting a new one
+       setLogs([]);
+       addLog({ type: 'system_info', data: `Starting research for preference ID: ${activeResearchRun.preferenceId}...` });
+    } 
+  }, [activeResearchRun, addLog]); // Keep addLog dependency for the initial log message
+
+  // --- Side effect to clear logs when research starts ---
+  useEffect(() => {
+    if (activeResearchRun) {
+       setActiveTab('running'); 
+       setLogs([]); // Clear logs
+       addLog({ type: 'system_info', data: `Starting research for preference ID: ${activeResearchRun.preferenceId}...` });
+    } 
+  }, [activeResearchRun, addLog]);
+
   return (
     <div className="min-h-screen bg-background text-foreground dark flex flex-col">
       <Navigation />
@@ -411,16 +635,21 @@ export default function SentinelPage() {
           <h1 className="text-3xl font-bold">Sentinel - AI Research Intelligence</h1>
         </div>
 
-        {/* Tabs */}
+        {/* --- Main Content Area --- */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-4">
+            {/* Conditionally render Running Tab */}
+            {activeResearchRun && (
+                <TabsTrigger value="running" className="text-yellow-400">Running</TabsTrigger>
+            )}
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="results">Research Results</TabsTrigger>
             <TabsTrigger value="alerts">Alerts</TabsTrigger>
             <TabsTrigger value="preferences">Preferences</TabsTrigger>
           </TabsList>
 
-          {/* Dashboard Tab */}
+          {/* --- Tab Content --- */}
+          {/* Render standard tabs */} 
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <Card>
@@ -448,9 +677,9 @@ export default function SentinelPage() {
                               variant="outline" 
                               size="sm" 
                               onClick={() => handleRunResearch(pref.id)}
-                              disabled={runningResearch}
+                              disabled={activeResearchRun !== null}
                             >
-                              {runningResearch ? (
+                              {activeResearchRun ? (
                                 <>
                                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                   Running...
@@ -539,8 +768,8 @@ export default function SentinelPage() {
                         No research results available yet
                       </p>
                       {preferences?.length > 0 && (
-                        <Button onClick={() => handleRunResearch(preferences[0].id)} disabled={runningResearch}>
-                          {runningResearch ? (
+                        <Button onClick={() => handleRunResearch(preferences[0].id)} disabled={activeResearchRun !== null}>
+                          {activeResearchRun ? (
                             <>
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                               Running Research...
@@ -608,13 +837,13 @@ export default function SentinelPage() {
             </Card>
           </TabsContent>
 
-          {/* Results Tab */}
+          {/* Results Tab Content */}
           <TabsContent value="results" className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold">Research Results</h2>
               {preferences?.length > 0 && (
-                <Button onClick={() => handleRunResearch(preferences[0].id)} disabled={runningResearch}>
-                  {runningResearch ? (
+                <Button onClick={() => handleRunResearch(preferences[0].id)} disabled={activeResearchRun !== null}>
+                  {activeResearchRun ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Running Research...
@@ -770,7 +999,7 @@ export default function SentinelPage() {
                     Configure Preferences
                   </Button>
                   {preferences?.length > 0 && (
-                    <Button variant="outline" onClick={() => handleRunResearch(preferences[0].id)} disabled={runningResearch}>
+                    <Button variant="outline" onClick={() => handleRunResearch(preferences[0].id)} disabled={activeResearchRun !== null}>
                       Run Research Now
                     </Button>
                   )}
@@ -779,7 +1008,7 @@ export default function SentinelPage() {
             )}
           </TabsContent>
 
-          {/* Alerts Tab */}
+          {/* Alerts Tab Content */}
           <TabsContent value="alerts" className="space-y-6">
             <h2 className="text-2xl font-semibold mb-4">Alerts</h2>
             
@@ -836,7 +1065,7 @@ export default function SentinelPage() {
             )}
           </TabsContent>
 
-          {/* Preferences Tab */}
+          {/* Preferences Tab Content */}
           <TabsContent value="preferences" className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold">Research Preferences</h2>
@@ -845,6 +1074,17 @@ export default function SentinelPage() {
               </Button>
             </div>
             
+            {/* Display Error Alert *Outside* the form/list */}
+            {preferencesError && (
+              <Alert variant="destructive" className="mb-6"> {/* Added margin bottom */}
+                <AlertTitle>Error Loading Preferences</AlertTitle> {/* More specific title */}
+                <AlertDescription>
+                  {/* Display error message if available */}
+                  {preferencesError instanceof Error ? preferencesError.message : 'Failed to load research preferences. Please check server logs or try again later.'}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* New Preference Form */}
             {showNewPreferenceForm && (
               <Card>
@@ -855,178 +1095,190 @@ export default function SentinelPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmitPreference} className="space-y-6">
-                    {/* Research Topics */}
-                    <div className="space-y-2">
-                      <Label htmlFor="topics">Topics of Interest</Label>
-                      <Textarea 
-                        id="topics" 
-                        placeholder="Enter topics separated by commas (e.g., technology, finance, healthcare)" 
-                        className="min-h-[80px]"
-                        onChange={handleTopicsChange}
-                        value={newPreference.topics?.join(', ') || ''}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        These broad categories help Sentinel determine what to research
-                      </p>
-                    </div>
+                  <form onSubmit={handleSubmitPreference} className="space-y-8">
+                    {/* Section 1: Core Focus */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Core Focus</h3>
+                      <div className="space-y-2">
+                        <Label htmlFor="topics">Topics of Interest</Label>
+                        <Textarea
+                          id="topics"
+                          placeholder="Enter topics separated by commas (e.g., technology, finance, healthcare)"
+                          className="min-h-[60px]"
+                          onChange={handleInputChange('topicsInput')}
+                          value={preferenceForm.topicsInput}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Broad categories for research (comma-separated).
+                        </p>
+                      </div>
 
-                    {/* Keywords */}
-                    <div className="space-y-2">
-                      <Label htmlFor="keywords">Keywords</Label>
-                      <Textarea 
-                        id="keywords" 
-                        placeholder="Enter specific keywords separated by commas (e.g., AI, blockchain, interest rates)" 
-                        className="min-h-[80px]"
-                        onChange={handleKeywordsChange}
-                        value={newPreference.keywords?.join(', ') || ''}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Specific terms Sentinel should look for during research
-                      </p>
-                    </div>
-
-                    {/* Asset Classes */}
-                    <div className="space-y-2">
-                      <Label>Asset Classes</Label>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        {['equities', 'crypto', 'forex', 'commodities'].map(asset => (
-                          <div key={asset} className="flex items-center space-x-2">
-                            <Checkbox 
-                              id={`asset-${asset}`} 
-                              checked={newPreference.assetClasses?.includes(asset) || false}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setNewPreference(prev => ({
-                                    ...prev,
-                                    assetClasses: [...(prev.assetClasses || []), asset]
-                                  }));
-                                } else {
-                                  setNewPreference(prev => ({
-                                    ...prev,
-                                    assetClasses: prev.assetClasses?.filter(a => a !== asset) || []
-                                  }));
-                                }
-                              }}
-                            />
-                            <Label htmlFor={`asset-${asset}`} className="capitalize">{asset}</Label>
-                          </div>
-                        ))}
+                      <div className="space-y-2">
+                        <Label htmlFor="keywords">Keywords</Label>
+                        <Textarea
+                          id="keywords"
+                          placeholder="Enter specific keywords separated by commas (e.g., AI, blockchain, interest rates)"
+                          className="min-h-[60px]"
+                          onChange={handleInputChange('keywordsInput')}
+                          value={preferenceForm.keywordsInput}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Specific terms to look for (comma-separated).
+                        </p>
                       </div>
                     </div>
 
-                    {/* Tickers */}
-                    <div className="space-y-2">
-                      <Label htmlFor="tickers">Specific Tickers</Label>
-                      <Textarea 
-                        id="tickers" 
-                        placeholder="Enter stock tickers separated by commas (e.g., AAPL, MSFT, GOOGL)" 
-                        className="min-h-[60px]"
-                        onChange={handleTickersChange}
-                        value={newPreference.specificAssets?.tickers?.join(', ') || ''}
-                      />
+                    {/* Section 2: Assets */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Assets</h3>
+                       <div className="space-y-2">
+                         <Label>Asset Classes</Label>
+                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                          {['equities', 'crypto', 'forex', 'commodities'].map(asset => (
+                            <div key={asset} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`asset-${asset}`}
+                                checked={preferenceForm.assetClasses?.includes(asset)}
+                                onCheckedChange={(checked) => handleAssetClassToggle(asset, checked)}
+                              />
+                              <Label htmlFor={`asset-${asset}`} className="capitalize font-normal">
+                                {asset}
+                              </Label>
+                            </div>
+                          ))}
+                         </div>
+                       </div>
+
+                       <div className="space-y-2">
+                         <Label htmlFor="tickers">Specific Tickers</Label>
+                         <Textarea
+                          id="tickers"
+                          placeholder="Enter stock tickers separated by commas (e.g., AAPL, MSFT, GOOGL)"
+                          className="min-h-[60px]"
+                          onChange={handleInputChange('tickersInput')}
+                          value={preferenceForm.tickersInput}
+                         />
+                         <p className="text-xs text-muted-foreground">
+                            Comma-separated stock/crypto tickers.
+                         </p>
+                       </div>
                     </div>
 
-                    {/* Data Sources */}
-                    <div className="space-y-2">
-                      <Label>Data Sources</Label>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {Object.entries({
-                          newsApis: "News APIs",
-                          marketData: "Market Data",
-                          secFilings: "SEC Filings",
-                          blogs: "Financial Blogs",
-                          socialMedia: "Social Media",
-                          economicIndicators: "Economic Indicators"
-                        }).map(([key, label]) => (
-                          <div key={key} className="flex items-center justify-between space-x-2 p-3 border rounded-md">
-                            <Label htmlFor={`source-${key}`}>{label}</Label>
-                            <Switch 
-                              id={`source-${key}`} 
-                              checked={newPreference.dataSources?.[key] || false}
-                              onCheckedChange={(checked) => handleDataSourceToggle(key, checked)}
-                            />
-                          </div>
-                        ))}
+                    <Separator /> {/* Added Separator */}
+
+                    {/* Section 3: Data & Analysis */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-medium">Data Sources</h3>
+                        <div className="space-y-3">
+                          {Object.entries({
+                            newsApis: "News APIs",
+                            marketData: "Market Data",
+                            secFilings: "SEC Filings",
+                            blogs: "Financial Blogs",
+                            socialMedia: "Social Media",
+                            economicIndicators: "Economic Indicators"
+                          }).map(([key, label]) => (
+                            <div key={key} className="flex items-center justify-between space-x-2">
+                              <Label htmlFor={`source-${key}`} className="font-normal">{label}</Label>
+                              <Switch
+                                id={`source-${key}`}
+                                checked={preferenceForm.dataSources?.[key as keyof ResearchPreference['dataSources']]}
+                                onCheckedChange={(checked) => handleDataSourceToggle(key as keyof ResearchPreference['dataSources'], checked)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-medium">Analysis Types</h3>
+                         <div className="space-y-3">
+                          {Object.entries({
+                            sentiment: "Sentiment Analysis",
+                            volumeSpikes: "Volume Spikes",
+                            priceAnomalies: "Price Anomalies",
+                            trendAnalysis: "Trend Analysis",
+                            keywordCooccurrence: "Keyword Co-occurrence",
+                            summarization: "Content Summarization"
+                          }).map(([key, label]) => (
+                            <div key={key} className="flex items-center justify-between space-x-2">
+                              <Label htmlFor={`analysis-${key}`} className="font-normal">{label}</Label>
+                              <Switch
+                                id={`analysis-${key}`}
+                                checked={preferenceForm.analysisTypes?.[key as keyof ResearchPreference['analysisTypes']]}
+                                onCheckedChange={(checked) => handleAnalysisTypeToggle(key as keyof ResearchPreference['analysisTypes'], checked)}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Analysis Types */}
-                    <div className="space-y-2">
-                      <Label>Analysis Types</Label>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {Object.entries({
-                          sentiment: "Sentiment Analysis",
-                          volumeSpikes: "Volume Spikes",
-                          priceAnomalies: "Price Anomalies",
-                          trendAnalysis: "Trend Analysis",
-                          keywordCooccurrence: "Keyword Co-occurrence",
-                          summarization: "Content Summarization"
-                        }).map(([key, label]) => (
-                          <div key={key} className="flex items-center justify-between space-x-2 p-3 border rounded-md">
-                            <Label htmlFor={`analysis-${key}`}>{label}</Label>
-                            <Switch 
-                              id={`analysis-${key}`} 
-                              checked={newPreference.analysisTypes?.[key] || false}
-                              onCheckedChange={(checked) => handleAnalysisTypeToggle(key, checked)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <Separator /> {/* Added Separator */}
 
-                    {/* Research Schedule */}
-                    <div className="space-y-2">
-                      <Label>Research Schedule</Label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
+                     {/* Section 4: Scheduling */}
+                     <div className="space-y-4">
+                       <h3 className="text-lg font-medium">Research Schedule</h3>
+                       <div className="grid grid-cols-2 gap-6">
+                         <div className="space-y-2">
                           <Label htmlFor="scheduleType">Frequency</Label>
-                          <Select 
-                            onValueChange={(value) => setNewPreference(prev => ({
-                              ...prev,
-                              scheduleSettings: {
-                                ...prev.scheduleSettings,
-                                scheduleType: value
-                              }
-                            }))}
+                          <Select
+                            value={preferenceForm.scheduleSettings?.scheduleType}
+                            onValueChange={(value) => handleScheduleSelectChange('scheduleType', value)}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select frequency" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="hourly">Hourly</SelectItem>
-                              <SelectItem value="daily">Daily</SelectItem>
-                              <SelectItem value="weekly">Weekly</SelectItem>
-                              <SelectItem value="custom">Custom</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="timezone">Timezone</Label>
-                          <Select 
-                            onValueChange={(value) => setNewPreference(prev => ({
-                              ...prev,
-                              scheduleSettings: {
-                                ...prev.scheduleSettings,
-                                timezone: value
-                              }
-                            }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select timezone" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="UTC">UTC</SelectItem>
-                              <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                              <SelectItem value="America/Chicago">Central Time</SelectItem>
-                              <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                              <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+                             <SelectTrigger id="scheduleType">
+                               <SelectValue placeholder="Select frequency" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="hourly">Hourly</SelectItem>
+                               <SelectItem value="daily">Daily</SelectItem>
+                               <SelectItem value="weekly">Weekly</SelectItem>
+                               <SelectItem value="event_based">Event Based (Manual Trigger)</SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
+
+                         <div className="space-y-2">
+                           <Label htmlFor="timezone">Timezone</Label>
+                           <Select
+                            value={preferenceForm.scheduleSettings?.timezone}
+                            onValueChange={(value) => handleScheduleSelectChange('timezone', value)}
+                           >
+                             <SelectTrigger id="timezone">
+                               <SelectValue placeholder="Select timezone" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="UTC">UTC</SelectItem>
+                               <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                               <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                               <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                               <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
+                       </div>
+                     </div>
+
+                    <Separator /> {/* Added Separator */}
+
+                    {/* Section 5: Custom Instructions */}
+                    <div className="space-y-2">
+                       <h3 className="text-lg font-medium">Custom Instructions (Optional)</h3>
+                       <Label htmlFor="customInstructions">Specific Guidance</Label>
+                       <Textarea
+                        id="customInstructions"
+                        placeholder="Provide any specific instructions for the AI agent, e.g., 'Focus on the impact on semiconductor stocks', 'Ignore news older than 7 days', 'Prioritize official company statements'."
+                        className="min-h-[100px]"
+                        onChange={handleInputChange('customInstructionsInput')}
+                        value={preferenceForm.customInstructionsInput}
+                       />
+                       <p className="text-xs text-muted-foreground">
+                         Guide the AI's analysis or data interpretation.
+                       </p>
                     </div>
+
+                    <Separator />
 
                     <Button type="submit" className="w-full" disabled={createPreferenceMutation.isPending}>
                       {createPreferenceMutation.isPending ? (
@@ -1043,120 +1295,145 @@ export default function SentinelPage() {
               </Card>
             )}
             
-            {/* Existing Preferences */}
-            {isLoadingPreferences ? (
-              <div className="flex items-center justify-center h-60">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : preferencesError ? (
-              <Alert variant="destructive">
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  Failed to load research preferences. Please try again later.
-                </AlertDescription>
-              </Alert>
-            ) : preferences?.length ? (
-              <div className="grid gap-6">
-                {preferences.map(pref => (
-                  <Card key={pref.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>
-                            {pref.topics?.slice(0, 3).join(', ')}
-                            {pref.topics?.length > 3 ? '...' : ''}
-                          </CardTitle>
-                          <CardDescription>
-                            Created {formatDate(pref.createdAt)}
-                          </CardDescription>
+            {/* Existing Preferences List (Handles Loading, Error, Empty, Data states) */}
+            {!showNewPreferenceForm && !preferencesError && ( // Only show list/empty message if not showing form and no error
+              isLoadingPreferences ? (
+                <div className="flex items-center justify-center h-60">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : preferences?.length ? (
+                <div className="grid gap-6">
+                  {preferences.map(pref => (
+                    <Card key={pref.id}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle>
+                              {pref.topics?.slice(0, 3).join(', ')}
+                              {pref.topics?.length > 3 ? '...' : ''}
+                            </CardTitle>
+                            <CardDescription>
+                              Created {formatDate(pref.createdAt)}
+                            </CardDescription>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm">
+                              <Settings className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Schedule
+                            </Button>
+                            <Button variant="default" size="sm" onClick={() => handleRunResearch(pref.id)} disabled={activeResearchRun !== null}>
+                              {activeResearchRun ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            <Settings className="h-4 w-4 mr-2" />
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            Schedule
-                          </Button>
-                          <Button variant="default" size="sm" onClick={() => handleRunResearch(pref.id)} disabled={runningResearch}>
-                            {runningResearch ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4" />
-                            )}
-                          </Button>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Topics & Keywords */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2">Topics</h4>
+                            <div className="flex flex-wrap gap-1">
+                              {pref.topics?.map(topic => (
+                                <Badge key={topic} variant="secondary">
+                                  {topic}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2">Keywords</h4>
+                            <div className="flex flex-wrap gap-1">
+                              {pref.keywords?.map(keyword => (
+                                <Badge key={keyword} variant="outline">
+                                  {keyword}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Topics & Keywords */}
-                      <div className="grid md:grid-cols-2 gap-4">
+                        
+                        {/* Asset Classes */}
                         <div>
-                          <h4 className="text-sm font-semibold mb-2">Topics</h4>
+                          <h4 className="text-sm font-semibold mb-2">Asset Classes</h4>
                           <div className="flex flex-wrap gap-1">
-                            {pref.topics?.map(topic => (
-                              <Badge key={topic} variant="secondary">
-                                {topic}
+                            {pref.assetClasses?.map(asset => (
+                              <Badge key={asset} variant="outline" className="capitalize">
+                                {asset}
                               </Badge>
                             ))}
                           </div>
                         </div>
+                        
+                        {/* Data Sources */}
                         <div>
-                          <h4 className="text-sm font-semibold mb-2">Keywords</h4>
+                          <h4 className="text-sm font-semibold mb-2">Data Sources</h4>
                           <div className="flex flex-wrap gap-1">
-                            {pref.keywords?.map(keyword => (
-                              <Badge key={keyword} variant="outline">
-                                {keyword}
-                              </Badge>
-                            ))}
+                            {pref.dataSources && Object.entries(pref.dataSources)
+                              .filter(([_, enabled]) => enabled)
+                              .map(([source, _]) => (
+                                <Badge key={source} variant="outline">
+                                  {source.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                </Badge>
+                              ))}
                           </div>
                         </div>
-                      </div>
-                      
-                      {/* Asset Classes */}
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2">Asset Classes</h4>
-                        <div className="flex flex-wrap gap-1">
-                          {pref.assetClasses?.map(asset => (
-                            <Badge key={asset} variant="outline" className="capitalize">
-                              {asset}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Data Sources */}
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2">Data Sources</h4>
-                        <div className="flex flex-wrap gap-1">
-                          {pref.dataSources && Object.entries(pref.dataSources)
-                            .filter(([_, enabled]) => enabled)
-                            .map(([source, _]) => (
-                              <Badge key={source} variant="outline">
-                                {source.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                              </Badge>
-                            ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Settings className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Research Preferences Yet</h3>
-                <p className="text-muted-foreground mb-6">
-                  Create your first research profile to tell Sentinel what to monitor for you.
-                </p>
-                <Button onClick={() => setShowNewPreferenceForm(true)}>
-                  Create First Research Profile
-                </Button>
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                // Show this only if loading is finished, there's no error, and no preferences exist
+                <div className="text-center py-12">
+                  <Settings className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Research Preferences Yet</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Create your first research profile to tell Sentinel what to monitor for you.
+                  </p>
+                  <Button onClick={() => setShowNewPreferenceForm(true)}>
+                    Create First Research Profile
+                  </Button>
+                </div>
+              )
             )}
           </TabsContent>
+
+          {/* Content for the Running Tab */} 
+          <TabsContent value="running">
+            {/* Keep showing running tab content even after completion */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column: AI Chatbot / Status */}
+                <div className="lg:col-span-1 flex flex-col gap-4 h-[80vh]">
+                    <h2 className="text-xl font-semibold">Agent Activity</h2>
+                    <div className="agent-activity-area flex-1 bg-muted rounded-lg overflow-hidden">
+                       <AgentActivityLog logs={logs} onCommandSubmit={handleSendCommand} />
+                    </div>
+                </div>
+                {/* Right Column: Terminal Output */}
+                <div className="lg:col-span-1 flex flex-col gap-4 h-[80vh]">
+                     <h2 className="text-xl font-semibold">Environment Output</h2>
+                     <div className="terminal-area flex-1 bg-muted rounded-lg overflow-hidden">
+                         <TerminalOutput 
+                             logs={logs} 
+                             isConnected={isWsConnected} 
+                             onCommandSubmit={handleSendCommand} 
+                         />
+                     </div>
+                </div>
+            </div>
+          </TabsContent>
+          {/* --- End Tab Content --- */}
+
         </Tabs>
+        {/* --- End Main Content Area --- */}
+
       </main>
       <Footer />
     </div>

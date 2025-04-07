@@ -10,6 +10,8 @@ import cors from "cors";
 import http from 'http'; // Import http
 import { WebSocketServer, WebSocket } from 'ws'; // Import ws
 import url from 'url'; // Import url
+import path from 'path'; // Import path
+import fs from 'fs'; // Import fs
 // @ts-ignore - Adjust path if needed, suppress resolution error for now
 import { sentinelAgent } from './services/ai/agents/SentinelAgent'; 
 
@@ -163,8 +165,25 @@ async function startServer() {
       path: WS_PATH 
     }); 
 
+    // Give the sentinelAgent instance a reference to the WebSocketServer
+    sentinelAgent.setWebSocketServer(wss);
+
     wss.on('connection', (ws, req) => {
         console.log(`[WSS] Client connected to ${WS_PATH}`);
+        // let isContainerConfirmedReady = false; // Flag for this connection // No longer needed
+
+        // REMOVE Check initial container status on connect
+        /*
+        sentinelAgent.isContainerRunning().then((isRunning: boolean) => {
+          if (isRunning) {
+            console.log('[WSS] Container already running on connect.');
+            ws.send(JSON.stringify({ type: 'status', event: 'container_ready', message: 'Container ready.' }));
+            // isContainerConfirmedReady = true;
+          }
+        }).catch((err: Error) => {
+            console.error("[WSS] Error checking initial container status:", err);
+        });
+        */
 
         ws.on('message', async (message) => {
             let command = '';
@@ -186,6 +205,14 @@ async function startServer() {
                 try {
                     const { exitCode } = await sentinelAgent.executeInEnvironment(command, onDataCallback);
                     ws.send(JSON.stringify({ type: 'status', message: `Command finished with exit code ${exitCode}.`, exitCode: exitCode }));
+                    
+                    // If command succeeded and we haven't sent ready signal yet, send it now
+                    // if (!isContainerConfirmedReady && exitCode === 0) {
+                    //     console.log('[WSS] Sending container_ready signal after first successful command.');
+                    //     ws.send(JSON.stringify({ type: 'status', event: 'container_ready', message: 'Container ready.' }));
+                    //     // isContainerConfirmedReady = true;
+                    // }
+
                 } catch (execError: any) {
                      console.error(`[WSS] Command execution error: ${execError.message}`);
                      ws.send(JSON.stringify({ type: 'error', message: `Command execution failed: ${execError.message}` }));
@@ -205,7 +232,7 @@ async function startServer() {
             console.error(`[WSS] WebSocket error: ${error.message}`);
         });
 
-        ws.send(JSON.stringify({ type: 'status', message: 'Connected to Sentinel execution endpoint.' }));
+        ws.send(JSON.stringify({ type: 'status', message: 'Connected to Sentinel command endpoint.' })); // Changed initial message slightly
     });
     console.log(`WebSocket endpoint configured at ws://localhost:${PORT}${WS_PATH}`); // Log WS setup
     // -----------------------------
@@ -263,3 +290,33 @@ async function gracefulShutdown() {
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
 // ---------------------------------------
+
+// --- Add Download Route for Sentinel Files (Placeholder) ---
+app.get('/download/sentinel/:filename', (req, res) => {
+  const filename = req.params.filename;
+  // IMPORTANT: Sanitize filename to prevent directory traversal vulnerabilities!
+  const safeFilename = path.basename(filename); // Basic sanitization
+  // Construct the full path - ASSUMING agent is accessible or path is known
+  // THIS IS A SIMPLIFICATION - Need robust path construction and agent access
+  const sharedDir = path.resolve(__dirname, './sentinel-shared'); // Assuming index.ts location
+  const filePath = path.join(sharedDir, safeFilename);
+
+  console.log(`[Download] Attempting to download: ${filePath}`);
+
+  // Check if file exists in the agent's shared directory
+  if (fs.existsSync(filePath)) {
+    res.download(filePath, safeFilename, (err) => {
+      if (err) {
+        console.error(`[Download] Error sending file ${safeFilename}:`, err);
+        // Avoid sending error details to client for security
+        if (!res.headersSent) {
+          res.status(500).send('Error downloading file.');
+        }
+      }
+    });
+  } else {
+    console.log(`[Download] File not found: ${filePath}`);
+    res.status(404).send('File not found.');
+  }
+});
+// ---------------------------------------------------------

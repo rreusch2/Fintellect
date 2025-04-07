@@ -7,7 +7,7 @@ if (!process.env.ANTHROPIC_API_KEY) {
 // Configure default model settings
 export const defaultModelConfig = {
   temperature: 0.7,
-  maxTokens: 1024,
+  maxTokens: 4096,
 };
 
 // Export model names for easy reference

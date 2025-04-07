@@ -244,4 +244,4 @@ export const selectGoalSchema = createSelectSchema(goals);
 export type SelectGoal = typeof goals.$inferSelect;
 export type InsertGoal = typeof goals.$inferInsert;
 
-export * from "./sentinel-schema.js";
+export * from "./sentinel-schema";

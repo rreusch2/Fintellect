@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python research libraries
-RUN pip3 install --no-cache-dir --break-system-packages pandas matplotlib seaborn yfinance requests beautifulsoup4
+RUN pip3 install --no-cache-dir --break-system-packages pandas matplotlib seaborn yfinance requests beautifulsoup4 scipy
 
 # Set up a basic working directory
 WORKDIR /app

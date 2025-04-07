@@ -1,7 +1,7 @@
 import { pgTable, text, serial, integer, timestamp, jsonb, boolean, varchar, index } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
-import { users } from "./schema.js";
+import { users } from "./schema";
 
 // Research Topics and Preferences
 export const researchPreferences = pgTable("research_preferences", {
@@ -41,6 +41,9 @@ export const researchPreferences = pgTable("research_preferences", {
     keywordCooccurrence?: boolean,
     summarization?: boolean
   }>(),
+  
+  // Optional custom instructions from the user
+  customInstructions: text("custom_instructions"),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

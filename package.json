@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "concurrently \"npm run start-mcp\" \"tsx server/index.ts\"",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --define:process.env.NODE_ENV=\\\"production\\\"",
-    "migrate": "tsx db/migrate.ts",
+    "migrate": "drizzle-kit migrate",
+    "generate": "drizzle-kit generate",
     "start-mcp": "bash ./start-mcp-servers.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
+    "@e2b/code-interpreter": "^1.1.0",
     "@google/generative-ai": "^0.21.0",
     "@hookform/resolvers": "^3.9.1",
     "@jridgewell/trace-mapping": "^0.3.25",

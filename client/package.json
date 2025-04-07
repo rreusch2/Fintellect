@@ -9,11 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^6.3.0",
-    "notistack": "^3.0.1"
+    "notistack": "^3.0.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }

@@ -2,6 +2,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+// Modern target supporting top-level await
+const modernTarget = ['es2022', 'edge89', 'firefox89', 'chrome89', 'safari15'];
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -40,6 +43,14 @@ export default defineConfig({
           });
         }
       }
+    }
+  },
+  build: {
+    target: modernTarget
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: modernTarget
     }
   },
   resolve: {

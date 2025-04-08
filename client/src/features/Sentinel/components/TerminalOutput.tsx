@@ -1,13 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Input } from '../../../components/ui/input';
-import { Button } from '../../../components/ui/button';
-import { Send, Terminal, FilePen, Check, RefreshCw, AlertTriangle } from "lucide-react";
-import Ansi from "ansi-to-react"; // For rendering ANSI escape codes if needed
+import React, { useRef, useEffect } from 'react';
+import { Terminal } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
-interface LogLine {
-  id: number; // For unique key
-  type: 'stdout' | 'stderr' | 'status' | 'error' | 'info' | 'terminal_stdout' | 'terminal_stderr' | 'user_command' | 'system_info' | 'system_error' | 'executing_command';
-  data: string;
+// Type for log line - should match what comes from SentinelPage
+export interface LogLine {
+  type: string;
+  data?: string;
+  command?: string;
+  output?: string;
+  agentId: string | null;
+  timestamp?: string;
 }
 
 interface TerminalOutputProps {
@@ -17,211 +22,136 @@ interface TerminalOutputProps {
 }
 
 const TerminalOutput: React.FC<TerminalOutputProps> = ({ logs, isConnected, onCommandSubmit }) => {
-  const [command, setCommand] = useState('');
-  const logsEndRef = useRef<HTMLDivElement>(null); // Ref for scrolling
-
-  const scrollToBottom = () => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // Filter logs for terminal display
-  const terminalLogs = logs.filter(
-    log => [
-        'terminal_stdout',
-        'terminal_stderr',
-        'user_command',
-        'system_info',
-        'system_error',
-        'executing_command'
-    ].includes(log.type)
-  );
-
+  const logsEndRef = useRef<HTMLDivElement>(null);
+  const commandRef = useRef<HTMLInputElement>(null);
+  
+  // Auto-scroll to bottom when logs update
   useEffect(() => {
-    scrollToBottom();
-  }, [terminalLogs]); // Scroll based on filtered logs
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
 
-  const handleSendCommand = () => {
-    if (command.trim()) {
-      onCommandSubmit(command.trim());
-      setCommand(''); // Clear input after submitting
+  // Handle command submission
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (commandRef.current && commandRef.current.value.trim()) {
+      onCommandSubmit(commandRef.current.value);
+      commandRef.current.value = '';
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCommand(e.target.value);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSendCommand();
-    }
-  };
-
-  const formatOutput = (text: string, type: LogLine['type']) => {
-    let jsonData: any = null;
-    let isUnhandledSummary = false;
-
-    // Check for the specific "unhandled message" format first
-    if (text.includes("Received unhandled message format:")) {
-      try {
-        const jsonMatch = text.match(/Received unhandled message format: (.+)/);
-        if (jsonMatch && jsonMatch[1]) {
-          jsonData = JSON.parse(jsonMatch[1]);
-          if (jsonData.type === 'task_summary' || jsonData.type === 'task_error') {
-            isUnhandledSummary = true; // Mark it so we don't display the raw log
-          }
-        }
-      } catch (e) {
-        // Parsing failed, treat as regular text
-        jsonData = null;
-      }
-    }
+  // Formats terminal output with ANSI coloring
+  const formatOutput = (output: string, type: string) => {
+    // Simple colorization - this could be improved with a full ANSI parser
+    const errorClasses = type.includes('error') || type.includes('stderr') 
+      ? 'text-red-400' 
+      : 'text-gray-300';
     
-    // If it was an unhandled summary/error, display specific message and stop
-    if (isUnhandledSummary) {
-      if (jsonData.type === 'task_summary') {
-         return (
-            <div className="text-green-400 font-medium flex items-center gap-1">
-               <Check className="h-4 w-4" /> Research Task Completed.
-            </div>
-         );
-      } else if (jsonData.type === 'task_error') {
-         return (
-            <div className="text-red-400 font-medium flex items-center gap-1">
-               <AlertTriangle className="h-4 w-4" /> Task Error: {jsonData.data || 'Unknown error'}
-            </div>
-         );
-      }
-      return null; // Skip rendering the original unhandled message log
-    }
+    return (
+      <div className={`whitespace-pre-wrap font-mono text-sm ${errorClasses}`}>
+        {output}
+      </div>
+    );
+  };
 
-    // --- Continue with other formatting for regular stdout/stderr/etc. ---
+  // Format command with shell-like styling
+  const formatCommand = (command: string) => {
+    return (
+      <div className="command-block my-1 font-mono">
+        <span className="text-green-400 font-semibold">$ </span>
+        <span className="text-cyan-300">{command}</span>
+      </div>
+    );
+  };
 
-    // Detect and format JSON in regular output
-    if ((text.startsWith('{') && text.endsWith('}')) || 
-        (text.startsWith('[') && text.endsWith(']'))) {
-      try {
-        const parsedJson = JSON.parse(text);
-        return (
-          <pre className="bg-gray-900 p-2 rounded overflow-x-auto text-xs text-blue-300 font-mono">
-            {JSON.stringify(parsedJson, null, 2)}
-          </pre>
-        );
-      } catch (e) {
-        // Not valid JSON, continue
-      }
-    }
-    
-    // Format Python script output
-    if (type === 'terminal_stdout' && (text.includes('/app/shared/') || text.includes('Summary Statistics:') || text.startsWith('   ') || text.startsWith('[analyze_news.py]'))) {
-      return (
-        <div>
-          {text.split('\n').map((line, i) => {
-            // Highlight file paths/creation
-            if (line.includes('/app/shared/') && (line.includes('Created') || line.includes('Saved'))) {
-              return <div key={i} className="text-green-400 flex items-center gap-1"><FilePen className="h-3 w-3" />{line}</div>;
-            } 
-            // Highlight data output
-            else if (line.includes('Summary Statistics:') || line.startsWith('   ')) {
-              return <div key={i} className="text-blue-300 font-mono text-xs">{line}</div>;
-            }
-            // Highlight script execution logs
-            else if (line.startsWith('[analyze_') || line.startsWith('--- Starting') || line.startsWith('--- Data Processing') || line.startsWith('--- Visualization')) {
-              return <div key={i} className="text-yellow-400">{line}</div>;
-            }
-            // Default line rendering for stdout
-            else {
-              return <div key={i}>{line}</div>;
-            }
-          })}
+  // Special rendering for the new terminal_command type
+  const renderCommandWithOutput = (command: string, output: string) => {
+    return (
+      <div className="border-l-2 border-indigo-500 pl-3 py-1 my-2 bg-gray-800/40 rounded-r">
+        {formatCommand(command)}
+        <div className="pl-4 text-gray-300 whitespace-pre-wrap text-sm opacity-90 font-mono">
+          {output}
         </div>
-      );
+      </div>
+    );
+  }
+
+  // Render a log entry based on its type
+  const renderLogContent = (log: LogLine) => {
+    // Special case for terminal_command type
+    if (log.type === 'terminal_command' && log.command) {
+      return renderCommandWithOutput(log.command, log.output || '');
     }
     
-    // Default text formatting for other types or unformatted stdout
-    return <span>{text}</span>;
-  };
-
-  const getLogColor = (type: LogLine['type']) => {
-    switch (type) {
-      case 'terminal_stdout': return 'text-gray-300';
-      case 'terminal_stderr': return 'text-red-400';
-      case 'user_command': return 'text-cyan-400 font-mono bg-gray-800 px-1 rounded';
-      case 'executing_command': return 'text-purple-400 font-semibold'; // Style for executing commands
-      case 'system_info': return 'text-gray-500';
-      case 'system_error': return 'text-red-600 font-semibold';
-      default: return 'text-gray-500';
+    // Handle standard types
+    switch (log.type) {
+      case 'system_error':
+        return formatOutput(log.data || '', 'error');
+      case 'terminal_stderr':
+        return formatOutput(log.data || '', 'stderr');
+      case 'terminal_stdout': 
+      case 'system_info':
+        return formatOutput(log.data || '', 'stdout');
+      case 'executing_command':
+        // For direct command execution
+        return formatCommand(log.data || '');
+      case 'user_command':
+        return (
+          <div className="text-blue-300 italic">
+            <span>User: {log.data}</span>
+          </div>
+        );
+      default:
+        return <div>{log.data}</div>;
     }
   };
 
   return (
-    <div className="terminal-output flex flex-col h-full bg-gray-950 rounded-lg overflow-hidden border border-gray-700">
-      {/* Header/Status */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-gray-900 text-xs text-gray-400">
-        <div className="flex items-center gap-1">
-            <Terminal size={14} />
-            <span>Sentinel Environment Output</span>
+    <Card className="flex flex-col h-full bg-gradient-to-b from-gray-950 to-gray-900">
+      <CardHeader className="py-3 px-4 border-b border-gray-800 flex flex-row items-center">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Terminal size={16} />
+          <span>Terminal Output</span>
+        </CardTitle>
+        <div className="ml-auto">
+          <Badge variant={isConnected ? "default" : "destructive"}>
+            {isConnected ? 'Connected' : 'Disconnected'}
+          </Badge>
         </div>
-        <div className="flex items-center gap-2">
-          <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} 
-               title={isConnected ? 'Command channel connected' : 'Command channel disconnected'}>
-          </div>
-          <span className="text-xs">{isConnected ? 'Connected' : 'Disconnected'}</span>
-        </div>
-      </div>
+      </CardHeader>
       
-      {/* Log Area - Add gradient mask for scroll indication */}
-      <div className="flex-1 overflow-y-auto p-3 font-mono text-sm space-y-1 relative 
-                    mask-gradient-to-b from-transparent via-transparent to-gray-950">
-        {terminalLogs.map((log) => {
-          // Handle executing_command separately for prefixing
-          if (log.type === 'executing_command') {
-            return (
-              <div key={log.id} className={`${getLogColor(log.type)} whitespace-pre-wrap break-words mb-1`}>
-                 <span className="text-gray-500">$ </span>{log.data.split('\n')[0]} {log.data.includes('\n') ? '<...>' : ''} {/* Show first line only for multi-line */}
-              </div>
-            );
-          }
-
-          // Handle other log types with formatting
-          const formattedOutput = formatOutput(log.data, log.type);
-          if (formattedOutput === null) return null;
-          
-          return (
-            <div key={log.id} className={`${getLogColor(log.type)} whitespace-pre-wrap break-words mb-1`}>
-               {log.type === 'user_command' ? `$ ${log.data}` : formattedOutput} 
+      <CardContent className="flex-1 overflow-y-auto p-4 text-sm space-y-1 bg-black/20">
+        {logs.length === 0 ? (
+          <div className="text-gray-500 text-center py-4">No terminal output yet...</div>
+        ) : (
+          logs.map((log, index) => (
+            <div key={index} className="log-entry">
+              {renderLogContent(log)}
             </div>
-          );
-        })}
-        <div ref={logsEndRef} /> { /* Invisible element to scroll to */}
-      </div>
-
-      {/* Input Area */}
-      <div className="flex items-center gap-2 p-2 border-t border-gray-700 bg-gray-900">
-        <div className="text-gray-500 text-sm flex-shrink-0">$</div>
+          ))
+        )}
+        <div ref={logsEndRef} />
+      </CardContent>
+      
+      <form onSubmit={handleSubmit} className="border-t border-gray-800 p-2 flex gap-2">
         <Input
-          type="text"
-          placeholder={isConnected ? "Enter command..." : "Connecting channel..."}
-          className="flex-1 bg-gray-800 border-gray-700 text-gray-300 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-          value={command}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
+          ref={commandRef}
+          placeholder="Enter command..."
+          className="flex-1 bg-gray-900 border-gray-700"
           disabled={!isConnected}
         />
-        <Button size="sm" onClick={handleSendCommand} disabled={!isConnected || !command.trim()} className="bg-indigo-600 hover:bg-indigo-700">
-          <Send size={16} />
+        <Button 
+          type="submit" 
+          variant="default" 
+          size="sm"
+          disabled={!isConnected}
+        >
+          Send
         </Button>
-      </div>
-    </div>
+      </form>
+    </Card>
   );
 };
-
-// Helper style for gradient mask (add to your global CSS or index.css if needed)
-/*
-.mask-gradient-to-b {
-  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-}
-*/
 
 export default TerminalOutput; 

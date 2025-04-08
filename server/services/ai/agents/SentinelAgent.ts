@@ -10,7 +10,6 @@ import {
   alertHistory,
   SelectResearchPreference
 } from "@db/sentinel-schema.js";
-import { generateContent } from '../config/anthropic.js';
 import {
   getMarketData,
   searchFinancialInfo,
@@ -22,418 +21,570 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
-// Correct imports based on likely E2B SDK structure
-import { Sandbox } from '@e2b/code-interpreter';
-import type { ProcessMessage, FilesystemOperation } from '@e2b/code-interpreter'; // Assuming types exist
+// --- E2B Imports Removed ---
+// import { Sandbox } from '@e2b/code-interpreter';
+// import type { ProcessMessage, FilesystemOperation } from '@e2b/code-interpreter';
+
+// Import the new OpenManus Connector
+import { OpenManusConnector, OpenManusEventHandler } from '../connectors/OpenManusConnector.js'; // Adjust path if needed
 
 const log = (message: string, ...args: any[]) => console.log(`[SentinelAgent] ${message}`, ...args);
 
 // --- Interfaces ---
-export interface ResearchResult { type: "insight" | "alert" | "digest" | "report"; title: string; summary: string; content: any; sources: { url?: string | null; title?: string; author?: string; publishedAt?: string }[]; analysisMetadata?: { sentimentScore?: number; confidence?: number; impactEstimate?: string; relatedAssets?: string[] }; }
-interface ResearchDataBundle { newsArticles: any[]; marketData: any; webSearchResults: any[]; deepResearchFindings: any; sentimentAnalysis: any; }
+// Added optional id field
+export interface ResearchResult {
+    id?: number; // Added optional ID, will be present after storing
+    type: "insight" | "alert" | "digest" | "report";
+    title: string;
+    summary: string;
+    content: any;
+    sources: { url?: string | null; title?: string; author?: string; publishedAt?: string }[];
+    analysisMetadata?: { sentimentScore?: number; confidence?: number; impactEstimate?: string; relatedAssets?: string[] };
+}
+// Removed ResearchDataBundle and ResearchTask as they were tied to E2B implementation
+// interface ResearchDataBundle { newsArticles: any[]; marketData: any; webSearchResults: any[]; deepResearchFindings: any; sentimentAnalysis: any; }
 type AnalyzablePreference = SelectResearchPreference;
-interface ResearchTask { id: number; description: string; status: 'pending' | 'running' | 'completed' | 'skipped' | 'error'; pythonCode?: string; output?: string; }
+// interface ResearchTask { id: number; description: string; status: 'pending' | 'running' | 'completed' | 'skipped' | 'error'; pythonCode?: string; output?: string; }
 // --- End Interfaces ---
 
 export class SentinelAgent {
   private wss: WebSocketServer | null = null;
-  private readonly E2B_SANDBOX_WORKDIR = '/home/user'; // Default E2B workdir
+  // --- E2B Sandbox Workdir Removed ---
+  // private readonly E2B_SANDBOX_WORKDIR = '/home/user';
+
+  // OpenManus Connector instance
+  private openManusConnector: OpenManusConnector | null = null;
+  // Removed useOpenManus flag
+  // private readonly useOpenManus: boolean;
+  private isConfigured: boolean = false; // Flag to check if agent is usable
 
   constructor(wssInstance?: WebSocketServer) {
-    log("Initializing SentinelAgent (E2B Mode)...");
+    log("Initializing SentinelAgent (OpenManus Mode)...");
     if (wssInstance) this.wss = wssInstance;
+
+    // Check environment variables for OpenManus configuration
+    const openManusUrl = process.env.OPENMANUS_URL;
+
+        if (openManusUrl) {
+            log(`OpenManus mode enabled. Connecting to: ${openManusUrl}`);
+            this.openManusConnector = new OpenManusConnector(openManusUrl);
+            // Set up event handling from the connector
+            this.setupOpenManusEventHandler();
+        this.isConfigured = true; // Mark as configured
+    } else {
+        log("ERROR: OPENMANUS_URL is not set. SentinelAgent research functionality will be disabled.");
+        this.isConfigured = false;
+    }
+    // --- Removed E2B mode logic ---
+
     log("SentinelAgent initialized.");
   }
 
-  public setWebSocketServer(wssInstance: WebSocketServer): void { this.wss = wssInstance; log("WebSocketServer instance set."); }
+  public setWebSocketServer(wssInstance: WebSocketServer): void {
+    this.wss = wssInstance;
+    log("WebSocketServer instance set.");
+  }
+
+  // --- Event Handler for OpenManus Connector --- (Modified to handle file_contents)
+  private setupOpenManusEventHandler(): void {
+    if (!this.openManusConnector) return;
+
+    const handler: OpenManusEventHandler = (event) => {
+      // Reduced verbosity for final_result
+      if (event.type === 'final_result') {
+        log(`[OpenManus Event Handler] Received event: type=${event.type}, agentId=${event.agentId}, resultsCount=${event.results?.length}, filesCount=${event.files?.length}, hasFileContents=${!!event.file_contents}`);
+      } else {
+        log(`[OpenManus Event Handler] Received event:`, event);
+      }
+      let payload: object | null = null;
+      const agentId = event.agentId; // Handler type ensures agentId exists (though possibly null)
+
+      switch (event.type) {
+        case 'status':
+          payload = { type: 'agent_status', message: event.message, agentId };
+          break;
+        case 'terminal_output':
+          payload = { type: 'terminal_stdout', data: event.content, agentId };
+          break;
+        case 'file_created':
+        case 'file_updated':
+           const fileMsg = `${event.type === 'file_created' ? 'Created' : 'Updated'} file: ${event.file.name}`;
+           payload = { type: 'agent_status', message: fileMsg, agentId, file: event.file };
+           break;
+        case 'error':
+           payload = { type: 'task_error', data: event.message, agentId };
+           break;
+        case 'progress':
+           payload = { type: 'agent_status', message: `Progress: ${event.step} (${event.percentage}%)`, agentId };
+           break;
+        case 'browser_state':
+           // Forward browser state information if available
+           if (event.data) {
+             payload = {
+               type: 'browser_state',
+               data: event.data,
+               base64_image: event.base64_image, // Pass along the screenshot if available
+               agentId
+             };
+           }
+           break;
+        case 'final_result':
+            log(`Processing final results from OpenManus for agent ${agentId}`);
+            // --- Extract file contents if available --- 
+            const fileContents = event.file_contents || {};
+            // --- Create results from event, potentially overriding with file contents ---
+            let results: ResearchResult[] = (event.results || []).map((r: any) => ({ 
+                type: r.type || 'report', // Default type if missing
+                title: r.title || `Research Result ${new Date().toISOString()}`,
+                summary: r.summary || '', // Placeholder
+                content: r.content || {}, // Placeholder
+                sources: r.sources || [],
+                analysisMetadata: r.analysisMetadata || {},
+             }));
+
+             // If no structured results, create one from file contents if available
+             if (results.length === 0 && (fileContents['financial_research_summary.txt'] || fileContents['financial_research_report.txt'])) {
+                 log(`No structured results found, creating one from file contents for agent ${agentId}`);
+                 results.push({
+                     type: 'report',
+                     title: `OpenManus Research Report (${agentId})`,
+                     summary: fileContents['financial_research_summary.txt'] || 'Summary not available.',
+                     content: { report: fileContents['financial_research_report.txt'] || 'Report content not available.' },
+                     sources: [],
+                     analysisMetadata: {}
+                 });
+             } 
+             // If structured results exist, try to populate summary/content from files
+             else if (results.length > 0) {
+                if (fileContents['financial_research_summary.txt']) {
+                    results[0].summary = fileContents['financial_research_summary.txt'];
+                }
+                if (fileContents['financial_research_report.txt']) {
+                    // Store full report in content field (e.g., under a specific key)
+                    results[0].content = { ...(results[0].content || {}), report: fileContents['financial_research_report.txt'] };
+                }
+             }
+            // --------------------------------------------------------------------------
+
+            // Ensure agentId is valid before proceeding
+            if (agentId) {
+                const researchContext = this.getResearchContext(agentId); // Pass string agentId
+                if (researchContext) {
+                    const { userId, preferenceId } = researchContext;
+                    // Use the potentially updated summary from file contents
+                    const finalSummary = results[0]?.summary || `Agent ${agentId} completed for Pref ${preferenceId}. Insights: ${results.length}`;
+                    this.broadcastToWs({ type: 'task_summary', data: finalSummary, files: event.files || [], suggestions: [], agentId });
+                    this.handleFinalResults(userId, preferenceId, results); // Pass potentially updated results
+                } else {
+                    log(`Error: Could not find context for agent ${agentId} to handle final results.`);
+                    this.broadcastToWs({ type: 'task_error', data: `Internal Error: Missing context for agent ${agentId}`, agentId });
+                }
+            } else {
+                 log(`Error: Received final_result event with null agentId.`);
+                 this.broadcastToWs({ type: 'task_error', data: `Internal Error: Received final_result without agentId`, agentId: null });
+            }
+             break;
+
+        default:
+           // Handle 'never' type by asserting event type or checking agentId
+           const unhandledEvent = event as any; // Use 'any' cautiously or add specific checks
+           log(`Unhandled OpenManus event type: ${unhandledEvent.type}`);
+           payload = { type: 'system_info', data: `Received unhandled OpenManus event: ${JSON.stringify(unhandledEvent)}`, agentId };
+      }
+
+      if (payload) {
+        this.broadcastToWs(payload);
+      }
+    };
+
+    this.openManusConnector.onEvent(handler);
+    log("OpenManus event handler set up.");
+  }
 
   // --- DB Methods (Stubs - Keep Full Implementations) ---
-  async getUserPreferences(userId: number) { /* ... */ return []; }
-  async updateUserPreferences(userId: number, prefData: any) { /* ... */ return {}; }
-  private async storeResults(userId: number, preferenceId: number, results: ResearchResult[]): Promise<any[]> { log(`Storing ${results.length} results`); return []; }
-  private async checkAlertConditions(userId: number, preferenceId: number, results: ResearchResult[]): Promise<void> { log("Checking alerts"); }
-  private evaluateAlertConditions(result: ResearchResult, config: any): boolean { return false; }
-  private determineAlertType(result: ResearchResult, config: any): string { return "event"; }
+  // TODO: Implement these fully
+  async getUserPreferences(userId: number): Promise<SelectResearchPreference[]> {
+      log(`Fetching preferences for user ${userId}`);
+      try {
+          return await db.query.researchPreferences.findMany({
+              where: eq(researchPreferences.userId, userId),
+              orderBy: desc(researchPreferences.updatedAt),
+          });
+      } catch (error) {
+          log("Error fetching preferences:", error);
+          return [];
+      }
+  }
+  async updateUserPreferences(userId: number, prefData: Partial<SelectResearchPreference>): Promise<SelectResearchPreference | null> {
+      log(`Updating preference ${prefData.id || 'new'} for user ${userId}`);
+      try {
+          if (prefData.id) {
+              const updated = await db.update(researchPreferences)
+                  .set({ ...prefData, updatedAt: new Date() })
+                  .where(and(eq(researchPreferences.id, prefData.id), eq(researchPreferences.userId, userId)))
+                  .returning();
+              return updated[0] || null;
+          } else {
+              const created = await db.insert(researchPreferences)
+                  .values({ ...prefData, userId } as any) // Use 'as any' or fix type if possible
+                  .returning();
+              return created[0] || null;
+          }
+      } catch (error) {
+          log("Error updating/creating preference:", error);
+          return null;
+      }
+  }
+  // Example scheduleResearch (needs full implementation based on schema)
+  async scheduleResearch(userId: number, preferenceId: number, scheduleData: any): Promise<any> {
+    log(`Scheduling research for user ${userId}, preference ${preferenceId}`);
+    // TODO: Implement DB interaction with researchSchedules table
+    return { id: Math.floor(Math.random() * 1000), userId, preferenceId, ...scheduleData, status: 'pending' };
+  }
+
+   async getRecentResults(userId: number, limit: number = 10): Promise<ResearchResult[]> {
+       log(`Fetching last ${limit} results for user ${userId}`);
+       try {
+            const resultsFromDb = await db.select()
+                .from(researchResults)
+                .where(eq(researchResults.userId, userId))
+                .orderBy(desc(researchResults.createdAt))
+                .limit(limit);
+
+            // Map to the expected ResearchResult interface structure, including 'type'
+            return resultsFromDb.map(r => ({
+                id: r.id,
+                type: r.resultType as ResearchResult['type'], // Map resultType to type
+                userId: r.userId,
+                preferenceId: r.preferenceId,
+                scheduleId: r.scheduleId ?? undefined,
+                title: r.title,
+                summary: r.summary,
+                content: r.content,
+                sources: r.sources?.map(s => ({ // Ensure sources match expected type (handle null url)
+                    url: s.url ?? null,
+                    title: s.title,
+                    author: s.author,
+                    publishedAt: s.publishedAt
+                })) ?? [],
+                analysisMetadata: r.analysisMetadata ?? undefined,
+                isRead: r.isRead,
+                isSaved: r.isSaved,
+                createdAt: r.createdAt.toISOString(),
+                relevantDate: r.relevantDate.toISOString(),
+            }));
+       } catch (error) {
+           log("Error fetching recent results:", error);
+           return [];
+       }
+   }
+
+   async getRecentAlerts(userId: number, limit: number = 10): Promise<any[]> { // Replace 'any' with Alert type if defined
+        log(`Fetching last ${limit} alerts for user ${userId}`);
+        try {
+            return await db.select()
+                .from(alertHistory)
+                .where(eq(alertHistory.userId, userId))
+                .orderBy(desc(alertHistory.createdAt))
+                .limit(limit);
+        } catch (error) {
+            log("Error fetching recent alerts:", error);
+            return [];
+        }
+   }
+
+  async markResultAsRead(userId: number, resultId: number): Promise<boolean> {
+      log(`Marking result ${resultId} as read for user ${userId}`);
+      try {
+          const updateResult = await db.update(researchResults)
+              .set({ isRead: true })
+              .where(and(eq(researchResults.id, resultId), eq(researchResults.userId, userId)));
+          // Check rowCount safely
+          return (updateResult.rowCount ?? 0) > 0;
+      } catch (error) {
+          log(`Error marking result ${resultId} as read:`, error);
+          return false;
+      }
+  }
+
+   async markAlertAsRead(userId: number, alertId: number): Promise<boolean> {
+       log(`Marking alert ${alertId} as read for user ${userId}`);
+       try {
+           const updateResult = await db.update(alertHistory)
+               .set({ isRead: true })
+               .where(and(eq(alertHistory.id, alertId), eq(alertHistory.userId, userId)));
+           // Check rowCount safely
+           return (updateResult.rowCount ?? 0) > 0;
+       } catch (error) {
+           log(`Error marking alert ${alertId} as read:`, error);
+           return false;
+       }
+   }
+
+
+  private async storeResults(userId: number, preferenceId: number, results: ResearchResult[]): Promise<any[]> {
+      log(`Storing ${results.length} results for user ${userId}, preference ${preferenceId}`);
+      if (results.length === 0) return [];
+
+      try {
+          // Ensure the data structure matches Drizzle insert schema, especially nullability
+          const inserts = results.map(result => ({
+              userId,
+              preferenceId,
+              resultType: result.type,
+              title: result.title,
+              summary: result.summary,
+              content: result.content,
+              sources: result.sources.map(s => ({ // Map to ensure nulls are handled if DB expects non-null
+                  url: s.url ?? undefined, // Use undefined if DB schema doesn't allow null strings
+                  title: s.title,
+                  author: s.author,
+                  publishedAt: s.publishedAt
+              })),
+              analysisMetadata: result.analysisMetadata,
+              relevantDate: new Date()
+          }));
+
+          // Use `as any` as a temporary workaround for complex type mismatches, ideally refine types
+          const insertedResults = await db.insert(researchResults).values(inserts as any).returning();
+          log(`Successfully stored ${insertedResults.length} results.`);
+          return insertedResults;
+      } catch (error) {
+          log(`Error storing results for user ${userId}, preference ${preferenceId}:`, error);
+          return [];
+      }
+  }
+
+  private async checkAlertConditions(userId: number, preferenceId: number, results: ResearchResult[]): Promise<void> {
+      log(`Checking ${results.length} results for alert conditions for user ${userId}, preference ${preferenceId}`);
+      let alertConfigs: any[] = [];
+      try {
+        alertConfigs = await db.query.alertConfig.findMany({
+          where: and(
+            eq(alertConfig.userId, userId),
+            eq(alertConfig.preferenceId, preferenceId),
+            eq(alertConfig.isActive, true)
+          )
+        });
+      } catch (dbError) {
+        log(`Error fetching alert configs for pref ${preferenceId}:`, dbError);
+        return;
+      }
+
+      if (alertConfigs.length === 0) {
+        log(`No active alert configs found for preference ${preferenceId}. Skipping check.`);
+        return;
+      }
+
+      log(`Found ${alertConfigs.length} active alert configs to check against.`);
+      const triggeredAlerts: any[] = [];
+
+      for (const result of results) {
+          // Skip check if result doesn't have an ID (should have after storing)
+          if (result.id === undefined) {
+            log(`Skipping alert check for result without ID: ${result.title}`);
+            continue;
+          }
+          for (const config of alertConfigs) {
+              if (this.evaluateAlertConditions(result, config)) {
+                  const alertType = this.determineAlertType(result, config);
+                  const message = `Alert triggered for ${result.title}: ${alertType}`;
+                  log(`ALERT TRIGGERED: ${message}`);
+
+                  triggeredAlerts.push({
+                      userId,
+                      configId: config.id,
+                      resultId: result.id, // Use the ID added to result
+                      alertType: alertType,
+                      message: message,
+                      deliveredVia: Object.entries(config.deliveryMethods || {})
+                                          .filter(([_, enabled]) => enabled)
+                                          .map(([method]) => method),
+                  });
+                  // TODO: Implement actual delivery
+              }
+          }
+      }
+
+      if (triggeredAlerts.length > 0) {
+          try {
+              await db.insert(alertHistory).values(triggeredAlerts);
+              log(`Successfully stored ${triggeredAlerts.length} triggered alerts.`);
+              triggeredAlerts.forEach(alert => {
+                  this.broadcastToWs({ type: 'new_alert', data: alert });
+              });
+          } catch (storeError) {
+              log(`Error storing triggered alerts:`, storeError);
+          }
+      } else {
+        log("No alerts triggered by these results.");
+      }
+  }
+
+  private evaluateAlertConditions(result: ResearchResult, config: any): boolean {
+      const conditions = config.conditions;
+      if (!conditions) return false;
+      if (conditions.sentimentThreshold && result.analysisMetadata?.sentimentScore) {
+          if (Math.abs(result.analysisMetadata.sentimentScore) >= Math.abs(conditions.sentimentThreshold)) {
+              log(`Sentiment alert triggered for result "${result.title}" (Score: ${result.analysisMetadata.sentimentScore}, Threshold: ${conditions.sentimentThreshold})`);
+              return true;
+          }
+      }
+      return false;
+  }
+  private determineAlertType(result: ResearchResult, config: any): string {
+      if (config.conditions?.sentimentThreshold) return "sentiment";
+      return "event";
+  }
   private generateFallbackResults(contextMessage?: string): ResearchResult[] { const r = contextMessage || "Analysis unavailable."; return [{ type: "insight", title: "Analysis Summary (Fallback)", summary: "Generated fallback summary.", content: { analysis: r }, sources: [], analysisMetadata: {} }]; }
 
-  // --- WebSocket Helper ---
-  private broadcastToWs(payload: object): void { if (!this.wss) return; const msg = JSON.stringify(payload); this.wss.clients.forEach(c => { if (c.readyState === WebSocket.OPEN) { try { c.send(msg); } catch (e) { console.error("WS broadcast err", e); } } }); }
-  private broadcastStatus(message: string): void { this.broadcastToWs({ type: 'agent_status', message }); }
-
-  // --- Data Gathering ---
-  private async gatherResearchData(preference: AnalyzablePreference): Promise<ResearchDataBundle> {
-      log(`Gathering data for topics: ${preference.topics?.join(', ')}`);
-      // Keep existing logic using direct API calls (searchFinancialInfo, getFinancialNews)
-      // Ensure placeholder functions are clearly marked or implemented
-      const [news, search, market, deep] = await Promise.all([
-          getFinancialNews(preference.topics || [], preference.keywords || []),
-          searchFinancialInfo(`${preference.topics?.join(' ')} ${preference.keywords?.join(' ')}`.trim()),
-          getMarketData(preference.specificAssets?.tickers || []), // Placeholder
-          performDeepResearch(preference.topics || [], preference.keywords || []) // Placeholder
-      ]);
-      const sentiment = await this.analyzeSentiment(preference); // Mock
-      log(`Data gathered: ${news.length} news, ${search.length} web results.`);
-      return { newsArticles: news, webSearchResults: search, marketData: market, deepResearchFindings: deep, sentimentAnalysis: sentiment };
+  // --- WebSocket Helper (Keep as is) ---
+  private broadcastToWs(payload: object): void { 
+    if (!this.wss) return; 
+    
+    // Ensure agentId is always included
+    const payloadWithId = {
+      ...payload,
+      // Only add agentId if it doesn't already exist
+      ...(!(payload as any).agentId && { agentId: null })
+    };
+    
+    const msg = JSON.stringify(payloadWithId); 
+    log(`Broadcasting WS message: ${msg.substring(0, 100)}...`);
+    
+    this.wss.clients.forEach(c => { 
+      if (c.readyState === WebSocket.OPEN) { 
+        try { 
+          c.send(msg); 
+        } catch (e) { 
+          console.error("WS broadcast err", e); 
+        } 
+      } 
+    }); 
   }
-
-  // --- Mock Sentiment Analysis ---
-  private async analyzeSentiment(preference: any): Promise<Record<string, any>> {
-    return { marketSentiment: (Math.random() * 2 - 1).toFixed(2), newsSentiment: (Math.random() * 2 - 1).toFixed(2), topicSentiment: preference.topics?.reduce((a: any, t: string) => (a[t] = (Math.random() * 2 - 1).toFixed(2), a), {}) };
-  }
-
-  // --- Helper: Parse Research Plan ---
-  private parseResearchPlan(planText: string): ResearchTask[] {
-    // Keep existing implementation
-    const tasks: ResearchTask[] = []; const lines = planText.split('\n'); let taskCounter = 0;
-    for (const line of lines) { const match = line.trim().match(/^(\d+)\.?\s+(.*)/); if (match && match[2]) { taskCounter++; tasks.push({ id: taskCounter, description: match[2].trim(), status: 'pending' }); } }
-    if (tasks.length === 0) { log("Warn: Could not parse plan"); lines.forEach((l, i) => { const d = l.trim(); if (d && !d.startsWith('#')) tasks.push({ id: i + 1, description: d, status: 'pending' }); }); }
-    log(`Parsed ${tasks.length} tasks.`); return tasks.slice(0, 8);
-  }
-
-  // --- Helper: Extract Python Code ---
-  private extractPythonCode(responseText: string): string | null {
-    // Keep existing implementation
-    const match = responseText.match(/```python\s*([\s\S]*?)\s*```/);
-    if (match && match[1]) return match[1].trim();
-    if (responseText.includes("import ") || responseText.includes("def ") || responseText.includes("print(")) return responseText.trim(); // Basic check
-    return null;
-  }
-
-  // --- E2B Filesystem Operation Helper ---
-  private async performE2bFilesystemOperation(
-      sandbox: Sandbox,
-      operation: FilesystemOperation, // Use SDK type
-      path: string,
-      content?: string
-  ): Promise<{ success: boolean; output: string }> {
-      let output = "";
-      try {
-          switch (operation) {
-              case 'write':
-                  if (content === undefined) throw new Error("Content needed for write op");
-                  await sandbox.filesystem.write(path, content);
-                  output = `[Filesystem] Successfully wrote to ${path}`;
-                  log(output);
-                  return { success: true, output };
-              case 'list':
-                  const files = await sandbox.filesystem.list(path);
-                  output = `[Filesystem] Contents of ${path}:\n${files.map(f => `${f.isDir ? 'D' : 'F'} ${f.name}`).join('\n')}`;
-                  log(output);
-                  return { success: true, output };
-              case 'read':
-                  const fileContent = await sandbox.filesystem.read(path);
-                  output = `[Filesystem] Content of ${path}:\n${fileContent}`;
-                   log(`[Filesystem] Read ${fileContent.length} chars from ${path}`);
-                  return { success: true, output };
-               case 'remove':
-                    await sandbox.filesystem.remove(path);
-                    output = `[Filesystem] Successfully removed ${path}`;
-                    log(output);
-                    return { success: true, output };
-              case 'makeDir':
-                    await sandbox.filesystem.makeDir(path);
-                    output = `[Filesystem] Successfully created directory ${path}`;
-                    log(output);
-                    return { success: true, output };
-              default:
-                  throw new Error(`Unsupported filesystem operation: ${operation}`);
-          }
-      } catch (error: any) {
-          output = `[Filesystem Error] Operation ${operation} on ${path} failed: ${error.message}`;
-          log(output);
-          return { success: false, output };
-      }
-  }
-
-  // --- E2B Process Execution Helper ---
-  private async executeE2bPythonScript(
-      sandbox: Sandbox,
-      scriptPath: string
-  ): Promise<{ exitCode: number; output: string; error: string }> {
-      let stdout = "";
-      let stderr = "";
-      let exitCode = -1; // Default error code
-
-      try {
-          this.broadcastToWs({ type: 'executing_command', data: `python3 ${scriptPath}` });
-          const process = await sandbox.process.start(`python3 ${scriptPath}`);
-
-          // Stream output in real-time
-          process.onStdout((msg: ProcessMessage) => {
-              log(`E2B STDOUT (${scriptPath}): ${msg.line}`);
-              this.broadcastToWs({ type: 'terminal_stdout', data: msg.line + '\n' });
-              stdout += msg.line + '\n';
-          });
-          process.onStderr((msg: ProcessMessage) => {
-              log(`E2B STDERR (${scriptPath}): ${msg.line}`);
-              this.broadcastToWs({ type: 'terminal_stderr', data: `[ERROR] ${msg.line}\n` });
-              stderr += msg.line + '\n';
-          });
-
-          // Wait for completion
-          const result = await process.finished;
-          exitCode = result.exitCode;
-          log(`E2B script ${scriptPath} finished with exit code ${exitCode}.`);
-
-      } catch (error: any) {
-          stderr += `\n[E2B SDK Error] Failed to run script ${scriptPath}: ${error.message}`;
-          log(`E2B SDK Error running ${scriptPath}: ${error.message}`);
-          exitCode = -1; // Ensure error code if SDK fails
-      }
-
-      return { exitCode, output: stdout.trim(), error: stderr.trim() };
+  
+  private broadcastStatus(message: string, agentId?: string | null): void { // Allow agentId to be null
+    const payload: { type: string; message: string; agentId?: string | null } = {
+        type: 'agent_status',
+        message
+    };
+    if (agentId !== undefined) { // Check for undefined, allow null
+        payload.agentId = agentId;
+    }
+    this.broadcastToWs(payload);
   }
 
 
-  // --- MAIN RESEARCH FUNCTION (E2B Refactored) ---
-  async performResearch(userId: number, preferenceId: number): Promise<ResearchResult[]> {
-    this.broadcastStatus(`Initializing E2B research for preference ID: ${preferenceId}...`);
-    let researchPlan: ResearchTask[] = [];
-    let accumulatedOutput = "";
-    let generatedFiles: { name: string; path: string }[] = [];
-    let rawDataBundle: ResearchDataBundle | null = null;
-    let sandbox: Sandbox | null = null;
+  // --- MAIN RESEARCH DISPATCHER (Simplified) ---
+  async performResearch(userId: number, preferenceId: number): Promise<{ agentId: string } | null> {
+     log(`Dispatching OpenManus research for userId ${userId}, preferenceId ${preferenceId}.`);
 
-    const E2B_API_KEY = process.env.E2B_API_KEY;
-    if (!E2B_API_KEY) { /* ... error handling ... */ return this.generateFallbackResults("E2B Key missing"); }
+     if (!this.isConfigured || !this.openManusConnector) {
+         const errorMsg = "SentinelAgent is not configured for OpenManus. Check OPENMANUS_URL.";
+         log(`Error: ${errorMsg}`);
+         this.broadcastStatus(`ERROR: ${errorMsg}`);
+         this.broadcastToWs({ type: 'task_error', data: errorMsg, files: [], suggestions: [] });
+         // Return null or throw error to indicate failure
+         // Returning null might be better handled by the route
+         return null;
+     }
+
+    // Renamed from performOpenManusResearch
+    this.broadcastStatus(`Initializing OpenManus research for preference ID: ${preferenceId}...`);
+    let agentId: string | null = null;
 
     try {
-      log(`Starting E2B research for userId ${userId}, preferenceId ${preferenceId}`);
-      // --- Create E2B Sandbox ---
-      this.broadcastStatus("Creating E2B Sandbox...");
-      // Corrected Sandbox.create call
-      sandbox = await Sandbox.create('base', { apiKey: E2B_API_KEY });
-      this.broadcastStatus("E2B Sandbox created successfully.");
-      log("E2B Sandbox created.");
+      log(`Starting OpenManus research request for userId ${userId}, preferenceId ${preferenceId}`);
 
-      // --- Get Prefs & Gather Data ---
-      this.broadcastStatus(`Fetching preference ${preferenceId}...`);
-      const preference = await db.query.researchPreferences.findFirst({where: and(eq(researchPreferences.id, preferenceId), eq(researchPreferences.userId, userId))});
-      if (!preference) throw new Error("Pref not found");
-      log("Preferences fetched.");
-      this.broadcastStatus("Gathering initial data via APIs...");
-      rawDataBundle = await this.gatherResearchData(preference);
-      this.broadcastStatus(`Data gathered: ${rawDataBundle.newsArticles.length} news, ${rawDataBundle.webSearchResults.length} web results.`);
-      accumulatedOutput += `--- Initial Data ---\nNews: ${rawDataBundle.newsArticles.length}, Web: ${rawDataBundle.webSearchResults.length}\n`;
+      // 1. Get Preference
+      const preference = await db.query.researchPreferences.findFirst({
+          where: and(eq(researchPreferences.id, preferenceId), eq(researchPreferences.userId, userId))
+      });
+      if (!preference) {
+          throw new Error(`Preference ${preferenceId} not found for user ${userId}`);
+      }
+      log("Preference fetched.");
 
-      // --- Generate Plan ---
-      this.broadcastStatus("Generating research plan...");
-      const planPrompt = this.buildPlanPrompt(preference);
-      let planText = await generateContent(planPrompt);
-      researchPlan = this.parseResearchPlan(planText.match(/## RESEARCH PLAN\s*([\s\S]*)/)?.[1]?.trim() || planText);
-      if (researchPlan.length === 0) throw new Error("Failed plan gen");
-      const planString = `## RESEARCH PLAN\n${researchPlan.map(t => `${t.id}. ${t.description}`).join('\n')}`;
-      this.broadcastStatus(planString);
-      accumulatedOutput += planString + "\n";
-      log("Research plan generated.");
+      // 2. Start Research via Connector
+      agentId = await this.openManusConnector.startResearch(preference);
 
-      // --- Execute Tasks ---
-      log(`Starting E2B task loop (${researchPlan.length} tasks)...`);
-      for (const task of researchPlan) {
-        task.status = 'running';
-        this.broadcastStatus(`Starting Task ${task.id}: ${task.description}`);
-        accumulatedOutput += `\n--- Starting Task ${task.id}: ${task.description} ---\n`;
+      // --- Store context mapping for result handling ---
+      this.storeResearchContext(agentId, { userId, preferenceId });
 
-        let taskOutput = "";
-        let taskFailed = false;
+      this.broadcastStatus(`OpenManus research initiated. Agent ID: ${agentId}. Waiting for updates...`, agentId);
 
-        try {
-          // Determine Action Type based on task description
-          if (task.description.toLowerCase().includes("save gathered data")) {
-             const marketPath = `${this.E2B_SANDBOX_WORKDIR}/market_data.json`;
-             const newsPath = `${this.E2B_SANDBOX_WORKDIR}/news_articles.json`;
-             const webPath = `${this.E2B_SANDBOX_WORKDIR}/web_search_results.json`;
+      // --- Important ---
+      // Return the agentId obtained from the connector
+      return { agentId }; // Return object containing agentId
 
-             const marketRes = await this.performE2bFilesystemOperation(sandbox, 'write', marketPath, JSON.stringify(rawDataBundle?.marketData || {}, null, 2));
-             const newsRes = await this.performE2bFilesystemOperation(sandbox, 'write', newsPath, JSON.stringify(rawDataBundle?.newsArticles || [], null, 2));
-             const webRes = await this.performE2bFilesystemOperation(sandbox, 'write', webPath, JSON.stringify(rawDataBundle?.webSearchResults || [], null, 2));
-
-             taskOutput = `${marketRes.output}\n${newsRes.output}\n${webRes.output}`;
-             taskFailed = !marketRes.success || !newsRes.success || !webRes.success;
-
-          } else if (task.description.toLowerCase().includes("verify") || task.description.toLowerCase().includes("ls -la")) {
-             const lsPath = this.E2B_SANDBOX_WORKDIR;
-             this.broadcastToWs({ type: 'executing_command', data: `ls -la ${lsPath}` }); // Show command intent
-             const listRes = await this.performE2bFilesystemOperation(sandbox, 'list', lsPath);
-             taskOutput = listRes.output;
-             taskFailed = !listRes.success;
-             // Update generated files
-             if(listRes.success){
-                const files = await sandbox.filesystem.list(lsPath);
-                generatedFiles = files.filter(f => !f.isDir && !f.name.endsWith('.py') && !f.name.startsWith('.'))
-                                      .map(f => ({ name: f.name, path: `/download/e2b/${preferenceId}/${f.name}` }));
-                if(generatedFiles.length > 0) this.broadcastStatus(`📁 Files found: ${generatedFiles.map(f=>f.name).join(', ')}`);
-             }
-
-          } else if (task.description.toLowerCase().includes("create and run") || task.description.toLowerCase().includes("execute python")) {
-             // 1. Generate Python Code
-             const pythonCodePrompt = this.buildPythonCodePrompt(task, preference, accumulatedOutput);
-             log(`Generating Python code for Task ${task.id}...`);
-             const pythonCodeResponse = await generateContent(pythonCodePrompt);
-             const pythonCode = this.extractPythonCode(pythonCodeResponse);
-             task.pythonCode = pythonCode || "# Error: Could not generate Python code";
-             accumulatedOutput += `\n--- Task ${task.id} Generated Code ---\n${task.pythonCode}\n---\n`;
-
-             if (!pythonCode) {
-                 taskFailed = true;
-                 taskOutput = "Error: LLM did not generate valid Python code.";
-                 this.broadcastStatus(`Error: No Python code generated for Task ${task.id}. Skipping execution.`);
-             } else {
-                 // 2. Write Script
-                 const scriptName = `task_${task.id}_script.py`;
-                 const scriptPath = `${this.E2B_SANDBOX_WORKDIR}/${scriptName}`;
-                 const writeRes = await this.performE2bFilesystemOperation(sandbox, 'write', scriptPath, pythonCode);
-                 taskOutput += writeRes.output + '\n';
-                 taskFailed = !writeRes.success;
-
-                 if (!taskFailed) {
-                     // 3. Execute Script
-                     this.broadcastStatus(`Executing script: python3 ${scriptPath}`);
-                     const execResult = await this.executeE2bPythonScript(sandbox, scriptPath);
-                     taskOutput += `\n--- Script Execution ---\nExit Code: ${execResult.exitCode}\nStdout:\n${execResult.output}\nStderr:\n${execResult.error}\n--- End Script ---`;
-                     if (execResult.exitCode !== 0 || execResult.error) {
-                         taskFailed = true;
-                         this.broadcastStatus(`Error: Task ${task.id} script failed (code ${execResult.exitCode}).`);
-                     } else {
-                        this.broadcastStatus(`Script executed successfully.`);
-                     }
-                 }
-             }
-          } else if (task.description.toLowerCase().includes("analyze") || task.description.toLowerCase().includes("report")) {
-             task.status = 'skipped';
-             taskOutput = 'Analysis/Reporting task - no execution needed at this stage.';
-             this.broadcastStatus(`Task ${task.id} skipped (Analysis/Reporting Step)`);
-             log(`Task ${task.id} skipped.`);
-          } else {
-             task.status = 'skipped';
-             taskOutput = 'Unrecognized task type for E2B execution.';
-             this.broadcastStatus(`Task ${task.id} skipped (Unrecognized type)`);
-             log(`Task ${task.id} skipped (Unrecognized type).`);
-          }
-
-        } catch (error: any) {
-            task.status = 'error';
-            taskOutput = `System Error during task ${task.id}: ${error.message}`;
-            this.broadcastStatus(`System Error during Task ${task.id}: ${error.message}`);
-            log(`Task ${task.id} system error: ${error.message}`);
-            taskFailed = true;
-        }
-
-        // Finalize task status based on outcome
-        if (task.status === 'running') { // If not already skipped or errored
-           task.status = taskFailed ? 'error' : 'completed';
-        }
-        task.output = taskOutput.trim();
-        accumulatedOutput += `\n\n--- Final Output for Task ${task.id} (${task.status}) ---\n${task.output}\n--- End Task ${task.id} Output ---\n`;
-        if(!taskFailed && task.status !== 'skipped') this.broadcastStatus(`✓ Task ${task.id} completed: ${task.description}`);
-
-        await new Promise(resolve => setTimeout(resolve, 300));
-      } // End Task Loop
-      log("E2B Task execution loop finished.");
-
-      // --- Final Analysis ---
-      this.broadcastStatus("Starting final analysis based on execution outputs...");
-      const finalAnalysisPrompt = this.buildFinalAnalysisPrompt(preference, accumulatedOutput);
-      const analysisResponse = await generateContent(finalAnalysisPrompt);
-      log("Final analysis response received.");
-      let analysisResults: ResearchResult[] = [];
-       try { /* ... Keep refined JSON parsing logic ... */
-            let finalJsonParsed=null;try{finalJsonParsed=JSON.parse(analysisResponse)}catch(e){}
-            if(Array.isArray(finalJsonParsed)){analysisResults=finalJsonParsed;log("Parsed final JSON directly")}
-            else{const m=analysisResponse.match(/```json\s*(\[[\s\S]*\])\s*```/);if(m&&m[1]){analysisResults=JSON.parse(m[1]);log("Parsed final JSON from markdown")}else{const f=analysisResponse.match(/(\[[\s\S]*\])/);if(f&&f[1]){analysisResults=JSON.parse(f[1]);log("Parsed final JSON via fallback")}else{throw new Error("No JSON array found")}}}
-            if(!Array.isArray(analysisResults)){throw new Error("Final result not array")}
-            this.broadcastStatus(`🔍 Final analysis generated ${analysisResults.length} insights.`);
-            log(`Parsed ${analysisResults.length} final insights.`);
-       } catch (parseError: any) { /* ... error handling ... */ log("Error parsing final:",parseError.message); this.broadcastStatus(`Error parsing final. Raw:\n${analysisResponse}`); analysisResults=this.generateFallbackResults("LLM parse failed"); }
-
-      // --- Store Results & Check Alerts ---
-      this.broadcastStatus(`Storing ${analysisResults.length} final results...`);
-      await this.storeResults(userId, preferenceId, analysisResults);
-      this.broadcastStatus(`Checking alert conditions...`);
-      await this.checkAlertConditions(userId, preferenceId, analysisResults);
-      this.broadcastStatus(`Alert check complete.`);
-
-       // --- Final Cleanup & Broadcast Completion ---
-       // List files one last time
-       try { if(sandbox){const files=await sandbox.filesystem.list(this.E2B_SANDBOX_WORKDIR);generatedFiles=files.filter(f=>!f.isDir&&!f.name.endsWith('.py')&&!f.name.startsWith('.')).map(f=>({name:f.name,path:`/download/e2b/${preferenceId}/${f.name}`}));if(generatedFiles.length>0)this.broadcastStatus(`📁 Final files: ${generatedFiles.map(f=>f.name).join(', ')}`);}}catch(lsError){log("Err list final files:",lsError);}
-
-      const taskSummaryString = researchPlan.map(t => `- Task ${t.id}: ${t.description} -> ${t.status.toUpperCase()}`).join('\n');
-      const finalSummary = `## RESEARCH SUMMARY (E2B)\nProcess completed.\n\n**Task Summary:**\n${taskSummaryString}\n\n**Metrics:**\n- Insights: ${analysisResults.length}\n- Files: ${generatedFiles.length} (${generatedFiles.map(f => f.name).join(', ') || 'None'})`;
-      this.broadcastStatus(finalSummary);
-      this.broadcastToWs({ type: 'task_summary', data: finalSummary, files: generatedFiles, suggestions: [/* ... */] });
-      log("E2B research completed successfully.");
-      return analysisResults;
-
-    } catch (error: any) {
-        log(`Critical Error in E2B research:`, error);
-        const errorMsg = `Error during research process: ${error.message || String(error)}`;
-        this.broadcastStatus(`ERROR: ${errorMsg}`);
-        this.broadcastToWs({ type: 'task_error', data: errorMsg, files: [], suggestions: [] });
-        return this.generateFallbackResults(errorMsg);
-    } finally {
-       if (sandbox) {
-          this.broadcastStatus("Closing E2B Sandbox...");
-          await sandbox.close();
-          log("E2B Sandbox closed.");
-       }
+    } catch (error: unknown) { // Catch as unknown
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        log(`Critical Error in OpenManus research initiation:`, errorMsg);
+        this.broadcastStatus(`ERROR: ${errorMsg}`, agentId ?? undefined); // Broadcast error with agentId if available
+        this.broadcastToWs({ type: 'task_error', data: errorMsg, agentId: agentId ?? undefined, files: [], suggestions: [] });
+        // Clean up context if start failed
+        if (agentId) this.clearResearchContext(agentId);
+        // Throw the error so the route handler catches it
+        throw error; // Re-throw the error
     }
+    // Note: No finally block to close the connector here, as it's persistent and handles multiple agents.
+    // Connection closure should be managed elsewhere (e.g., on server shutdown or if the agent explicitly finishes)
   }
 
 
- // --- Prompt Building Functions (Refactored for E2B/Python) ---
+  // --- Helper to handle final results (Keep as is) ---
+  // TODO: Implement storage/retrieval for agent context
+  private agentContextMap: Map<string, { userId: number; preferenceId: number }> = new Map();
 
- private buildPlanPrompt(preference: AnalyzablePreference): string {
-    // Keep existing implementation - Plan should still reference python scripts
-     const topics = preference.topics?.join(", ") || 'N/A'; const keywords = preference.keywords?.join(", ") || 'N/A';
-     return `# TASK: Generate Research Plan...\n## USER PREFERENCES...\n## OUTPUT FORMAT...\nExample:\n## RESEARCH PLAN\n1. Save market data to /home/user/market_data.json...\n2. Create and execute process_data.py...\n3. Create and execute visualize_data.py...\n4. Analyze script outputs...\n5. Compile final report.\n`;
- }
+  private storeResearchContext(agentId: string, context: { userId: number; preferenceId: number }): void {
+     log(`Storing context for agent ${agentId}:`, context);
+     this.agentContextMap.set(agentId, context);
+  }
 
- private buildPythonCodePrompt(task: ResearchTask, preference: AnalyzablePreference, previousOutput: string): string { // Removed rawData param
-    const topics = preference.topics?.join(", ") || 'N/A';
-    const keywords = preference.keywords?.join(", ") || 'N/A';
-    const recentOutput = previousOutput.slice(-1500);
+  private getResearchContext(agentId: string): { userId: number; preferenceId: number } | undefined {
+      log(`Retrieving context for agent ${agentId}`);
+      // Add check if agentId is null/undefined, though type should prevent it here now
+      if (!agentId) return undefined;
+      return this.agentContextMap.get(agentId);
+  }
 
-    // Task-specific Python guidance
-    let pythonGuidance = "# Write Python code for this task.";
-    if (task.description.toLowerCase().includes("save gathered data")) {
-         pythonGuidance = `# Python code to save raw data (passed separately) into JSON files: market_data.json, news_articles.json, web_search_results.json within ${this.E2B_SANDBOX_WORKDIR}. Use the json library. Print confirmation.`;
-    } else if (task.description.toLowerCase().includes("process data")) {
-        pythonGuidance = `# Python code to load data from JSON files (e.g., market_data.json) in ${this.E2B_SANDBOX_WORKDIR}, process using pandas, save results to ${this.E2B_SANDBOX_WORKDIR}/processed_data.csv. Print status.`;
-    } else if (task.description.toLowerCase().includes("visualiz") || task.description.toLowerCase().includes("chart")) {
-        pythonGuidance = `# Python code to load ${this.E2B_SANDBOX_WORKDIR}/processed_data.csv using pandas, generate charts with matplotlib, save as PNG (e.g., price_chart.png) in ${this.E2B_SANDBOX_WORKDIR}. Print confirmation.`;
-    } else if (task.description.toLowerCase().includes("verify") || task.description.toLowerCase().includes("ls -la")) {
-         pythonGuidance = `# Python code using os.listdir('${this.E2B_SANDBOX_WORKDIR}') to list files and print results.`;
-    } else if (task.description.toLowerCase().includes("analyze") || task.description.toLowerCase().includes("report")) {
-         return "echo 'No Python code needed for analysis/reporting.'"; // Use echo for non-code tasks
+  private clearResearchContext(agentId: string): void {
+      log(`Clearing context for agent ${agentId}`);
+      this.agentContextMap.delete(agentId);
+  }
+
+ private async handleFinalResults(userId: number, preferenceId: number, results: ResearchResult[]): Promise<void> {
+    try {
+        // The results passed in here should now contain content/summary from files if they were read
+        log(`Storing ${results.length} final results for user ${userId}, preference ${preferenceId} (Content included: ${results.some(r => !!r.content?.report)})`); 
+         const stored = await this.storeResults(userId, preferenceId, results); 
+         // Add IDs back to results if needed for alert checking
+         const resultsWithIds = stored.map((dbResult, index) => ({
+             ...results[index], // Original result data
+             id: dbResult.id    // Add the ID from the database
+         }));
+
+        log(`Checking alert conditions for user ${userId}, preference ${preferenceId}`);
+         await this.checkAlertConditions(userId, preferenceId, resultsWithIds); // Use results with IDs
+
+        log(`Final result processing complete for user ${userId}, preference ${preferenceId}`);
+         // Clean up context map after results are processed
+         const agentId = [...this.agentContextMap.entries()].find(([id, ctx]) => ctx.userId === userId && ctx.preferenceId === preferenceId)?.[0];
+         if (agentId) {
+            this.clearResearchContext(agentId);
+         } else {
+             log(`Warning: Could not find agent ID to clear context after handling results for user ${userId}, pref ${preferenceId}`);
+         }
+
+     } catch (error: unknown) { // Catch as unknown
+         const errorMsg = error instanceof Error ? error.message : String(error);
+         log(`Error processing final results for user ${userId}, preference ${preferenceId}:`, errorMsg);
+        // Decide how to handle storage/alert errors - broadcast an error?
+         this.broadcastStatus(`ERROR processing final results: ${errorMsg}`);
+          // Also try to clean up context map on error
+         const agentId = [...this.agentContextMap.entries()].find(([id, ctx]) => ctx.userId === userId && ctx.preferenceId === preferenceId)?.[0];
+         if (agentId) this.clearResearchContext(agentId);
     }
-
-    return `
-# TASK: Generate Python Code Snippet
-
-Current Task ${task.id}: "${task.description}"
-
-## PREVIOUS OUTPUT (Last 1500 chars)
-\`\`\`
-${recentOutput || "(No previous output yet)"}
-\`\`\`
-
-## INSTRUCTIONS
-Generate ONLY the Python 3 code snippet for the Current Task.
-- Assume 'os', 'json', 'pandas', 'matplotlib.pyplot as plt' are available.
-- Use this working directory for file paths: ${this.E2B_SANDBOX_WORKDIR}
-- ${pythonGuidance}
-- Include print() statements for progress/confirmation.
-- Ensure code is complete and directly executable.
-
-Respond ONLY with raw Python code in a \`\`\`python ... \`\`\` block. No explanations.
-`;
-}
-
-
- private buildFinalAnalysisPrompt(preference: AnalyzablePreference, accumulatedOutput: string): string {
-      // Keep existing implementation, instructions already focus on accumulated output
-      const topics = preference.topics?.join(", ") || 'N/A'; const keywords = preference.keywords?.join(", ") || 'N/A'; const analysisOutput = accumulatedOutput.slice(-4000);
-      return `# TASK: Final Analysis...\n## USER PREFERENCES...\n## ACCUMULATED SCRIPT OUTPUT...\n\`\`\`\n${analysisOutput}\n\`\`\`\n## INSTRUCTIONS\nAnalyze ACCUMULATED SCRIPT OUTPUT...Generate 2-3 insights...Format as JSON array...\n## REQUIRED JSON OUTPUT FORMAT\n\`\`\`json\n[{"type":"insight","title":"Title from Output","summary":"Summary from Output",...sources:[{"title":"Task X Output","url":"internal://..."},{"title":"File: chart.png","url":"e2b:///home/user/chart.png"}],...}]\n\`\`\`\n**IMPORTANT: Respond ONLY with the valid JSON array.**`;
  }
 
 } // End class SentinelAgent

@@ -8,13 +8,13 @@ COPY server/package*.json server/
 RUN npm install
 RUN cd client && npm install --legacy-peer-deps
 COPY . .
-ENV NODE_ENV=production
+# ENV NODE_ENV=production # Setting this in builder stage is fine if needed for build
 RUN npm run build
 
 # Production stage
 FROM node:18-alpine
 WORKDIR /app
-ENV NODE_ENV=production
+# ENV NODE_ENV=production # Remove this line to allow docker-compose to control it
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist/public ./public
 COPY --from=builder /app/client/public ./public

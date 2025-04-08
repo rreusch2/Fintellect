@@ -1,0 +1,70 @@
+# General Coding Assistant Rules for Fintellect Project
+
+## Primary Goal
+Assist in the development of the Fintellect financial application. Key focus areas include the TypeScript/React frontend, Node.js/Express backend, and the Python-based OpenManus AI agent service (`openmanus-service`). Pay special attention to the integration and functionality of the "Sentinel" AI research feature.
+
+## Core Technologies
+- Frontend: TypeScript, React, Vite, Tailwind CSS, Shadcn UI, TanStack Query
+- Backend: TypeScript, Node.js, Express, Drizzle ORM
+- AI Service: Python, FastAPI, OpenManus Agent Framework, Deepseek API, Anthropic API
+- Database: PostgreSQL (NeonDB)
+- Containerization: Docker, Docker Compose
+
+## Project Structure Awareness
+- `client/`: React frontend application code.
+- `server/`: Node.js/Express backend API and core services.
+  - `server/services/ai/agents/`: Contains agent logic (e.g., `SentinelAgent.ts`).
+  - `server/services/ai/connectors/`: Connectors to external AI services (e.g., `OpenManusConnector.ts`).
+  - `server/routes/`: API endpoint definitions.
+- `openmanus-service/`: Python service hosting the OpenManus agent.
+  - `openmanus-service/OpenManus/`: Git submodule containing the OpenManus framework code.
+    - `openmanus-service/OpenManus/app/`: Core OpenManus application logic.
+    - `openmanus-service/OpenManus/app/tool/`: Agent tools (e.g., `browser_use_tool.py`, `llm.py`).
+    - `openmanus-service/OpenManus/workspace/`: Default working directory for the agent *inside* the container.
+  - `sentinel_openmanus_service.py`: FastAPI service wrapper.
+- `db/`: Database schema definitions (`schema.ts`, `sentinel-schema.ts`) and migration files.
+- `sentinel-env/`: Docker environment setup for a VNC-enabled container (potentially for agent observation/debugging, but not currently used by OpenManus).
+- `docker-compose.yml`: Defines the `fintellect` (main app) and `openmanus` services.
+- `.env`: Contains API keys and configuration flags (e.g., `OPENMANUS_LLM_PROVIDER`).
+
+## Interaction Guidelines
+1.  **Prioritize Provided Context:** Always use the code, errors, logs, and conversation history provided before making assumptions or searching externally.
+2.  **Understand the Goal:** Ensure you understand the specific task related to Fintellect or Sentinel before suggesting code changes. Ask clarifying questions if needed.
+3.  **Maintain Consistency:** Adhere to existing coding styles, patterns, and chosen libraries within the respective parts of the codebase (TypeScript backend vs. Python service vs. React frontend).
+4.  **Focus on Integration:** Be mindful of how changes in one service (`openmanus-service`) affect others (`server`, `client`), especially concerning API contracts, WebSocket messages, and configuration.
+5.  **Error Diagnosis:** When presented with errors or logs, analyze them carefully in the context of the recent changes and the overall application flow (UI -> Backend -> OpenManus Service -> Agent -> Tools -> LLM -> Tools -> OpenManus Service -> Backend -> UI).
+
+## MCP Server Awareness (Guiding Assistant's Understanding)
+
+*Be aware of the following concepts and services used or planned within the Fintellect ecosystem. While you may not directly call these MCP tools, understand their purpose when analyzing code or discussing features.*
+
+1.  **Knowledge Graph Memory (`mcp/memory`):**
+    *   **Purpose:** Used for persistent storage of information about users, preferences, project details, or concepts *across chat sessions* or agent runs.
+    *   **Relevance:** When discussing how Sentinel or other AI features might remember past interactions, learn user preferences deeply, or build a persistent knowledge base about financial entities, this is the underlying concept. Code might involve structuring data as entities, relations, and observations.
+
+2.  **Sequential Thinking (`mcp/sequential-thinking`):**
+    *   **Purpose:** A structured approach for breaking down complex problems, planning multi-step actions, generating hypotheses, and refining solutions iteratively.
+    *   **Relevance:** The `Manus` agent inherently uses a step-by-step thinking process. When debugging the agent's logic, planning complex features, or designing multi-stage analysis, think in terms of these sequential, potentially branching, and revisable steps.
+
+3.  **PostgreSQL Database (`mcp/postgres`):**
+    *   **Purpose:** Provides read-only access to the application's primary database (`neondb` hosted on Neon). Used for querying data and inspecting schema.
+    *   **Relevance:** The Fintellect backend (`server/`) uses Drizzle ORM (`db/`) to interact with this database. Understand that direct SQL queries via an MCP tool are primarily for *inspection* or read-only tasks. Backend code handles mutations. Connection details are in `.env`.
+
+4.  **Git Repository (`mcp/git`):**
+    *   **Purpose:** Allows programmatic interaction with the project's Git repository (`/home/reid/Desktop/FinGit/Fintellect`).
+    *   **Relevance:** The project uses Git for version control. When suggesting code changes, be mindful of standard Git practices (branching, committing, diffs). You might be asked to check file history, compare branches, or analyze changes using Git concepts, mirroring what the `mcp/git` server *could* do. Assume standard Git commands apply.
+
+5.  **Web Fetching (`mcp/fetch`):**
+    *   **Purpose:** Retrieves content from external URLs, often converting HTML to Markdown. Handles potentially large pages via pagination (`start_index`).
+    *   **Relevance:** The `OpenManus` agent needs to access external web data. It primarily uses its `browser_use` tool, but the *concept* of fetching web content (and potential issues like timeouts or content formatting) is central. The `WebSearch` tool within `OpenManus` likely uses a similar fetching mechanism.
+
+6.  **Browser Automation Tools (`mcp/browser-tools` vs. `browser_use_tool.py`):**
+    *   **`browser_use_tool.py` (OpenManus):** This is the *agent's* primary tool for controlling a headless browser (via Playwright) *inside the `openmanus-service` container*. It's used for navigation, interaction, and extraction as part of the research task. Debugging often involves this tool's logic and timeouts.
+    *   **`@agentdeskai/browser-tools-mcp@1.2.0` (MCP Server):** This MCP server provides tools for *Cursor* to interact with *its own browser context* (e.g., debugging a webview within the IDE or a related browser tab). It is **NOT** used by the `OpenManus` agent for its web research tasks. Avoid confusing the two. Use this MCP server's conceptual purpose only if debugging Cursor's own browser interactions related to the project becomes necessary.
+
+## Specific Instructions
+- When modifying `docker-compose.yml`, ensure environment variables and volume mappings are correct for both `fintellect` and `openmanus` services.
+- When editing `sentinel_openmanus_service.py`, pay attention to FastAPI setup, WebSocket handling (`ConnectionManager`), agent instantiation (`Manus`), configuration loading (`configure_openmanus_from_env`), and error handling.
+- When working in `SentinelAgent.ts`, focus on the interaction with `OpenManusConnector`, WebSocket event handling, state management (`agentContextMap`), and database interaction (`db/sentinel-schema.ts`).
+- When dealing with LLM provider configuration (`.env`, `llm.py`), ensure the logic correctly selects the provider (`OPENMANUS_LLM_PROVIDER`) and uses the corresponding credentials and API details (base URL, model name, API type).
+- Always rebuild Docker images (`docker compose up --build`) after changing Python dependencies (`requirements.txt`), Dockerfiles, or core service code to ensure changes take effect.

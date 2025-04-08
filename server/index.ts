@@ -151,10 +151,29 @@ async function startServer() {
 
     // Setup web app *after* API routes and HTTP server creation
     if (process.env.NODE_ENV === "development") {
-      const { setupVite } = await import("./vite.js");
-      // Pass the http.Server instance to Vite for HMR WebSocket handling
-      setupVite(app, server); 
+      try {
+        // Use require inside the block, guarded by try/catch
+        // Node requires '.js' for require, assuming TS compiles vite.ts to vite.js
+        log("Attempting to load Vite development server middleware...");
+        const viteModule = require("./vite.js"); // <-- Using require
+        if (viteModule && typeof viteModule.setupVite === 'function') {
+             // Since setupVite is async, we need to await it
+             await viteModule.setupVite(app, server);
+             log("Vite development server setup complete.");
+        } else {
+            // This case should ideally not happen if require succeeds
+            log("Error: setupVite function not found or not a function in ./vite.js. Serving static files as fallback.");
+            setupStatic(app); // Fallback
+        }
+      } catch (err: unknown) {
+        // This catch block will execute if 'require("./vite.js")' fails
+        // (e.g., if 'vite' package is missing, expected in production)
+        log(`Vite setup failed/skipped (Error: ${err instanceof Error ? err.message : String(err)}). Serving static files.`);
+        setupStatic(app); // Fallback to static files
+      }
     } else {
+      // Explicitly serve static in production
+      log("Production mode: Serving static files.");
       setupStatic(app);
     }
 
@@ -203,19 +222,15 @@ async function startServer() {
                 };
 
                 try {
-                    const { exitCode } = await sentinelAgent.executeInEnvironment(command, onDataCallback);
-                    ws.send(JSON.stringify({ type: 'status', message: `Command finished with exit code ${exitCode}.`, exitCode: exitCode }));
-                    
-                    // If command succeeded and we haven't sent ready signal yet, send it now
-                    // if (!isContainerConfirmedReady && exitCode === 0) {
-                    //     console.log('[WSS] Sending container_ready signal after first successful command.');
-                    //     ws.send(JSON.stringify({ type: 'status', event: 'container_ready', message: 'Container ready.' }));
-                    //     // isContainerConfirmedReady = true;
-                    // }
-
+                    // This likely needs changing - executeInEnvironment was E2B specific
+                    // We need a way to send commands to OpenManus via connector/WS
+                    // For now, just log it
+                    log(`[WSS] Command execution via SentinelAgent needed for: ${command} (Not implemented for OpenManus yet)`);
+                    // const { exitCode } = await sentinelAgent.executeInEnvironment(command, onDataCallback);
+                    ws.send(JSON.stringify({ type: 'status', message: `Command '${command}' received but execution via OpenManus not implemented.`, exitCode: -1 }));
                 } catch (execError: any) {
-                     console.error(`[WSS] Command execution error: ${execError.message}`);
-                     ws.send(JSON.stringify({ type: 'error', message: `Command execution failed: ${execError.message}` }));
+                     console.error(`[WSS] Command execution placeholder error: ${execError.message}`);
+                     ws.send(JSON.stringify({ type: 'error', message: `Command execution placeholder failed: ${execError.message}` }));
                 }
 
             } catch (error: any) {
@@ -265,12 +280,12 @@ startServer().then(serverInstance => {
 
 async function gracefulShutdown() {
     console.log('\n[Server] Received shutdown signal. Shutting down gracefully...');
-    try {
-        await sentinelAgent.stopAndRemoveEnvironment();
-    } catch (e) {
-        console.error("[Server] Error stopping environment on shutdown:", e);
-    }
-
+    // try {
+        // Placeholder: Add shutdown logic for OpenManus if needed (e.g., via connector)
+        // await sentinelAgent.stopAndRemoveEnvironment();
+    // } catch (e) {
+        // console.error("[Server] Error stopping environment on shutdown:", e);
+    // }
     if (runningServer) {
         runningServer.close(() => {
             console.log('[Server] HTTP server closed.');

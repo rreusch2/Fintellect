@@ -1,0 +1,96 @@
+# docker-compose.yml
+# version: '3.8' # Obsolete, remove
+
+services:
+  fintellect:
+    build:
+      context: .
+      dockerfile: Dockerfile # Assuming your main Dockerfile is at the root
+    ports:
+      - "${PORT:-5001}:${PORT:-5001}" # Expose the Fintellect backend port
+    env_file:
+      - .env # Pass environment variables from .env file
+    environment:
+      # Ensure the connector uses the service name defined below
+      - OPENMANUS_URL=http://openmanus:8000
+      # Explicitly set NODE_ENV if not in .env
+      - NODE_ENV=${NODE_ENV:-development} # Default back to development for local compose
+    working_dir: /app # Explicitly set working directory
+    # Remove volume mount for host code to avoid hiding built code
+    # volumes:
+    #   - .:/app
+    #   - /app/node_modules
+    #   - shared_data:/app/shared
+    volumes:
+      - /app/node_modules # Keep node_modules mount if necessary
+      - shared_data:/app/shared
+    depends_on:
+      # Wait for openmanus service to be healthy, not just started
+      openmanus:
+        condition: service_healthy
+    command: node dist/index.js # Run the built application
+    networks:
+      - fintellect_network
+
+  openmanus:
+    build:
+      context: ./openmanus-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000" # Expose the FastAPI service port
+    volumes:
+      # Mount service code for development (changes trigger reload via uvicorn)
+      - ./openmanus-service:/app
+      # Map shared volume to the path OpenManus expects based on config.py
+      - shared_data:/app/OpenManus/workspace
+      # Mount the specific config file to ensure it's present (optional but safer)
+      - ./openmanus-service/OpenManus/config/config.toml:/app/OpenManus/config/config.toml
+      # Uncomment the line below ONLY if OpenManus needs to control Docker
+      # - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # WORKSPACE_DIR env var is no longer needed here as we map the volume
+      # - WORKSPACE_DIR=/app/workspace
+      # Pass necessary API keys for OpenManus agent
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - EXA_API_KEY=${EXA_API_KEY}
+      - SERP_API_KEY=${SERP_API_KEY}
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+      - E2B_API_KEY=${E2B_API_KEY}
+      # Add new provider variables
+      - OPENMANUS_LLM_PROVIDER=${OPENMANUS_LLM_PROVIDER:-anthropic} # Default to anthropic if not set
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL}
+      - DEEPSEEK_MODEL_NAME=${DEEPSEEK_MODEL_NAME}
+      - ANTHROPIC_MODEL_NAME=${ANTHROPIC_MODEL_NAME}
+      - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME}
+      # Pass extraction override vars if set
+      - EXTRACTION_LLM_PROVIDER=${EXTRACTION_LLM_PROVIDER}
+      - EXTRACTION_LLM_MODEL=${EXTRACTION_LLM_MODEL}
+      - EXTRACTION_LLM_API_KEY=${EXTRACTION_LLM_API_KEY}
+      - DISPLAY=:99
+    # Add a healthcheck to verify the FastAPI service is responding
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/"] # Check root endpoint
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Give it time to start initially
+    # Temporarily remove xvfb-run to test uvicorn startup
+    command: [
+        "uvicorn",
+        "sentinel_openmanus_service:app",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--reload"
+      ]
+    networks:
+      - fintellect_network
+
+volumes:
+  shared_data: # Define the shared volume
+
+networks:
+  fintellect_network: # Define the network
+    driver: bridge 

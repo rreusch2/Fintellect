@@ -14,13 +14,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, Bookmark, Bell, BookX, CheckCircle, Calendar, Clock, Settings, ArrowRight, RefreshCw } from "lucide-react";
+import { Loader2, Search, Bookmark, Bell, BookX, CheckCircle, Calendar, Clock, Settings, ArrowRight, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from '@/components/ui/separator';
 
 // Import new components
 import TerminalOutput from '@/features/Sentinel/components/TerminalOutput';
 import AgentActivityLog from '@/features/Sentinel/components/AgentActivityLog';
+import { LogLine } from '@/features/Sentinel/components/TerminalOutput';
+import { AgentProgress } from '@/features/Sentinel/components/AgentActivityFeed';
+
+// Import Step Components
+import StatusStep from '@/features/Sentinel/components/steps/StatusStep';
+import TerminalStep from '@/features/Sentinel/components/steps/TerminalStep';
+import SummaryStep from '@/features/Sentinel/components/steps/SummaryStep';
+import ErrorStep from '@/features/Sentinel/components/steps/ErrorStep';
+import ResearchDisplay from '@/features/Sentinel/components/ResearchDisplay';
 
 // Interfaces based on the database schema
 interface ResearchPreference {
@@ -119,13 +128,25 @@ interface Alert {
 // Define LogLine interface
 interface LogLine {
   id: number; 
-  // Consolidate types for clarity
-  type: 'agent_status' | 'terminal_stdout' | 'terminal_stderr' | 'user_command' | 'task_summary' | 'task_error' | 'system_info' | 'system_error';
-  data: string;
-  // Optional fields for completion messages
+  type: 'agent_status' | 'terminal_stdout' | 'terminal_stderr' | 'user_command' | 
+        'task_summary' | 'task_error' | 'system_info' | 'system_error' | 'terminal_command';
+  data?: string;
+  command?: string; // For terminal_command type
+  output?: string;  // For terminal_command type
+  agentId?: string | null;
   files?: { name: string, path: string }[];
   suggestions?: { short: string, full: string }[];
 }
+
+// --- Define AgentStep Interface ---
+interface AgentStep {
+  id: number; // Unique identifier for the step
+  type: 'status' | 'terminal' | 'file' | 'summary' | 'error'; // Type of step
+  title: string; // Title describing the step
+  content: any; // Content specific to the step type (string, string[], object)
+  timestamp?: number; // Optional timestamp from logs
+}
+// -------------------------------
 
 // Temporary state for raw string inputs
 interface PreferenceFormInputs {
@@ -283,33 +304,76 @@ export default function SentinelPage() {
   });
 
   // New state to track active research run
-  const [activeResearchRun, setActiveResearchRun] = useState<{ preferenceId: number } | null>(null);
+  const [activeResearchRun, setActiveResearchRun] = useState<{ preferenceId: number; agentId?: string } | null>(null);
 
-  // --- WebSocket State --- 
+  // --- WebSocket State ---
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [isWsConnected, setIsWsConnected] = useState(false);
   const ws = useRef<WebSocket | null>(null);
-  const nextLogId = useRef(0); 
+  const nextLogId = useRef(0);
   // ----------------------
 
-  // --- WebSocket Logic --- 
-  const addLog = useCallback((logEntry: Omit<LogLine, 'id'>) => {
-    setLogs((prevLogs) => [
-      ...prevLogs.slice(-200), 
-      { ...logEntry, id: nextLogId.current++ }, // Add ID here
-    ]);
-  }, []);
+  // --- State for Sequential Step View ---
+  const [agentSteps, setAgentSteps] = useState<AgentStep[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  // ------------------------------------
+
+  // Add state for browser data
+  const [browserImages, setBrowserImages] = useState<string[]>([]);
+  const [browserState, setBrowserState] = useState<{
+    url: string;
+    title: string;
+    interactiveElements?: string;
+  }>({ url: '', title: '' });
+
+  // New state for enhanced features
+  const [agentProgress, setAgentProgress] = useState<AgentProgress>();
+  const [workspaceFiles, setWorkspaceFiles] = useState<Array<{
+    name: string;
+    path: string;
+    content: string;
+    content_type: string;
+  }>>([]);
+  const [viewingFile, setViewingFile] = useState<{
+    name: string;
+    content: string;
+    content_type: string;
+    is_binary: boolean;
+  } | null>(null);
+
+  // --- WebSocket Logic ---
+  const addLog = useCallback((logEntry: Omit<LogLine, 'id'> & { agentId?: string | null }) => {
+    // Associate log with the current run's agent ID if possible
+    const currentAgentId = activeResearchRun?.agentId;
+    // Ensure we use the provided agentId if available, or fallback to the current run ID
+    const logAgentId = logEntry.agentId || currentAgentId; 
+
+    // Only add logs relevant to the current active run (or system logs)
+    if (logEntry.type.startsWith('system') || !currentAgentId || logAgentId === currentAgentId) {
+        setLogs((prevLogs) => [
+          ...prevLogs.slice(-200),
+          { ...logEntry, id: nextLogId.current++, agentId: logAgentId }, // Store agentId with log
+        ]);
+    } else {
+        console.warn(`[SentinelPage] Ignoring log for different agent ID. Current: ${currentAgentId}, Log: ${logAgentId}`, logEntry);
+    }
+  }, [activeResearchRun]);
 
   useEffect(() => {
     // Ensure we don't create multiple connections if effect runs twice
-    if (ws.current) {
+    if (ws.current && (ws.current.readyState === WebSocket.OPEN || ws.current.readyState === WebSocket.CONNECTING)) { // Check connecting state too
         console.log("[WebSocket Effect] Already connecting/connected.");
         return;
     }
 
     console.log(`Attempting to connect command WebSocket: ${WS_COMMAND_URL}`);
-    addLog({ type: 'system_info', data: `Connecting command channel to ${WS_COMMAND_URL}...` });
-    
+    // Ensure addLog is available before calling it
+    if(addLog) {
+        addLog({ type: 'system_info', data: `Connecting command channel to ${WS_COMMAND_URL}...`, agentId: null });
+    } else {
+        console.warn("[WebSocket Effect] addLog function not yet available for initial connection message.");
+    }
+
     let localWs = new WebSocket(WS_COMMAND_URL);
     ws.current = localWs; // Assign to ref immediately
     let isClosing = false; // Flag to prevent double close/error logs
@@ -318,7 +382,7 @@ export default function SentinelPage() {
       if (isClosing) return; // Ignore if cleanup already started
       console.log('Command WebSocket Connected');
       setIsWsConnected(true);
-      addLog({ type: 'system_info', data: 'Command channel connected.' });
+      addLog({ type: 'system_info', data: 'Command channel connected.', agentId: null });
     };
 
     localWs.onclose = (event) => {
@@ -326,7 +390,7 @@ export default function SentinelPage() {
       console.log('Command WebSocket Disconnected', event.reason, `(Code: ${event.code})`);
       setIsWsConnected(false);
       ws.current = null; // Clear ref on close
-      addLog({ type: 'system_error', data: `Command channel disconnected: ${event.reason || 'Unknown reason'} (Code: ${event.code})` });
+      addLog({ type: 'system_error', data: `Command channel disconnected: ${event.reason || 'Unknown reason'} (Code: ${event.code})`, agentId: null });
     };
 
     localWs.onerror = (error) => {
@@ -334,50 +398,129 @@ export default function SentinelPage() {
       console.error('Command WebSocket Error:', error);
       setIsWsConnected(false);
       ws.current = null; // Clear ref on error
-      addLog({ type: 'system_error', data: 'Command channel connection error.' });
+      addLog({ type: 'system_error', data: 'Command channel connection error.', agentId: null });
     };
 
     localWs.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        console.log("Command WS Message:", message);
-        
-        // Handle specific message types from backend
-        switch (message.type) {
-          case 'agent_status':
-          case 'terminal_stdout':
-          case 'terminal_stderr':
-            addLog({ type: message.type, data: message.message || message.data });
-            break;
-          case 'task_complete':
-            addLog({
-              type: 'task_summary', 
-              data: message.summary || 'Task completed successfully.', 
-              files: message.files || [], 
-              suggestions: message.suggestions || []
-            });
-             // Maybe add a visual separator log?
-             addLog({ type: 'system_info', data: '--- End of Task ---' });
-            break;
-          case 'task_error':
-             addLog({
-               type: 'task_error', 
-               data: message.summary || 'Task failed.'
-             });
-              addLog({ type: 'system_info', data: '--- End of Task (Error) ---' });
-            break;
-          // Ignore internal status messages like container_ready if we added them
-          // case 'status': 
-          //   if (message.event === 'container_ready') { /* Handled by agent status now */ } 
-          //   else { addLog({ type: 'system_info', data: message.message }); }
-          //   break;
-          default:
-             addLog({ type: 'system_info', data: `Received unhandled message format: ${event.data}` });
-        }
+        console.log("WebSocket message received:", message);
 
-      } catch (e) {
-        console.error("Failed to parse command WebSocket message:", e);
-        addLog({ type: 'system_info', data: `Received raw message: ${event.data}` });
+        // Debug logging for agent ID
+        const messageAgentId = message.agentId;
+        // Access activeResearchRun safely via the ref's current value or state
+        const currentAgentId = activeResearchRun?.agentId;
+        console.log(`Message agent ID: ${messageAgentId}, Current agent ID: ${currentAgentId}`);
+
+        // Handle specific message types
+        switch (message.type) {
+          case 'terminal_command':
+            console.log("Received terminal command:", message.command);
+            // Handle terminal command (add to logs)
+            addLog({
+              type: 'terminal_command',
+              command: message.command,
+              output: message.output,
+              agentId: message.agentId
+            });
+            break;
+            
+          case 'workspace_files':
+            console.log("Received workspace files:", message.files?.length || 0);
+            // Update workspace files state
+            setWorkspaceFiles(message.files || []);
+            break;
+            
+          case 'agent_progress':
+            console.log("Received agent progress:", message.data);
+            // Update agent progress state
+            setAgentProgress(message.data);
+            break;
+            
+          case 'file_content':
+            console.log("Received file content:", message.filename);
+            // Handle file content for viewing
+            handleFileContent(message);
+            break;
+            
+          case 'browser_state':
+            console.log("Received browser state update");
+            // Handle browser screenshot and state
+            if (message.base64_image) {
+              console.log("Received browser screenshot");
+              setBrowserImages(prev => [...prev, message.base64_image]);
+            }
+            if (message.data) {
+              console.log("Received browser state data");
+              setBrowserState(message.data);
+            }
+            break;
+            
+          case 'status':
+            console.log("Received status message:", message.message);
+            addLog({ 
+              type: 'agent_status', 
+              data: message.message, 
+              agentId: message.agentId
+            });
+            break;
+            
+          case 'error':
+            console.log("Received error message:", message.message);
+            addLog({ 
+              type: 'task_error', 
+              data: message.message, 
+              agentId: message.agentId
+            });
+            break;
+            
+          case 'agent_status': // Add case for agent_status
+            console.log("Received agent status message:", message.message || message.data);
+            if (message.message || message.data) {
+              addLog({
+                type: 'agent_status',
+                data: message.message || message.data, // Handle both potential keys
+                agentId: message.agentId
+              });
+            }
+            break;
+            
+          case 'system_info': // Keep system_info handling
+            console.log("Received system info:", message.data);
+            addLog({
+              type: 'system_info',
+              data: message.data,
+              agentId: message.agentId
+            });
+            break;
+            
+          case 'final_result':
+            console.log("Received final result:", message.results);
+            // Handle final result data
+            if (message.results && message.results.length > 0) {
+              console.log("Processing final research results");
+              // Add a summary log
+              const summary = message.results[0]?.summary || "Research completed";
+              addLog({
+                type: 'task_summary',
+                data: summary,
+                files: message.files || [],
+                agentId: message.agentId
+              });
+            }
+            break;
+            
+          default:
+            console.log("Unhandled message type:", message.type);
+            // Log unhandled message types for debugging
+            addLog({ 
+              type: 'system_info', 
+              data: `Received unhandled message type: ${message.type}`, 
+              agentId: message.agentId
+            });
+        }
+      } catch (error) {
+        console.error("Failed to parse WebSocket message:", error, event.data);
       }
     };
 
@@ -396,17 +539,21 @@ export default function SentinelPage() {
           ws.current = null;
       }
     };
-  }, [addLog]); // addLog is stable due to useCallback
+  }, [addLog]); // Keep activeResearchRun dependency for agent ID checks
 
   const handleSendCommand = useCallback((command: string) => {
+    // Access agentId from state directly when sending
+    const currentAgentId = activeResearchRun?.agentId;
     if (command.trim() && ws.current && ws.current.readyState === WebSocket.OPEN) {
-      addLog({ type: 'user_command', data: command.trim() }); // Log user command
-      ws.current.send(JSON.stringify({ command: command.trim() }));
+      // Add log with current agentId if available, otherwise null
+      addLog({ type: 'user_command', data: command.trim(), agentId: currentAgentId });
+      // Send command with current agentId
+      ws.current.send(JSON.stringify({ command: command.trim(), agentId: currentAgentId }));
       // Don't clear completion state here anymore, it's part of logs
     } else if (!isWsConnected) {
-      addLog({ type: 'system_error', data: 'Command channel not connected. Cannot send command.' });
+      addLog({ type: 'system_error', data: 'Command channel not connected. Cannot send command.', agentId: currentAgentId });
     }
-  }, [isWsConnected, addLog]);
+  }, [isWsConnected, addLog, activeResearchRun]); // Include activeResearchRun if agentId logic depends on it
   // ------------------------
 
   // Queries
@@ -460,25 +607,128 @@ export default function SentinelPage() {
     },
   });
 
-  const runResearchMutation = useMutation({
-    mutationFn: runResearch,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sentinelResults'] });
-      toast({
-        title: "Success",
-        description: "Research completed successfully",
-      });
-      setActiveResearchRun(null);
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to run research: ${error.message}`,
-      });
-      setActiveResearchRun(null);
-    },
-  });
+  // --- Logic to Process Logs into Steps ---
+  useEffect(() => {
+    if (!activeResearchRun) {
+      setAgentSteps([]); // Clear steps when no run is active
+      setCurrentStepIndex(0);
+      return;
+    }
+
+    const processedSteps: AgentStep[] = [];
+    let currentTerminalBlock: string[] = [];
+    let lastTerminalType: 'terminal_stdout' | 'terminal_stderr' | null = null;
+    let precedingStatusLog: LogLine | null = null; // Track the log before terminal output
+    let stepIdCounter = 0;
+
+    const pushTerminalBlock = () => {
+      if (currentTerminalBlock.length > 0 && lastTerminalType) {
+        let title = lastTerminalType === 'terminal_stderr' ? 'Terminal Error Output' : 'Terminal Output';
+        // Attempt to use preceding status as title if relevant
+        if (precedingStatusLog && precedingStatusLog.data.toLowerCase().includes('executing')) {
+            title = precedingStatusLog.data; // Use the full status message
+        }
+
+        processedSteps.push({
+          id: stepIdCounter++,
+          type: 'terminal',
+          title: title.length > 80 ? title.substring(0, 77) + '...' : title, // Truncate title slightly more
+          content: currentTerminalBlock.join('\n'), // Join lines for display
+          timestamp: Date.now(), // Use current time or find log timestamp later
+        });
+        currentTerminalBlock = [];
+        lastTerminalType = null;
+        precedingStatusLog = null; // Reset preceding log after pushing block
+      }
+    };
+
+    logs.forEach((log, index) => {
+        // Only process logs for the current agent run
+        if (log.agentId !== activeResearchRun.agentId && !log.type.startsWith('system')) return;
+
+      if (log.type === 'terminal_stdout' || log.type === 'terminal_stderr') {
+        if (!lastTerminalType) {
+            // This is the start of a new block, check the preceding log
+            precedingStatusLog = logs[index - 1] && logs[index - 1].type === 'agent_status' ? logs[index - 1] : null;
+        }
+        if (lastTerminalType && log.type !== lastTerminalType) {
+          // Different terminal type within a block? Push previous block.
+          // This might happen if stdout/stderr are interleaved rapidly.
+          pushTerminalBlock();
+          // Start new block, check preceding again if needed (though unlikely here)
+          precedingStatusLog = logs[index - 1] && logs[index - 1].type === 'agent_status' ? logs[index - 1] : null;
+        }
+        currentTerminalBlock.push(log.data);
+        lastTerminalType = log.type;
+        precedingStatusLog = null; // Clear preceding log once terminal output starts accumulating
+      } else {
+        // Not terminal output, push any pending terminal block first
+        pushTerminalBlock();
+
+        // Handle other log types as individual steps
+        let stepType: AgentStep['type'] | null = null;
+        let stepTitle = '';
+        let stepContent: any = log.data;
+
+        switch (log.type) {
+          case 'agent_status':
+          case 'system_info':
+             // Filter out less informative status messages for the step view
+             const lowerCaseData = log.data.toLowerCase();
+             if (lowerCaseData.includes('connecting command channel') ||
+                 lowerCaseData.includes('command channel connected') ||
+                 lowerCaseData.includes('connected to sentinel command endpoint') ||
+                 lowerCaseData.includes('connected to agent stream') ||
+                 lowerCaseData.includes('waiting for connection') ||
+                 lowerCaseData.startsWith('---')) {
+                 // Skip these less informative logs for the step view
+                 break;
+             }
+            stepType = 'status';
+            stepTitle = log.data.split('\n')[0]; // Use first line as title
+            stepContent = log.data; // Keep full content
+            break;
+          case 'task_summary':
+            stepType = 'summary';
+            stepTitle = 'Research Complete';
+            // Ensure content structure matches SummaryStepProps
+            stepContent = { summary: log.data, files: log.files || [], suggestions: log.suggestions || [] };
+            break;
+          case 'task_error':
+          case 'system_error':
+            stepType = 'error';
+            stepTitle = 'Error Occurred';
+            stepContent = log.data; // Pass the error message as content
+            break;
+          case 'user_command':
+            // Skip user commands for the step view.
+            break;
+        }
+
+        if (stepType) {
+          processedSteps.push({
+            id: stepIdCounter++,
+            type: stepType,
+            title: stepTitle.length > 70 ? stepTitle.substring(0, 67) + '...' : stepTitle, // Truncate title
+            content: stepContent,
+            timestamp: Date.now(), // Placeholder timestamp
+          });
+        }
+      }
+    });
+
+    // Push any remaining terminal block after loop
+    pushTerminalBlock();
+
+    setAgentSteps(processedSteps);
+
+    // Keep current step index unless it becomes invalid
+    if (currentStepIndex >= processedSteps.length && processedSteps.length > 0) {
+        setCurrentStepIndex(processedSteps.length - 1);
+    }
+
+  }, [logs, activeResearchRun, currentStepIndex]); // Add currentStepIndex dependency? Maybe not needed.
+  // ---------------------------------------
 
   // Event Handlers
   const handleSubmitPreference = (e: React.FormEvent) => {
@@ -520,8 +770,8 @@ export default function SentinelPage() {
     createPreferenceMutation.mutate(preferenceData);
   };
 
-  // Handle Run Research function
-  const handleRunResearch = (preferenceId: number) => {
+  // Modified handleRunResearch to store agentId
+  const handleRunResearch = async (preferenceId: number) => {
     if (activeResearchRun) {
       toast({
         title: "Research in Progress",
@@ -530,11 +780,58 @@ export default function SentinelPage() {
       return;
     }
 
-    // Set the active research run
+    // Set the active research run (initially without agentId)
     setActiveResearchRun({ preferenceId });
-    
-    // Run the research mutation
-    runResearchMutation.mutate(preferenceId);
+    setActiveTab('running'); // Switch to running tab immediately
+    setLogs([]); // Clear previous logs
+    setAgentSteps([]); // Clear previous steps
+    setCurrentStepIndex(0);
+    addLog({ type: 'system_info', data: `Requesting research run for preference ID: ${preferenceId}...`, agentId: null });
+
+    try {
+      // Call the backend API endpoint to start the research
+      const response = await fetch('/api/ai/sentinel/research', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ preferenceId }),
+      });
+
+      if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to start research run');
+      }
+
+      const result = await response.json();
+      const agentId = result.agentId; // Assuming the backend returns the agentId
+
+      if (agentId) {
+          // Update the active run state with the agentId
+          setActiveResearchRun({ preferenceId, agentId });
+          addLog({ type: 'system_info', data: `Research requested successfully. Agent ID: ${agentId}. Waiting for connection...`, agentId });
+          // The WebSocket connection attempt is handled by the useEffect hook
+      } else {
+           throw new Error("Backend did not return an agent ID.");
+      }
+
+      // Note: We don't handle completion/error toast here anymore,
+      // it will be handled based on WebSocket messages ('task_summary'/'task_error')
+      // The runResearchMutation is removed as the flow is now:
+      // 1. Button click -> call API -> get agentId
+      // 2. WebSocket connects and sends updates
+      // 3. 'task_summary' or 'task_error' log triggers final state update
+
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        toast({
+          variant: "destructive",
+          title: "Error Starting Research",
+          description: errorMsg,
+        });
+        addLog({ type: 'system_error', data: `Failed to start research: ${errorMsg}`, agentId: null });
+        setActiveResearchRun(null); // Reset active run on failure
+        setActiveTab('dashboard'); // Switch back if start fails
+    }
   };
 
   const handleInputChange = (field: keyof PreferenceFormInputs) => (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -581,6 +878,16 @@ export default function SentinelPage() {
     }));
   };
 
+  // --- Navigation Handlers for Step View ---
+  const handleNextStep = () => {
+    setCurrentStepIndex((prevIndex) => Math.min(prevIndex + 1, agentSteps.length - 1));
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStepIndex((prevIndex) => Math.max(prevIndex - 1, 0));
+  };
+  // ---------------------------------------
+
   // Helper functions
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -593,7 +900,7 @@ export default function SentinelPage() {
     return "text-yellow-500";
   };
 
-  // --- Side effect to set initial tab based on preferences ---
+  // --- Side effects ---
   useEffect(() => {
     if (isPreferencesSuccess && preferences !== undefined) {
        if (preferences.length === 0 && !showNewPreferenceForm && !activeResearchRun) { // Don't switch if running
@@ -602,26 +909,108 @@ export default function SentinelPage() {
             console.log("No preferences found, setting active tab to 'preferences'.");
        } 
     }
-  }, [isPreferencesSuccess, preferences, showNewPreferenceForm, activeResearchRun]); // Add activeResearchRun dependency
+  }, [isPreferencesSuccess, preferences, showNewPreferenceForm, activeResearchRun]);
 
-  // --- Side effect to switch tab when research starts/stops ---
+  // Side effect to switch tab remains, but clearing logs/steps is handled by handleRunResearch
   useEffect(() => {
     if (activeResearchRun) {
-       setActiveTab('running'); // Switch to running tab when a run starts
-       // Clear logs from previous run when starting a new one
-       setLogs([]);
-       addLog({ type: 'system_info', data: `Starting research for preference ID: ${activeResearchRun.preferenceId}...` });
-    } 
-  }, [activeResearchRun, addLog]); // Keep addLog dependency for the initial log message
+       setActiveTab('running');
+    }
+    // If run completes (activeResearchRun becomes null), maybe switch back? Or stay on the running tab?
+    // Let's stay on the running tab for now to view completed steps.
+  }, [activeResearchRun]);
 
-  // --- Side effect to clear logs when research starts ---
-  useEffect(() => {
-    if (activeResearchRun) {
-       setActiveTab('running'); 
-       setLogs([]); // Clear logs
-       addLog({ type: 'system_info', data: `Starting research for preference ID: ${activeResearchRun.preferenceId}...` });
-    } 
-  }, [activeResearchRun, addLog]);
+  // Render current step component
+  const renderCurrentStep = () => {
+    if (agentSteps.length === 0) {
+      return <div className="p-4 text-muted-foreground text-center">Waiting for agent steps...</div>;
+    }
+    const step = agentSteps[currentStepIndex];
+    if (!step) {
+       return <div className="p-4 text-muted-foreground text-center">Invalid step index.</div>;
+    }
+
+    switch (step.type) {
+      case 'status':
+        return <StatusStep title={step.title} content={step.content} />;
+      case 'terminal':
+        return <TerminalStep title={step.title} content={step.content} />;
+      case 'summary':
+         // Ensure content structure matches SummaryStepProps before passing
+         const summaryContent = typeof step.content === 'object' && step.content !== null
+           ? step.content
+           : { summary: String(step.content), files: [], suggestions: [] }; // Basic fallback
+         return <SummaryStep title={step.title} content={summaryContent} />;
+      case 'error':
+        return <ErrorStep title={step.title} content={step.content} />;
+      // TODO: Add case for 'file' step type later
+      default:
+        // Assert exhaustive check or handle default
+        const _exhaustiveCheck: never = step.type;
+        return <div className="p-4">Unknown step type: {step.type}</div>;
+    }
+  };
+
+  // Function to request a file download
+  const handleFileDownload = (filename: string) => {
+    // Check if we have a WebSocket connection and an active research run
+    if (ws.current && ws.current.readyState === WebSocket.OPEN && activeResearchRun?.agentId) {
+      console.log(`Requesting file download for ${filename} from agent ${activeResearchRun.agentId}`);
+      // Send file download request
+      ws.current.send(JSON.stringify({ 
+        type: 'file_download', 
+        filename,
+        agentId: activeResearchRun.agentId
+      }));
+    } else {
+      console.error("Cannot download file: WebSocket not connected or no active research run");
+      addLog({ 
+        type: 'system_error', 
+        data: 'WebSocket not connected or no active research run. Cannot request file.',
+        agentId: activeResearchRun?.agentId
+      });
+    }
+  };
+
+  // Function to process received file content
+  const handleFileContent = (message: any) => {
+    console.log(`Received file content for ${message.filename}`);
+    // Update the viewing file state to show in the file viewer
+    setViewingFile({
+      name: message.filename,
+      content: message.content,
+      content_type: message.content_type,
+      is_binary: message.is_binary
+    });
+  };
+
+  // Function to send a test message via WebSocket (for debugging)
+  const sendTestMessage = () => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN && activeResearchRun?.agentId) {
+      // Send test command
+      ws.current.send(JSON.stringify({
+        type: 'debug_client_message',
+        message: 'Test message from client',
+        agentId: activeResearchRun.agentId
+      }));
+      
+      // Add a log entry for the test
+      addLog({
+        type: 'system_info',
+        data: 'Sent test message to server. Check console for response.',
+        agentId: activeResearchRun.agentId
+      });
+      
+      console.log('Test message sent to server. Current agent ID:', activeResearchRun.agentId);
+    } else {
+      console.error('Cannot send test message: WebSocket not ready or no active research');
+      toast({
+        title: 'Error',
+        description: 'Cannot send test message. WebSocket not connected or no active research run.',
+        variant: 'destructive'
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground dark flex flex-col">
@@ -870,123 +1259,24 @@ export default function SentinelPage() {
                 </AlertDescription>
               </Alert>
             ) : results?.length ? (
-              <div className="grid gap-6">
-                {results.map(result => (
-                  <Card key={result.id} className={`${result.isRead ? 'opacity-80' : ''}`}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <CardTitle>{result.title}</CardTitle>
-                            <Badge variant={result.isRead ? "outline" : "default"}>
-                              {result.resultType}
-                            </Badge>
-                          </div>
-                          <CardDescription>
-                            {formatDate(result.createdAt)}
-                          </CardDescription>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="icon">
-                            <Bookmark className={`h-5 w-5 ${result.isSaved ? 'fill-current' : ''}`} />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="font-medium">{result.summary}</p>
-                      
-                      {/* Analysis Content */}
-                      {result.content?.analysis && (
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-sm">Analysis</h4>
-                          <p className="text-sm text-muted-foreground">{result.content.analysis}</p>
-                        </div>
-                      )}
-                      
-                      {/* Implications */}
-                      {result.content?.implications && (
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-sm">Implications</h4>
-                          <p className="text-sm text-muted-foreground">{result.content.implications}</p>
-                        </div>
-                      )}
-                      
-                      {/* Recommendations */}
-                      {result.content?.recommendations && (
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-sm">Recommendations</h4>
-                          <p className="text-sm text-muted-foreground">{result.content.recommendations}</p>
-                        </div>
-                      )}
-                      
-                      {/* Metadata */}
-                      {result.analysisMetadata && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t">
-                          {result.analysisMetadata.sentimentScore !== undefined && (
-                            <div>
-                              <h4 className="text-xs font-semibold text-muted-foreground">Sentiment</h4>
-                              <p className={`text-sm font-medium ${getSentimentColor(result.analysisMetadata.sentimentScore)}`}>
-                                {result.analysisMetadata.sentimentScore > 0 ? '+' : ''}
-                                {result.analysisMetadata.sentimentScore.toFixed(2)}
-                              </p>
-                            </div>
-                          )}
-                          
-                          {result.analysisMetadata.confidence !== undefined && (
-                            <div>
-                              <h4 className="text-xs font-semibold text-muted-foreground">Confidence</h4>
-                              <p className="text-sm font-medium">{(result.analysisMetadata.confidence * 100).toFixed(0)}%</p>
-                            </div>
-                          )}
-                          
-                          {result.analysisMetadata.impactEstimate && (
-                            <div>
-                              <h4 className="text-xs font-semibold text-muted-foreground">Impact</h4>
-                              <p className="text-sm font-medium">{result.analysisMetadata.impactEstimate}</p>
-                            </div>
-                          )}
-                          
-                          {result.analysisMetadata.relatedAssets?.length > 0 && (
-                            <div>
-                              <h4 className="text-xs font-semibold text-muted-foreground">Related Assets</h4>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {result.analysisMetadata.relatedAssets.map(asset => (
-                                  <Badge key={asset} variant="outline" className="text-xs">
-                                    {asset}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Sources */}
-                      {result.sources?.length > 0 && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-xs font-semibold text-muted-foreground mb-2">Sources</h4>
-                          <div className="space-y-1">
-                            {result.sources.map((source, index) => (
-                              <div key={index} className="text-xs text-muted-foreground">
-                                {source.url ? (
-                                  <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                    {source.title || source.url}
-                                  </a>
-                                ) : (
-                                  <span>{source.title}</span>
-                                )}
-                                {source.author && <span> by {source.author}</span>}
-                                {source.publishedAt && <span> • {new Date(source.publishedAt).toLocaleDateString()}</span>}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <ResearchDisplay 
+                activityLogs={logs.filter(log => 
+                  ['agent_status', 'user_command', 'task_summary', 'task_error', 'system_info', 'system_error'].includes(log.type)
+                )}
+                terminalLogs={logs.filter(log =>
+                  ['terminal_stdout', 'terminal_stderr', 'terminal_command', 'user_command', 'system_info', 'system_error', 'executing_command'].includes(log.type)
+                )}
+                isConnected={isWsConnected}
+                onCommandSubmit={handleSendCommand}
+                onAgentPrompt={handleSendCommand}
+                browserImages={browserImages}
+                browserState={browserState}
+                agentProgress={agentProgress}
+                workspaceFiles={workspaceFiles}
+                onFileDownload={handleFileDownload}
+                viewingFile={viewingFile}
+                onCloseFile={() => setViewingFile(null)}
+              />
             ) : (
               <div className="text-center py-12">
                 <BookX className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -1405,31 +1695,85 @@ export default function SentinelPage() {
             )}
           </TabsContent>
 
-          {/* Content for the Running Tab */} 
+          {/* --- MODIFIED Running Tab Content --- */}
           <TabsContent value="running">
-            {/* Keep showing running tab content even after completion */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column: AI Chatbot / Status */}
-                <div className="lg:col-span-1 flex flex-col gap-4 h-[80vh]">
-                    <h2 className="text-xl font-semibold">Agent Activity</h2>
-                    <div className="agent-activity-area flex-1 bg-muted rounded-lg overflow-hidden">
-                       <AgentActivityLog logs={logs} onCommandSubmit={handleSendCommand} />
+            {activeResearchRun ? (
+              <>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">Research in Progress</CardTitle>
+                    <CardDescription>
+                      Running research for preference #{activeResearchRun.preferenceId}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Debug buttons for WebSocket testing */}
+                    {process.env.NODE_ENV === 'development' && (
+                      <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
+                        <h4 className="text-xs font-medium mb-2">Debug Controls</h4>
+                        <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={sendTestMessage}
+                            className="text-xs"
+                          >
+                            Test WebSocket Message
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => {
+                              if (activeResearchRun?.agentId) {
+                                window.open(`http://localhost:8000/debug/send-test-message/${activeResearchRun.agentId}`, '_blank');
+                              }
+                            }}
+                            className="text-xs"
+                          >
+                            Send Test Messages from Server
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Research display component */}
+                    <div className="h-[calc(100vh-280px)]">
+                      <ResearchDisplay 
+                        activityLogs={logs.filter(log => 
+                          ['agent_status', 'user_command', 'task_summary', 'task_error', 'system_info', 'system_error'].includes(log.type)
+                        )}
+                        terminalLogs={logs.filter(log =>
+                          ['terminal_stdout', 'terminal_stderr', 'terminal_command', 'user_command', 'system_info', 'system_error', 'executing_command'].includes(log.type)
+                        )}
+                        isConnected={isWsConnected}
+                        onCommandSubmit={handleSendCommand}
+                        onAgentPrompt={handleSendCommand}
+                        browserImages={browserImages}
+                        browserState={browserState}
+                        agentProgress={agentProgress}
+                        workspaceFiles={workspaceFiles}
+                        onFileDownload={handleFileDownload}
+                        viewingFile={viewingFile}
+                        onCloseFile={() => setViewingFile(null)}
+                      />
                     </div>
-                </div>
-                {/* Right Column: Terminal Output */}
-                <div className="lg:col-span-1 flex flex-col gap-4 h-[80vh]">
-                     <h2 className="text-xl font-semibold">Environment Output</h2>
-                     <div className="terminal-area flex-1 bg-muted rounded-lg overflow-hidden">
-                         <TerminalOutput 
-                             logs={logs} 
-                             isConnected={isWsConnected} 
-                             onCommandSubmit={handleSendCommand} 
-                         />
-                     </div>
-                </div>
-            </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <BookX className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Research in Progress</h3>
+                <p className="text-muted-foreground mb-6">
+                  Start a research run to view the research display.
+                </p>
+                <Button onClick={() => setActiveTab('dashboard')}>
+                  Start Research
+                </Button>
+              </div>
+            )}
           </TabsContent>
-          {/* --- End Tab Content --- */}
+          {/* --- End Modified Running Tab --- */}
 
         </Tabs>
         {/* --- End Main Content Area --- */}

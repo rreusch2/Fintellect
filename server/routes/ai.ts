@@ -195,9 +195,23 @@ router.post("/sentinel/research", async (req: AuthenticatedRequest, res) => {
     }
 
     console.log(`[AI] Running Sentinel research for user ${userId}, preference ${preferenceId}`);
-    const results = await sentinelAgent.performResearch(userId, preferenceId);
-    res.json(results);
+    // Call performResearch and expect { agentId: string } or null
+    const result = await sentinelAgent.performResearch(userId, preferenceId);
+
+    if (result && result.agentId) {
+        // Successfully started, return the agentId
+        res.json({ agentId: result.agentId });
+    } else {
+        // Handle case where performResearch returned null (e.g., not configured)
+        // or potentially threw an error that wasn't caught (though it should re-throw)
+        // Log the unexpected result for debugging
+        console.error(`[AI] performResearch for user ${userId}, pref ${preferenceId} did not return a valid agentId. Result:`, result);
+        // Send a generic error back to the client
+        res.status(500).json({ error: "Failed to initiate research process." });
+    }
+
   } catch (error: any) {
+    // Catch errors specifically thrown by performResearch
     console.error(`[AI] Error running Sentinel research:`, error?.message || error);
     res.status(500).json({ 
         error: "Failed to run research",

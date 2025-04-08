@@ -1,0 +1,59 @@
+# OpenManus Configuration - Using Anthropic
+
+[llm]
+# Default model settings (prioritizing Anthropic)
+api_type = "anthropic"
+api_key = "YOUR_ANTHROPIC_API_KEY_ENV_VAR" # <<< LOAD FROM ENVIRONMENT VARIABLE
+model = "claude-3-5-sonnet-20240620" # Or your preferred Anthropic model
+base_url = "https://api.anthropic.com/v1/"
+max_tokens = 4096
+temperature = 0.0
+# base_url and api_version are not typically used by Anthropic client
+
+# Vision model settings (can often be same as default)
+[llm.vision]
+api_type = "anthropic"
+api_key = "YOUR_ANTHROPIC_API_KEY_ENV_VAR" # <<< LOAD FROM ENVIRONMENT VARIABLE
+model = "claude-3-5-sonnet-20240620"
+
+# Optional: Other LLM provider sections (if you want fallbacks or specific tools use them)
+# [llm.openai]
+# api_type = "openai"
+# api_key = "YOUR_OPENAI_API_KEY"
+# model = "gpt-4o"
+# base_url = "https://api.openai.com/v1"
+
+# [llm.gemini]
+# api_type = "gemini"
+# api_key = "YOUR_GEMINI_API_KEY"
+# model = "gemini-pro"
+
+[browser_config]
+headless = false
+disable_security = true
+# extra_chromium_args = []
+# chrome_instance_path = null
+# wss_url = null
+# cdp_url = null
+# max_content_length = 2000
+
+[search_config]
+engine = "DuckDuckGo" # Example: Using DuckDuckGo as default
+# fallback_engines = ["Baidu", "Bing"]
+# retry_delay = 60
+# max_retries = 3
+# lang = "en"
+# country = "us"
+
+[sandbox]
+# Controls OpenManus's *internal* sandbox, distinct from the container it runs in
+use_sandbox = false # Setting to false as recommended in implementation docs for now
+network_enabled = true # Allow network access for tools
+image = "python:3.12-slim"
+work_dir = "/workspace" # This should match the volume mount target if use_sandbox=true
+memory_limit = "512m"
+cpu_limit = 1.0
+timeout = 300
+
+[mcp_config]
+server_reference = "app.mcp.server"

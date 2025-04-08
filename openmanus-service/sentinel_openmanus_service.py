@@ -10,11 +10,6 @@ from typing import Dict, Any, List
 from pathlib import Path
 import tomli_w
 
-# Import new handlers
-from handlers.terminal_command_handler import TerminalCommandHandler
-from handlers.workspace_monitor import WorkspaceMonitor
-from handlers.task_progress_tracker import TaskProgressTracker
-
 # --- Restore OpenManus Imports --- #
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'OpenManus'))
@@ -198,11 +193,6 @@ async def run_agent_process(agent_id: str, prompt: str):
         active_agents[agent_id] = agent_instance
         logger.info(f"Manus agent instance created for {agent_id}.")
 
-        # Initialize handlers
-        terminal_handler = TerminalCommandHandler(manager)
-        workspace_monitor = WorkspaceMonitor(manager, workspace_path="/app/OpenManus/workspace")
-        task_tracker = TaskProgressTracker(manager)
-
         await manager.send_message({"type": "status", "message": "Executing research steps...", "agentId": agent_id}, agent_id)
         
         # Begin agent thinking loop - process messages periodically
@@ -221,15 +211,6 @@ async def run_agent_process(agent_id: str, prompt: str):
                         
                         # 1. Process browser state
                         await browser_state_handler.process_messages(agent_id, messages_list)
-                        
-                        # 2. Process terminal commands (new)
-                        await terminal_handler.process_messages(agent_id, messages_list)
-                        
-                        # 3. Update task progress (new)
-                        await task_tracker.process_messages(agent_id, messages_list)
-                        
-                        # 4. Scan workspace for file changes (new)
-                        await workspace_monitor.scan_workspace(agent_id)
                         
                         # 5. Periodically send heartbeat status messages
                         if message_count % 50 == 0:  # Every ~100 seconds

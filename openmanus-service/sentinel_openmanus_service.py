@@ -23,58 +23,6 @@ except ImportError as e:
     OPENMANUS_AVAILABLE = False
 # ------------------------------- #
 
-# --- Browser State Handling --- #
-class BrowserStateHandler:
-    """Handler for browser state events from OpenManus."""
-    
-    def __init__(self, connection_manager):
-        self.connection_manager = connection_manager
-        self.last_screenshot = {}  # Store last screenshot per agent_id to avoid duplicates
-        
-    async def process_messages(self, agent_id: str, messages: list):
-        """Process messages from agent to extract browser state."""
-        # Look for messages from browser_use tool
-        for message in messages:
-            # We're interested in tool responses with browser state or images
-            if message.get('role') == 'tool' and message.get('content'):
-                content = message.get('content')
-                if isinstance(content, str):
-                    try:
-                        # Try to parse as JSON
-                        content_obj = json.loads(content)
-                        
-                        # Check if it's a browser_use tool response with state info
-                        if ('output' in content_obj and 
-                            isinstance(content_obj['output'], str) and 
-                            ('"url":' in content_obj['output'] or '"title":' in content_obj['output'])):
-                            
-                            # Extract and send screenshot if available
-                            base64_image = content_obj.get('base64_image')
-                            
-                            # Only send if it's a new screenshot (avoid duplicates)
-                            if base64_image and self.last_screenshot.get(agent_id) != base64_image:
-                                self.last_screenshot[agent_id] = base64_image
-                                
-                                # Send browser state event to client
-                                await self.connection_manager.send_message({
-                                    'type': 'browser_state',
-                                    'data': content_obj['output'],
-                                    'base64_image': base64_image
-                                }, agent_id)
-                                
-                                logger.info(f"Sent browser state with screenshot for agent {agent_id}")
-                            elif '"url":' in content_obj['output']:
-                                # Still send state updates without screenshots or with duplicate screenshots
-                                await self.connection_manager.send_message({
-                                    'type': 'browser_state',
-                                    'data': content_obj['output'],
-                                }, agent_id)
-                                logger.info(f"Sent browser state update (no new screenshot) for agent {agent_id}")
-                    except (ValueError, json.JSONDecodeError, TypeError):
-                        # Not valid JSON or not the structure we're looking for
-                        pass
-# --- End Browser State Handling --- #
-
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -126,7 +74,6 @@ class ConnectionManager:
             return False
 
 manager = ConnectionManager()
-browser_state_handler = BrowserStateHandler(manager)
 
 # Helper function for reading file content asynchronously
 def read_file_content(file_path: str) -> str | None:
@@ -189,10 +136,20 @@ async def run_agent_process(agent_id: str, prompt: str):
     }
 
     try:
-        agent_instance = Manus()
+        # --- Agent Initialization ---
+        from OpenManus.app.tool import ToolCollection, WebSearch, BrowserUseTool, PythonExecute, StrReplaceEditor
+        from OpenManus.app.agent.manus import Manus
+
+        agent_tools = ToolCollection( # Pass tools as separate args
+            WebSearch(),
+            BrowserUseTool(),
+            PythonExecute(),
+            StrReplaceEditor()
+        )
+        agent_instance = Manus(available_tools=agent_tools, max_steps=40)
+
         active_agents[agent_id] = agent_instance
         logger.info(f"Manus agent instance created for {agent_id}.")
-
         await manager.send_message({"type": "status", "message": "Executing research steps...", "agentId": agent_id}, agent_id)
         
         # Begin agent thinking loop - process messages periodically
@@ -205,12 +162,8 @@ async def run_agent_process(agent_id: str, prompt: str):
                 
                 if hasattr(agent_instance, 'messages'):
                     try:
-                        # Process messages for browser state and other updates
                         messages_list = [msg.to_dict() for msg in agent_instance.messages]
                         logger.debug(f"Got {len(messages_list)} messages for agent {agent_id}")
-                        
-                        # 1. Process browser state
-                        await browser_state_handler.process_messages(agent_id, messages_list)
                         
                         # 5. Periodically send heartbeat status messages
                         if message_count % 50 == 0:  # Every ~100 seconds
@@ -236,6 +189,7 @@ async def run_agent_process(agent_id: str, prompt: str):
         try:
             await message_processing_task
         except asyncio.CancelledError:
+            logger.info(f"Message processing task cancelled for agent {agent_id}.")
             pass
             
         logger.info(f"Agent {agent_id} run completed. Final Answer: {final_answer}")

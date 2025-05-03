@@ -77,6 +77,10 @@ class ToolCallAgent(ReActAgent):
         )
         content = response.content if response and response.content else ""
 
+        # Send thought update
+        if content:
+            await self._send_summary_update(f"Thinking: {content[:150]}...", step_name='thinking')
+
         # Log response info
         logger.info(f"✨ {self.name}'s thoughts: {content}")
         logger.info(
@@ -87,6 +91,8 @@ class ToolCallAgent(ReActAgent):
                 f"🧰 Tools being prepared: {[call.function.name for call in tool_calls]}"
             )
             logger.info(f"🔧 Tool arguments: {tool_calls[0].function.arguments}")
+            # Send tool planning update
+            await self._send_summary_update(f"Planning to use tools: {[c.function.name for c in tool_calls]}", step_name='tool_planning')
 
         try:
             if response is None:
@@ -142,6 +148,9 @@ class ToolCallAgent(ReActAgent):
             # Reset base64_image for each tool call
             self._current_base64_image = None
 
+            # Send tool start update
+            await self._send_summary_update(f"Starting tool: {command.function.name}(...) Arguments: {command.function.arguments[:100]}...", step_name='tool_start')
+
             result = await self.execute_tool(command)
 
             if self.max_observe:
@@ -150,6 +159,9 @@ class ToolCallAgent(ReActAgent):
             logger.info(
                 f"🎯 Tool '{command.function.name}' completed its mission! Result: {result}"
             )
+
+            # Send tool end update
+            await self._send_summary_update(f"Tool '{command.function.name}' finished. Result snippet: {str(result)[:100]}...", step_name='tool_end')
 
             # Add tool response to memory
             tool_msg = Message.tool_message(

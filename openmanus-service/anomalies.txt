@@ -1,0 +1,9 @@
+AAPL Price Anomalies: []
+AAPL Volume Anomalies: []
+
+MSFT Price Anomalies: []
+MSFT Volume Anomalies: ['2025-01-30']
+
+TSLA Price Anomalies: []
+TSLA Volume Anomalies: []
+

@@ -77,14 +77,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s # Give it time to start initially
-    # Temporarily remove xvfb-run to test uvicorn startup
-    command: [
-        "uvicorn",
-        "sentinel_openmanus_service:app",
-        "--host", "0.0.0.0",
-        "--port", "8000",
-        "--reload"
-      ]
+    # Use start-services.sh script which properly sets up the environment
+    command: ["bash", "/app/start-services.sh"]
     networks:
       - fintellect_network
 
@@ -93,4 +87,4 @@ volumes:
 
 networks:
   fintellect_network: # Define the network
-    driver: bridge 
+    driver: bridge

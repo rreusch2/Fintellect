@@ -14,12 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, Bookmark, Bell, BookX, CheckCircle, Calendar, Clock, Settings, ArrowRight, RefreshCw } from "lucide-react";
+import { Loader2, Search, Bookmark, Bell, BookX, CheckCircle, Calendar, Clock, Settings, ArrowRight, RefreshCw, Download } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from '@/components/ui/separator';
 
 // Import new components
-import TerminalOutput from '@/features/Sentinel/components/TerminalOutput';
 import AgentActivityLog from '@/features/Sentinel/components/AgentActivityLog';
 
 // Interfaces based on the database schema
@@ -118,13 +117,13 @@ interface Alert {
 
 // Define LogLine interface
 interface LogLine {
-  id: number; 
-  // Consolidate types for clarity
-  type: 'agent_status' | 'terminal_stdout' | 'terminal_stderr' | 'user_command' | 'task_summary' | 'task_error' | 'system_info' | 'system_error';
-  data: string;
-  // Optional fields for completion messages
-  files?: { name: string, path: string }[];
-  suggestions?: { short: string, full: string }[];
+  id: number;
+  type: 'agent_status' | 'user_command' | 'task_summary' | 'task_error' | 'system_info' | 'system_error' | 'agent_insight' | 'agent_summary';
+  data: any;
+  files?: { name: string, path?: string }[];
+  summary?: string;
+  agentId?: string | null;
+  timestamp?: string;
 }
 
 // Temporary state for raw string inputs
@@ -283,25 +282,30 @@ export default function SentinelPage() {
   });
 
   // New state to track active research run
-  const [activeResearchRun, setActiveResearchRun] = useState<{ preferenceId: number } | null>(null);
+  const [activeResearchRun, setActiveResearchRun] = useState<{ preferenceId: number, agentId: string | null } | null>(null);
 
-  // --- WebSocket State --- 
+  // --- WebSocket State ---
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [isWsConnected, setIsWsConnected] = useState(false);
   const ws = useRef<WebSocket | null>(null);
-  const nextLogId = useRef(0); 
+  const nextLogId = useRef(0);
+  // --- File Viewer State ---
+  // const [viewingFile, setViewingFile] = useState<null | {
+  //   name: string;
+  //   content: string;
+  //   content_type: string;
+  // }>(null);
   // ----------------------
 
-  // --- WebSocket Logic --- 
+  // --- WebSocket Logic ---
   const addLog = useCallback((logEntry: Omit<LogLine, 'id'>) => {
     setLogs((prevLogs) => [
-      ...prevLogs.slice(-200), 
-      { ...logEntry, id: nextLogId.current++ }, // Add ID here
+      ...prevLogs.slice(-200),
+      { ...logEntry, id: nextLogId.current++ },
     ]);
   }, []);
 
   useEffect(() => {
-    // Ensure we don't create multiple connections if effect runs twice
     if (ws.current) {
         console.log("[WebSocket Effect] Already connecting/connected.");
         return;
@@ -311,235 +315,128 @@ export default function SentinelPage() {
     addLog({ type: 'system_info', data: `Connecting command channel to ${WS_COMMAND_URL}...` });
     
     let localWs = new WebSocket(WS_COMMAND_URL);
-    ws.current = localWs; // Assign to ref immediately
-    let isClosing = false; // Flag to prevent double close/error logs
+    ws.current = localWs;
+    let isClosing = false;
 
     localWs.onopen = () => {
-      if (isClosing) return; // Ignore if cleanup already started
+      if (isClosing) return;
       console.log('Command WebSocket Connected');
       setIsWsConnected(true);
       addLog({ type: 'system_info', data: 'Command channel connected.' });
     };
 
     localWs.onclose = (event) => {
-      if (isClosing) return; // Ignore if cleanup already started
+      if (isClosing) return;
       console.log('Command WebSocket Disconnected', event.reason, `(Code: ${event.code})`);
       setIsWsConnected(false);
-      ws.current = null; // Clear ref on close
+      ws.current = null;
       addLog({ type: 'system_error', data: `Command channel disconnected: ${event.reason || 'Unknown reason'} (Code: ${event.code})` });
     };
 
     localWs.onerror = (error) => {
-      if (isClosing) return; // Ignore if cleanup already started
+      if (isClosing) return;
       console.error('Command WebSocket Error:', error);
       setIsWsConnected(false);
-      ws.current = null; // Clear ref on error
+      ws.current = null;
       addLog({ type: 'system_error', data: 'Command channel connection error.' });
     };
 
     localWs.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        console.log("Command WS Message:", message);
-        
-        // Handle specific message types from backend
+        const agentId = message.agentId;
+
         switch (message.type) {
-          case 'agent_status':
-          case 'terminal_stdout':
-          case 'terminal_stderr':
-            addLog({ type: message.type, data: message.message || message.data });
+          case 'agent_insight':
+            addLog({ type: message.type, data: message.data, agentId });
             break;
-          case 'task_complete':
+          case 'agent_status':
+            if (!message.message?.includes('Agent still processing...')) {
+               addLog({ type: message.type, data: message.message || message.data, agentId });
+            }
+            break;
+          case 'task_summary':
             addLog({
-              type: 'task_summary', 
-              data: message.summary || 'Task completed successfully.', 
-              files: message.files || [], 
-              suggestions: message.suggestions || []
+              type: 'task_summary',
+              data: message.summary || 'Task completed.',
+              summary: message.summary || 'Task completed.',
+              files: message.files || [],
+              agentId: agentId
             });
-             // Maybe add a visual separator log?
-             addLog({ type: 'system_info', data: '--- End of Task ---' });
+            addLog({ type: 'system_info', data: '--- End of Task ---', agentId });
             break;
           case 'task_error':
-             addLog({
-               type: 'task_error', 
-               data: message.summary || 'Task failed.'
-             });
-              addLog({ type: 'system_info', data: '--- End of Task (Error) ---' });
+            addLog({ type: 'task_error', data: message.data || 'Task failed.', agentId });
+            addLog({ type: 'system_info', data: '--- End of Task (Error) ---', agentId });
             break;
-          // Ignore internal status messages like container_ready if we added them
-          // case 'status': 
-          //   if (message.event === 'container_ready') { /* Handled by agent status now */ } 
-          //   else { addLog({ type: 'system_info', data: message.message }); }
-          //   break;
+          case 'connected':
+            addLog({ type: 'system_info', data: message.message, agentId: null });
+            break;
+          case 'system_info':
+            addLog({ type: 'system_info', data: message.data || 'System notification', agentId });
+            break;
+          case 'summary':
+            addLog({ type: 'agent_summary', data: message.summary, timestamp: message.timestamp, agentId });
+            break;
           default:
-             addLog({ type: 'system_info', data: `Received unhandled message format: ${event.data}` });
+            addLog({ type: 'system_info', data: `Received unhandled message type: ${message.type || event.data}`, agentId });
         }
 
       } catch (e) {
         console.error("Failed to parse command WebSocket message:", e);
-        addLog({ type: 'system_info', data: `Received raw message: ${event.data}` });
+        addLog({ type: 'system_info', data: `Received raw message: ${event.data}`, agentId: null });
       }
     };
 
-    // Cleanup function refined
     return () => {
-      isClosing = true; // Signal that cleanup is in progress
+      isClosing = true;
       if (localWs) {
           console.log("Closing command WebSocket connection (Cleanup)...", `State: ${localWs.readyState}`);
-          // Only close if it's in connecting or open state
           if (localWs.readyState === WebSocket.CONNECTING || localWs.readyState === WebSocket.OPEN) {
              localWs.close();
           }
       }
-      // Ensure ref is cleared if it still points to this instance
       if (ws.current === localWs) {
           ws.current = null;
       }
     };
-  }, [addLog]); // addLog is stable due to useCallback
+  }, [addLog]);
 
   const handleSendCommand = useCallback((command: string) => {
     if (command.trim() && ws.current && ws.current.readyState === WebSocket.OPEN) {
-      addLog({ type: 'user_command', data: command.trim() }); // Log user command
+      addLog({ type: 'user_command', data: command.trim() });
       ws.current.send(JSON.stringify({ command: command.trim() }));
-      // Don't clear completion state here anymore, it's part of logs
     } else if (!isWsConnected) {
       addLog({ type: 'system_error', data: 'Command channel not connected. Cannot send command.' });
     }
   }, [isWsConnected, addLog]);
-  // ------------------------
 
-  // Queries
-  const { 
-    data: preferences, 
-    isLoading: isLoadingPreferences,
-    isSuccess: isPreferencesSuccess,
-    error: preferencesError
-  } = useQuery<ResearchPreference[]>({
-    queryKey: ['sentinelPreferences'],
-    queryFn: fetchPreferences,
-  });
+  const handleStartResearchCommand = useCallback((preferenceId: number) => {
+     if (activeResearchRun) {
+         toast({ title: "Research in Progress", description: "Please wait for the current run to complete." });
+         return;
+     }
+     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+         const commandPayload = {
+             action: 'start_research',
+             preferenceId: preferenceId
+         };
+         addLog({ type: 'user_command', data: `Requesting research for preference ID: ${preferenceId}`, agentId: null });
+         ws.current.send(JSON.stringify(commandPayload));
+         setActiveResearchRun({ preferenceId, agentId: null });
+         setActiveTab('running');
+     } else {
+         addLog({ type: 'system_error', data: 'Command channel not connected. Cannot start research.', agentId: null });
+         toast({ variant: "destructive", title: "Connection Error", description: "WebSocket not connected." });
+     }
+  }, [isWsConnected, addLog, activeResearchRun, toast]);
 
-  console.log("Preferences Data from useQuery:", preferences);
-
-  const { 
-    data: results, 
-    isLoading: isLoadingResults,
-    error: resultsError
-  } = useQuery<ResearchResult[]>({
-    queryKey: ['sentinelResults'],
-    queryFn: fetchResults,
-  });
-
-  const { 
-    data: alerts, 
-    isLoading: isLoadingAlerts,
-    error: alertsError
-  } = useQuery<Alert[]>({
-    queryKey: ['sentinelAlerts'],
-    queryFn: fetchAlerts,
-  });
-
-  // Log preferences state when it changes
-  useEffect(() => {
-    console.log("[SentinelPage] Preferences state updated:", preferences);
-  }, [preferences]);
-
-  // Mutations
-  const createPreferenceMutation = useMutation({
-    mutationFn: createOrUpdatePreference,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['sentinelPreferences'] });
-      toast({
-        title: "Success",
-        description: "Research preferences saved successfully",
-      });
-      setShowNewPreferenceForm(false);
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to save preferences: ${error.message}`,
-      });
-    },
-  });
-
-  const runResearchMutation = useMutation({
-    mutationFn: runResearch,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sentinelResults'] });
-      toast({
-        title: "Success",
-        description: "Research completed successfully",
-      });
-      setActiveResearchRun(null);
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to run research: ${error.message}`,
-      });
-      setActiveResearchRun(null);
-    },
-  });
-
-  // Event Handlers
-  const handleSubmitPreference = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Parse comma-separated strings into arrays
-    const topics = preferenceForm.topicsInput.split(',').map(t => t.trim()).filter(t => t);
-    const keywords = preferenceForm.keywordsInput.split(',').map(k => k.trim()).filter(k => k);
-    const tickers = preferenceForm.tickersInput.split(',').map(t => t.trim().toUpperCase()).filter(t => t);
-
-    // Validate required fields
-    if (topics.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Validation Error",
-        description: "Please enter at least one research topic",
-      });
-      return;
-    }
-
-    // Create the final preference object to send to the backend
-    const preferenceData: Partial<ResearchPreference> = {
-      id: preferenceForm.id,
-      topics,
-      keywords,
-      assetClasses: preferenceForm.assetClasses,
-      specificAssets: {
-        ...preferenceForm.specificAssets,
-        tickers,
-      },
-      dataSources: preferenceForm.dataSources,
-      analysisTypes: preferenceForm.analysisTypes,
-      scheduleSettings: preferenceForm.scheduleSettings,
-      customInstructions: preferenceForm.customInstructionsInput.trim() || undefined,
-      isActive: preferenceForm.isActive,
-    };
-
-    // Submit the data
-    createPreferenceMutation.mutate(preferenceData);
-  };
-
-  // Handle Run Research function
   const handleRunResearch = (preferenceId: number) => {
-    if (activeResearchRun) {
-      toast({
-        title: "Research in Progress",
-        description: "Please wait for the current research to complete",
-      });
-      return;
-    }
-
-    // Set the active research run
-    setActiveResearchRun({ preferenceId });
-    
-    // Run the research mutation
-    runResearchMutation.mutate(preferenceId);
+      if (activeResearchRun) {
+          toast({ title: "Research in Progress", description: "Please wait for the current research to complete" });
+          return;
+      }
+      runResearchMutation.mutate(preferenceId);
   };
 
   const handleInputChange = (field: keyof PreferenceFormInputs) => (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -598,41 +495,172 @@ export default function SentinelPage() {
     return "text-yellow-500";
   };
 
-  // --- Side effect to set initial tab based on preferences ---
+  // New state to track initial load completion
+  const [initialPrefLoadComplete, setInitialPrefLoadComplete] = useState(false);
+
+  // Queries
+  const {
+    data: preferences,
+    isLoading: isLoadingPreferences,
+    error: preferencesError
+  } = useQuery<ResearchPreference[]>({
+    queryKey: ['sentinelPreferences'],
+    queryFn: fetchPreferences,
+    onSuccess: () => {
+        if (!initialPrefLoadComplete) setInitialPrefLoadComplete(true);
+    },
+    onError: () => {
+         if (!initialPrefLoadComplete) setInitialPrefLoadComplete(true);
+    }
+  });
+
+  console.log("Preferences Data from useQuery:", preferences);
+
+  const { 
+    data: results, 
+    isLoading: isLoadingResults,
+    error: resultsError
+  } = useQuery<ResearchResult[]>({
+    queryKey: ['sentinelResults'],
+    queryFn: fetchResults,
+  });
+
+  const { 
+    data: alerts, 
+    isLoading: isLoadingAlerts,
+    error: alertsError
+  } = useQuery<Alert[]>({
+    queryKey: ['sentinelAlerts'],
+    queryFn: fetchAlerts,
+  });
+
+  // Log preferences state when it changes
   useEffect(() => {
-    if (isPreferencesSuccess && preferences !== undefined) {
-       if (preferences.length === 0 && !showNewPreferenceForm && !activeResearchRun) { // Don't switch if running
+    console.log("[SentinelPage] Preferences state updated:", preferences);
+  }, [preferences]);
+
+  // Mutations
+  const createPreferenceMutation = useMutation({
+    mutationFn: createOrUpdatePreference,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['sentinelPreferences'] });
+      toast({
+        title: "Success",
+        description: "Research preferences saved successfully",
+      });
+      setShowNewPreferenceForm(false);
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to save preferences: ${error.message}`,
+      });
+    },
+  });
+
+  const runResearchMutation = useMutation({
+    mutationFn: async (preferenceId: number) => {
+      handleStartResearchCommand(preferenceId);
+      return Promise.resolve();
+    },
+    onSuccess: () => {
+    },
+    onError: (error) => {
+      toast({ variant: "destructive", title: "Error", description: `Failed to start research: ${error.message}` });
+      setActiveResearchRun(null);
+    },
+  });
+
+  // Event Handlers
+  const handleSubmitPreference = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const topics = preferenceForm.topicsInput.split(',').map(t => t.trim()).filter(t => t);
+    const keywords = preferenceForm.keywordsInput.split(',').map(k => k.trim()).filter(k => k);
+    const tickers = preferenceForm.tickersInput.split(',').map(t => t.trim().toUpperCase()).filter(t => t);
+
+    if (topics.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please enter at least one research topic",
+      });
+      return;
+    }
+
+    const preferenceData: Partial<ResearchPreference> = {
+      id: preferenceForm.id,
+      topics,
+      keywords,
+      assetClasses: preferenceForm.assetClasses,
+      specificAssets: {
+        ...preferenceForm.specificAssets,
+        tickers,
+      },
+      dataSources: preferenceForm.dataSources,
+      analysisTypes: preferenceForm.analysisTypes,
+      scheduleSettings: preferenceForm.scheduleSettings,
+      customInstructions: preferenceForm.customInstructionsInput.trim() || undefined,
+      isActive: preferenceForm.isActive,
+    };
+
+    createPreferenceMutation.mutate(preferenceData);
+  };
+
+  // --- Side effect to set initial tab based on preferences ---
+  // Now depends on initialPrefLoadComplete state
+  useEffect(() => {
+    // Only run this logic AFTER the initial load attempt is complete
+    if (initialPrefLoadComplete) {
+       // Check the actual preferences data
+       if (preferences && preferences.length === 0 && !showNewPreferenceForm && !activeResearchRun) {
             setActiveTab('preferences');
             setShowNewPreferenceForm(true);
-            console.log("No preferences found, setting active tab to 'preferences'.");
-       } 
+            console.log("Initial load complete, no preferences found, setting active tab to 'preferences'.");
+       }
     }
-  }, [isPreferencesSuccess, preferences, showNewPreferenceForm, activeResearchRun]); // Add activeResearchRun dependency
+    // Dependencies: Run only when initial load completes, or other relevant state changes
+  }, [initialPrefLoadComplete, preferences, showNewPreferenceForm, activeResearchRun]);
 
-  // --- Side effect to switch tab when research starts/stops ---
+  // --- Side effect to switch tab and clear logs when research starts ---
+  // Kept the first one, removed the duplicate
   useEffect(() => {
     if (activeResearchRun) {
-       setActiveTab('running'); // Switch to running tab when a run starts
-       // Clear logs from previous run when starting a new one
-       setLogs([]);
-       addLog({ type: 'system_info', data: `Starting research for preference ID: ${activeResearchRun.preferenceId}...` });
-    } 
-  }, [activeResearchRun, addLog]); // Keep addLog dependency for the initial log message
+       setActiveTab('running');
+       setLogs([]); // Clear logs here
+       addLog({ type: 'system_info', data: `Starting research for preference ID: ${activeResearchRun.preferenceId}...`, agentId: null });
+    }
+  }, [activeResearchRun, addLog]); // addLog is stable due to useCallback
 
-  // --- Side effect to clear logs when research starts ---
+  // --- Side effect to update agentId in activeResearchRun and clear state on completion ---
   useEffect(() => {
-    if (activeResearchRun) {
-       setActiveTab('running'); 
-       setLogs([]); // Clear logs
-       addLog({ type: 'system_info', data: `Starting research for preference ID: ${activeResearchRun.preferenceId}...` });
-    } 
-  }, [activeResearchRun, addLog]);
+      // Update agentId if available
+      const lastStatusLog = logs.findLast(log => log.type === 'agent_status' && log.data.includes('Agent ID:'));
+      if (lastStatusLog && activeResearchRun && !activeResearchRun.agentId) {
+          const match = lastStatusLog.data.match(/Agent ID: (\S+)/);
+          if (match && match[1]) {
+              setActiveResearchRun(prev => prev ? { ...prev, agentId: match[1] } : null);
+              console.log(`Associated agentId ${match[1]} with the active run.`);
+          }
+      }
+
+      // Check for completion messages to clear activeResearchRun
+      const lastLog = logs.at(-1);
+      if (activeResearchRun && (lastLog?.type === 'task_summary' || lastLog?.type === 'task_error')) {
+          console.log(`Task completed (Type: ${lastLog.type}). Clearing active run state.`);
+          // No timeout needed, just clear the state
+          setActiveResearchRun(null);
+          // Optionally switch back to dashboard or results tab?
+          // setActiveTab('results');
+      }
+      // Removed timeout logic here, clear state directly when completion log arrives.
+  }, [logs, activeResearchRun]); // Depend on logs and activeResearchRun
 
   return (
     <div className="min-h-screen bg-background text-foreground dark flex flex-col">
       <Navigation />
       <main className="container mx-auto px-4 py-8 flex-1 relative z-10">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="p-3 rounded-lg bg-indigo-500/10 text-indigo-400 w-fit">
             <Search className="h-6 w-6" />
@@ -640,10 +668,8 @@ export default function SentinelPage() {
           <h1 className="text-3xl font-bold">Sentinel - AI Research Intelligence</h1>
         </div>
 
-        {/* --- Main Content Area --- */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-4">
-            {/* Conditionally render Running Tab */}
             {activeResearchRun && (
                 <TabsTrigger value="running" className="text-yellow-400">Running</TabsTrigger>
             )}
@@ -653,8 +679,6 @@ export default function SentinelPage() {
             <TabsTrigger value="preferences">Preferences</TabsTrigger>
           </TabsList>
 
-          {/* --- Tab Content --- */}
-          {/* Render standard tabs */} 
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <Card>
@@ -799,7 +823,6 @@ export default function SentinelPage() {
               </Card>
             </div>
             
-            {/* Alerts Summary */}
             <Card>
               <CardHeader>
                 <CardTitle>Recent Alerts</CardTitle>
@@ -842,7 +865,6 @@ export default function SentinelPage() {
             </Card>
           </TabsContent>
 
-          {/* Results Tab Content */}
           <TabsContent value="results" className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold">Research Results</h2>
@@ -888,7 +910,7 @@ export default function SentinelPage() {
                             </Badge>
                           </div>
                           <CardDescription>
-                            {formatDate(result.createdAt)}
+                            Created {formatDate(result.createdAt)}
                           </CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
@@ -901,7 +923,6 @@ export default function SentinelPage() {
                     <CardContent className="space-y-4">
                       <p className="font-medium">{result.summary}</p>
                       
-                      {/* Analysis Content */}
                       {result.content?.analysis && (
                         <div className="space-y-2">
                           <h4 className="font-semibold text-sm">Analysis</h4>
@@ -909,7 +930,6 @@ export default function SentinelPage() {
                         </div>
                       )}
                       
-                      {/* Implications */}
                       {result.content?.implications && (
                         <div className="space-y-2">
                           <h4 className="font-semibold text-sm">Implications</h4>
@@ -917,7 +937,6 @@ export default function SentinelPage() {
                         </div>
                       )}
                       
-                      {/* Recommendations */}
                       {result.content?.recommendations && (
                         <div className="space-y-2">
                           <h4 className="font-semibold text-sm">Recommendations</h4>
@@ -925,7 +944,6 @@ export default function SentinelPage() {
                         </div>
                       )}
                       
-                      {/* Metadata */}
                       {result.analysisMetadata && (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t">
                           {result.analysisMetadata.sentimentScore !== undefined && (
@@ -967,7 +985,6 @@ export default function SentinelPage() {
                         </div>
                       )}
                       
-                      {/* Sources */}
                       {result.sources?.length > 0 && (
                         <div className="pt-2 border-t">
                           <h4 className="text-xs font-semibold text-muted-foreground mb-2">Sources</h4>
@@ -1013,7 +1030,6 @@ export default function SentinelPage() {
             )}
           </TabsContent>
 
-          {/* Alerts Tab Content */}
           <TabsContent value="alerts" className="space-y-6">
             <h2 className="text-2xl font-semibold mb-4">Alerts</h2>
             
@@ -1070,7 +1086,6 @@ export default function SentinelPage() {
             )}
           </TabsContent>
 
-          {/* Preferences Tab Content */}
           <TabsContent value="preferences" className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold">Research Preferences</h2>
@@ -1079,18 +1094,15 @@ export default function SentinelPage() {
               </Button>
             </div>
             
-            {/* Display Error Alert *Outside* the form/list */}
             {preferencesError && (
-              <Alert variant="destructive" className="mb-6"> {/* Added margin bottom */}
-                <AlertTitle>Error Loading Preferences</AlertTitle> {/* More specific title */}
+              <Alert variant="destructive" className="mb-6">
+                <AlertTitle>Error Loading Preferences</AlertTitle>
                 <AlertDescription>
-                  {/* Display error message if available */}
                   {preferencesError instanceof Error ? preferencesError.message : 'Failed to load research preferences. Please check server logs or try again later.'}
                 </AlertDescription>
               </Alert>
             )}
 
-            {/* New Preference Form */}
             {showNewPreferenceForm && (
               <Card>
                 <CardHeader>
@@ -1101,7 +1113,6 @@ export default function SentinelPage() {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmitPreference} className="space-y-8">
-                    {/* Section 1: Core Focus */}
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium">Core Focus</h3>
                       <div className="space-y-2">
@@ -1133,7 +1144,6 @@ export default function SentinelPage() {
                       </div>
                     </div>
 
-                    {/* Section 2: Assets */}
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium">Assets</h3>
                        <div className="space-y-2">
@@ -1169,9 +1179,8 @@ export default function SentinelPage() {
                        </div>
                     </div>
 
-                    <Separator /> {/* Added Separator */}
+                    <Separator />
 
-                    {/* Section 3: Data & Analysis */}
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-4">
                         <h3 className="text-lg font-medium">Data Sources</h3>
@@ -1220,9 +1229,8 @@ export default function SentinelPage() {
                       </div>
                     </div>
 
-                    <Separator /> {/* Added Separator */}
+                    <Separator />
 
-                     {/* Section 4: Scheduling */}
                      <div className="space-y-4">
                        <h3 className="text-lg font-medium">Research Schedule</h3>
                        <div className="grid grid-cols-2 gap-6">
@@ -1265,9 +1273,8 @@ export default function SentinelPage() {
                        </div>
                      </div>
 
-                    <Separator /> {/* Added Separator */}
+                    <Separator />
 
-                    {/* Section 5: Custom Instructions */}
                     <div className="space-y-2">
                        <h3 className="text-lg font-medium">Custom Instructions (Optional)</h3>
                        <Label htmlFor="customInstructions">Specific Guidance</Label>
@@ -1300,8 +1307,7 @@ export default function SentinelPage() {
               </Card>
             )}
             
-            {/* Existing Preferences List (Handles Loading, Error, Empty, Data states) */}
-            {!showNewPreferenceForm && !preferencesError && ( // Only show list/empty message if not showing form and no error
+            {!showNewPreferenceForm && !preferencesError && (
               isLoadingPreferences ? (
                 <div className="flex items-center justify-center h-60">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1341,7 +1347,6 @@ export default function SentinelPage() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {/* Topics & Keywords */}
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
                             <h4 className="text-sm font-semibold mb-2">Topics</h4>
@@ -1365,7 +1370,6 @@ export default function SentinelPage() {
                           </div>
                         </div>
                         
-                        {/* Asset Classes */}
                         <div>
                           <h4 className="text-sm font-semibold mb-2">Asset Classes</h4>
                           <div className="flex flex-wrap gap-1">
@@ -1377,7 +1381,6 @@ export default function SentinelPage() {
                           </div>
                         </div>
                         
-                        {/* Data Sources */}
                         <div>
                           <h4 className="text-sm font-semibold mb-2">Data Sources</h4>
                           <div className="flex flex-wrap gap-1">
@@ -1395,7 +1398,6 @@ export default function SentinelPage() {
                   ))}
                 </div>
               ) : (
-                // Show this only if loading is finished, there's no error, and no preferences exist
                 <div className="text-center py-12">
                   <Settings className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">No Research Preferences Yet</h3>
@@ -1410,34 +1412,25 @@ export default function SentinelPage() {
             )}
           </TabsContent>
 
-          {/* Content for the Running Tab */} 
           <TabsContent value="running">
-            {/* Keep showing running tab content even after completion */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column: AI Chatbot / Status */}
-                <div className="lg:col-span-1 flex flex-col gap-4 h-[80vh]">
-                    <h2 className="text-xl font-semibold">Agent Activity</h2>
-                    <div className="agent-activity-area flex-1 bg-muted rounded-lg overflow-hidden">
-                       <AgentActivityLog logs={logs} onCommandSubmit={handleSendCommand} />
-                    </div>
+            {activeResearchRun ? (
+              <div className="flex flex-col gap-4 h-[80vh]">
+                  <h2 className="text-xl font-semibold">Agent Activity</h2>
+                  <div className="agent-activity-area flex-1 bg-muted rounded-lg overflow-hidden">
+                     <AgentActivityLog
+                        logs={logs}
+                        agentId={activeResearchRun?.agentId}
+                     />
+                  </div>
+              </div>
+            ) : (
+                <div className="text-center py-12">
+                    <p className="text-muted-foreground">No research currently running. Start one from the Dashboard or Preferences tab.</p>
                 </div>
-                {/* Right Column: Terminal Output */}
-                <div className="lg:col-span-1 flex flex-col gap-4 h-[80vh]">
-                     <h2 className="text-xl font-semibold">Environment Output</h2>
-                     <div className="terminal-area flex-1 bg-muted rounded-lg overflow-hidden">
-                         <TerminalOutput 
-                             logs={logs} 
-                             isConnected={isWsConnected} 
-                             onCommandSubmit={handleSendCommand} 
-                         />
-                     </div>
-                </div>
-            </div>
+            )}
           </TabsContent>
-          {/* --- End Tab Content --- */}
 
         </Tabs>
-        {/* --- End Main Content Area --- */}
 
       </main>
       <Footer />

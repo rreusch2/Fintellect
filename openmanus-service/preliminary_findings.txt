@@ -1,0 +1,5 @@
+Article URL: https://finance.yahoo.com/news/tesla-tsla-faces-ai-growth-180832221.html
+Sentiment: negative
+Positive Keywords: growth, safe, gain
+Negative Keywords: headwinds, cuts, uncertainty, risk, consequences
+Summary: The article discusses Tesla (TSLA) facing challenges in AI growth due to new tariffs announced by U.S. President Donald Trump. JPMorgan has cut its EPS forecast for Tesla, and Bernstein warns of higher uncertainty and downside risk for semiconductor stocks. The competitive landscape may shift, benefiting Tesla's competitors.

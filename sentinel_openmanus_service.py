@@ -5,6 +5,28 @@ import websockets
 from websockets.server import serve, WebSocketServerProtocol
 import json
 import uuid
+import sys  # Import sys for stderr
+from loguru import logger # Keep the import
+
+# --- Loguru Configuration ---
+logger.remove() # Remove default handler to avoid duplicate console logs
+logger.add(
+    sys.stderr,
+    level="INFO", # Log INFO level and above to console
+    format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+)
+logger.add(
+    "logs/openmanus_service_{time}.log",
+    rotation="10 MB", # Rotate log file when it reaches 10 MB
+    retention="3 days", # Keep logs for 3 days
+    level="DEBUG", # Log DEBUG level and above to file
+    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",
+    enqueue=True, # Make file logging asynchronous
+    backtrace=True, # Optional: Add full stacktrace for exceptions
+    diagnose=True # Optional: Add variable values in exception tracebacks
+)
+logger.info("Loguru configured with console (INFO) and rotating file (DEBUG) sinks.")
+# --- End Loguru Configuration ---
 
 # Assuming OpenManus modules are importable (adjust paths if needed)
 # These might be relative imports depending on your final structure
@@ -15,8 +37,8 @@ from OpenManus.app.config import config # Import the global config object
 from OpenManus.app.agent.manus import Manus
 from OpenManus.app.tool import ToolCollection, WebSearch, BrowserUseTool, PythonExecuteTool, EditorTool
 
-# Assuming logger setup exists
-from loguru import logger # Example, use your actual logger setup
+# Assuming logger setup exists - We just configured it above
+# from loguru import logger # Example, use your actual logger setup - REMOVED/Handled Above
 
 # --- Configuration Loading ---
 # Ensure config is loaded or relevant values are set from environment
@@ -131,7 +153,12 @@ async def run_agent_process(agent_id: str, preference: dict, websocket: WebSocke
             EditorTool()
         ])
         # Increase max_steps to allow for more complex planning
-        agent_instance = Manus(available_tools=agent_tools, max_steps=40) 
+        agent_instance = Manus(
+            available_tools=agent_tools,
+            max_steps=40,
+            websocket=websocket,  # Pass the websocket object
+            ws_manager=manager     # Pass the connection manager
+        )
         logger.info(f"Manus agent instance created for {agent_id} with tools: {[t.name for t in agent_instance.available_tools.tools]} and max_steps=40")
 
         await manager.send_personal_message({"type": "status", "message": "Agent initialized. Starting research...", "agentId": agent_id}, websocket)

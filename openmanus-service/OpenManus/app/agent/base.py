@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import List, Optional, Any
+import json
+from datetime import datetime
+from websockets.server import WebSocketServerProtocol
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -34,6 +37,14 @@ class BaseAgent(BaseModel, ABC):
     memory: Memory = Field(default_factory=Memory, description="Agent's memory store")
     state: AgentState = Field(
         default=AgentState.IDLE, description="Current agent state"
+    )
+
+    # WebSocket context (optional)
+    websocket: Optional[WebSocketServerProtocol] = Field(
+        default=None, description="WebSocket connection for live updates", exclude=True
+    )
+    ws_manager: Optional[Any] = Field(
+        default=None, description="WebSocket manager for sending messages", exclude=True
     )
 
     # Execution control
@@ -113,6 +124,27 @@ class BaseAgent(BaseModel, ABC):
         kwargs = {"base64_image": base64_image, **(kwargs if role == "tool" else {})}
         self.memory.add_message(message_map[role](content, **kwargs))
 
+    async def _send_summary_update(self, summary_text: str, step_name: Optional[str] = None):
+        """Sends a structured summary message via WebSocket if available."""
+        if self.websocket and self.ws_manager:
+            logger.debug(f"[_send_summary_update] Attempting to send summary: '{summary_text[:100]}...' via WebSocket.")
+            message = {
+                "type": "summary",
+                "timestamp": datetime.now().isoformat(),
+                "summary": summary_text,
+                "step": step_name or self.state.value  # Use agent state if no specific step provided
+                # Add agentId if available, maybe pass during init?
+                # "agentId": self.agent_id # Assuming agent_id is stored
+            }
+            try:
+                # Use the manager's method to send the message
+                await self.ws_manager.send_personal_message(message, self.websocket)
+                logger.debug(f"Sent summary update: {summary_text[:50]}...")
+            except Exception as e:
+                logger.error(f"Failed to send WebSocket summary update: {e}")
+        else:
+            logger.debug("WebSocket context not available, skipping summary update.")
+
     async def run(self, request: Optional[str] = None) -> str:
         """Execute the agent's main loop asynchronously.
 
@@ -138,7 +170,13 @@ class BaseAgent(BaseModel, ABC):
             ):
                 self.current_step += 1
                 logger.info(f"Executing step {self.current_step}/{self.max_steps}")
+                # Send update before starting the step
+                await self._send_summary_update(f"Starting step {self.current_step}", "step_start")
+
                 step_result = await self.step()
+
+                # Send update after completing the step
+                await self._send_summary_update(f"Completed step {self.current_step}. Result snippet: {str(step_result)[:100]}...", "step_end")
 
                 # Check for stuck state
                 if self.is_stuck():

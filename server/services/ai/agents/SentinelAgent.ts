@@ -25,8 +25,14 @@ import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 // --- E2B Imports Removed ---
 
-// Import the new OpenManus Connector
-import { OpenManusConnector, OpenManusEventHandler } from '../connectors/OpenManusConnector.js'; // Adjust path if needed
+// Import the new OpenManus Connector AND the event type
+import { OpenManusConnector, OpenManusEventHandler, OpenManusEvent } from '../connectors/OpenManusConnector.js'; // Adjust path if needed
+// Placeholder: Import your chosen lightweight LLM client here if needed later
+// import { YourLLMClient, SummarizationInput } from 'your-llm-library';
+
+// --- ADDED: Import Anthropic SDK ---
+import Anthropic from '@anthropic-ai/sdk';
+// ------------------------------------
 
 const log = (message: string, ...args: any[]) => console.log(`[SentinelAgent] ${message}`, ...args);
 
@@ -53,6 +59,13 @@ export class SentinelAgent {
   private openManusConnector: OpenManusConnector | null = null;
   // Flag to check if agent is usable based on config
   private isConfigured: boolean = false;
+  // Placeholder: Instantiate LLM client if needed
+  // private llmClient = new YourLLMClient({ apiKey: process.env.YOUR_LLM_API_KEY });
+  private llmConfigured: boolean = false; // Flag to check if LLM is setup
+
+  // --- ADDED: Anthropic Client ---
+  private anthropic: Anthropic | null = null;
+  // ----------------------------- 
 
   constructor(wssInstance?: WebSocketServer) {
     log("Initializing SentinelAgent (OpenManus Mode)...");
@@ -71,6 +84,18 @@ export class SentinelAgent {
         log("ERROR: OPENMANUS_URL is not set. SentinelAgent research functionality will be disabled.");
         this.isConfigured = false;
     }
+
+    // --- Initialize Anthropic Client ---
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    if (anthropicApiKey) {
+        this.anthropic = new Anthropic({ apiKey: anthropicApiKey });
+        this.llmConfigured = true;
+        log("Anthropic API Key found, enabling AI summarization features.");
+    } else {
+         this.llmConfigured = false;
+         log("ANTHROPIC_API_KEY not found, AI summarization features disabled.");
+    }
+    // ---------------------------------
 
     log("SentinelAgent initialized.");
   }
@@ -363,119 +388,228 @@ export class SentinelAgent {
     this.broadcastToWs(payload);
   }
 
+  // --- UPDATED: LLM Summarization for Final Result ---
+  private async generateEnhancedSummary(results: ResearchResult[], agentId: string): Promise<string> {
+      log(`Generating enhanced summary for agent ${agentId}...`);
+      const baseSummary = results[0]?.summary || `Agent ${agentId} completed its research task.`;
+
+      if (results.length === 0) return "Agent completed, but no detailed results were generated.";
+
+      if (this.llmConfigured && this.anthropic) { // Check for client instance
+          try {
+              log(`Attempting Anthropic summarization for final results of agent ${agentId}`);
+              const contentToSummarize = results.map(r =>
+                  `Title: ${r.title}\nSummary: ${r.summary}\n${r.content ? `Content Snippet: ${JSON.stringify(r.content).substring(0, 300)}...
+` : ''}`
+              ).join('\n---\n');
+
+              const prompt = `Based on the following research results provided by an automated agent, generate a concise, user-friendly final summary (2-3 sentences) highlighting the main conclusions or findings:\n\n${contentToSummarize}`;
+
+              const msg = await this.anthropic.messages.create({
+                  model: "claude-3-5-sonnet-20240620",
+                  max_tokens: 150, // Adjust token limit as needed
+                  messages: [{ role: "user", content: prompt }],
+              });
+
+              // Extract text from the response content block(s)
+              let enhancedSummary = "";
+              if (msg.content && msg.content.length > 0 && msg.content[0].type === 'text') {
+                   enhancedSummary = msg.content[0].text;
+              } else {
+                  log(`Anthropic response did not contain expected text content for agent ${agentId}.`);
+                  enhancedSummary = baseSummary + " (AI summary failed: unexpected format)";
+              }
+
+              log(`Anthropic final summarization successful for agent ${agentId}.`);
+              return enhancedSummary;
+
+          } catch (llmError: any) {
+              log(`Error during Anthropic final summarization for agent ${agentId}: ${llmError.message}`);
+              return baseSummary + " (AI summary failed)";
+          }
+      } else {
+           log(`Anthropic client not configured, using default final summary for agent ${agentId}.`);
+           return baseSummary;
+      }
+  }
+  // --- END UPDATED ---
+
+  // --- UPDATED: LLM Summarization for Intermediate Steps ---
+  private async generateIntermediateSummary(event: OpenManusEvent & { agentId: string | null }): Promise<string | null> {
+      log(`Checking for intermediate summary generation for event type: ${event.type}, Agent: ${event.agentId}`);
+
+      if (!this.llmConfigured || !this.anthropic || !event.agentId) {
+          if (!this.llmConfigured || !this.anthropic) log("Skipping intermediate summary: LLM not configured.");
+          if (!event.agentId) log("Skipping intermediate summary: Event has no agentId.");
+          return null;
+      }
+
+      let prompt = "";
+      let isSignificantEvent = false;
+
+      if (event.type === 'agent_status') {
+          const message = String((event as any).message || (event as any).data || ''); // Ensure it's a string
+          log(`Intermediate summary check: evaluating status message: "${message}"`);
+          const lowerMessage = message.toLowerCase();
+
+          // --- Adjusted Keywords ---
+          if (lowerMessage.includes('executing step')) {
+              prompt = `The AI agent reported: "${message}". State this concisely (e.g., "Executing step X of Y...").`;
+              isSignificantEvent = true;
+          } else if (lowerMessage.includes('activating tool:')) {
+              const toolMatch = message.match(/activating tool: '([^']+)'/i);
+              const toolName = toolMatch ? toolMatch[1] : 'a tool';
+              prompt = `The AI agent is now using the ${toolName} tool. Summarize this action for the user (e.g., "Using the ${toolName} tool to...").`;
+              isSignificantEvent = true;
+          } else if (lowerMessage.includes('search results for')) {
+              prompt = `The AI agent reported finding search results related to its query. State this concisely (e.g., "Found search results...").`;
+              isSignificantEvent = true;
+          } else if (lowerMessage.includes('navigated to')) {
+               prompt = `The AI agent reported: "${message}". Summarize this navigation concisely for the user (e.g., "Navigating to [Site Name]...").`;
+               isSignificantEvent = true;
+           } else if (lowerMessage.includes('analyzing') || lowerMessage.includes('processing data') || lowerMessage.includes('performing analysis')) {
+              prompt = `The AI agent reported: "${message}". Summarize this analysis step concisely for the user (e.g., "Analyzing data...", "Performing sentiment analysis...").`;
+               isSignificantEvent = true;
+          } else if (lowerMessage.includes('generating report') || lowerMessage.includes('creating summary') || lowerMessage.includes('compiling findings')) {
+               prompt = `The AI agent reported: "${message}". Summarize this reporting step concisely for the user (e.g., "Compiling report...", "Generating final summary...").`;
+               isSignificantEvent = true;
+          }
+          // --- End Adjusted Keywords ---
+
+      } else if (event.type === 'error') {
+           prompt = `The AI agent encountered an error: "${event.message}". Briefly explain this error in a user-friendly way (1 sentence).`;
+           isSignificantEvent = true;
+      }
+      // We might need to add more specific checks based on observing a full successful run's logs
+
+      if (!isSignificantEvent) {
+           log(`Intermediate summary check: Event type '${event.type}' with current message not deemed significant.`);
+           return null;
+      }
+
+      try {
+         // ... (LLM call placeholder remains the same) ...
+         log(`Attempting Anthropic intermediate summarization for agent ${event.agentId} with prompt: "${prompt}"`);
+         // const msg = await this.anthropic.messages.create({ ... }); // Actual call if implemented
+          // Placeholder:
+          const insight = `[AI Insight Placeholder] ${prompt.substring(0, 100)}...`; // More dynamic placeholder
+          log(`LLM intermediate summarization successful (Placeholder) for agent ${event.agentId}.`);
+          return insight;
+      } catch (llmError: any) {
+         log(`Error during Anthropic intermediate summarization for agent ${event.agentId}: ${llmError.message}`);
+         return null;
+      }
+  }
+  // --- END UPDATED ---
 
   // --- Event Handler for OpenManus Connector ---
   private setupOpenManusEventHandler(): void {
     if (!this.openManusConnector) return;
 
-    const handler: OpenManusEventHandler = (event) => {
-      // Reduced verbosity for final_result log
-      if (event.type === 'final_result') {
-        log(`[OpenManus Event Handler] Received event: type=${event.type}, agentId=${event.agentId}, resultsCount=${event.results?.length}, filesCount=${event.files?.length}, hasFileContents=${!!event.file_contents}`);
-      } else {
-        log(`[OpenManus Event Handler] Received event:`, event);
+    const handler: OpenManusEventHandler = async (event) => {
+      log(`[OpenManus Event Handler] Received event:`, event);
+
+      let payload: object | null = null; // Payload for regular status/errors
+      let insightPayload: object | null = null; // Payload for LLM insights
+      const agentId = event.agentId;
+
+      // --- Generate Intermediate Summary/Insight using LLM ---
+      const insight = await this.generateIntermediateSummary(event);
+      if (insight && agentId) {
+           insightPayload = { type: 'agent_insight', data: insight, agentId };
       }
+      // ---------------------------------------------------------
 
-      let payload: object | null = null;
-      const agentId = event.agentId; // Extract agentId from event
-
-      // Map OpenManus events to frontend WebSocket message types
       switch (event.type) {
-        case 'status':
-          payload = { type: 'agent_status', message: event.message, agentId };
-          break;
+        case 'agent_status':
+           const statusMessage = String((event as any).message || (event as any).data || 'Status update');
+           payload = { type: 'agent_status', message: statusMessage, agentId };
+           break;
         case 'terminal_output':
-          // Map to stdout, could potentially differentiate stderr if OpenManus provides it
-          payload = { type: 'terminal_stdout', data: event.content, agentId };
-          break;
-        case 'file_created':
+           log(`[Agent ${agentId}] Terminal Output: ${event.content}`);
+           payload = null;
+           break;
+        case 'file_created': 
         case 'file_updated':
-           const fileMsg = `${event.type === 'file_created' ? 'Created' : 'Updated'} file: ${event.file.name}`;
-           // Send as agent_status, potentially include file info if frontend needs it
-           payload = { type: 'agent_status', message: fileMsg, agentId, file: event.file };
-           break;
+            const fileMsg = `${event.type === 'file_created' ? 'Created' : 'Updated'} file: ${event.file.name}`;
+            payload = { type: 'agent_status', message: fileMsg, agentId, file: event.file };
+            break;
         case 'error':
-           // Map OpenManus error to task_error for frontend
-           payload = { type: 'task_error', data: event.message, agentId };
-           break;
-        case 'progress':
-           // Send progress updates as agent_status
-           payload = { type: 'agent_status', message: `Progress: ${event.step} (${event.percentage}%)`, agentId };
-           break;
+            payload = { type: 'task_error', data: event.message, agentId };
+            break;
+        case 'progress': 
+            payload = { type: 'agent_status', message: `Progress: ${event.step} (${event.percentage}%)`, agentId };
+            break;
         case 'final_result':
-            log(`Processing final results from OpenManus for agent ${agentId}`);
-            const fileContents = event.file_contents || {}; // Get file contents if available
-
-            // Map OpenManus results structure to ResearchResult interface
-            let results: ResearchResult[] = (event.results || []).map((r: any) => ({
-                type: r.type || 'report', // Default to 'report' if type is missing
-                title: r.title || `Research Result ${new Date().toISOString()}`,
-                summary: r.summary || '', // Use provided summary or default
-                content: r.content || {}, // Use provided content or default
-                sources: r.sources || [],
-                analysisMetadata: r.analysisMetadata || {},
-             }));
-
-             // If no structured results from agent, try creating one from report files
+             log(`Processing final results from OpenManus for agent ${agentId}`);
+             const fileContents = event.file_contents || {};
+             let results: ResearchResult[] = (event.results || []).map((r: any) => ({
+                 type: r.type || 'report',
+                 title: r.title || `Research Result ${new Date().toISOString()}`,
+                 summary: r.summary || '',
+                 content: r.content || {},
+                 sources: r.sources || [],
+                 analysisMetadata: r.analysisMetadata || {},
+              }));
              if (results.length === 0 && (fileContents['financial_research_summary.txt'] || fileContents['financial_research_report.txt'])) {
-                 log(`No structured results found, creating one from file contents for agent ${agentId}`);
                  results.push({
                      type: 'report',
                      title: `OpenManus Research Report (${agentId})`,
                      summary: fileContents['financial_research_summary.txt'] || 'Summary not available.',
                      content: { report: fileContents['financial_research_report.txt'] || 'Report content not available.' },
-                     sources: [], // No sources info in files
+                     sources: [],
                      analysisMetadata: {}
                  });
              }
-             // If structured results exist, augment with file contents if available
              else if (results.length > 0) {
-                if (fileContents['financial_research_summary.txt']) {
-                    results[0].summary = fileContents['financial_research_summary.txt']; // Override/set summary
-                }
-                if (fileContents['financial_research_report.txt']) {
-                    // Add report text to content, preserving existing content
-                    results[0].content = { ...(results[0].content || {}), report: fileContents['financial_research_report.txt'] };
-                }
+                 if (fileContents['financial_research_summary.txt']) { results[0].summary = fileContents['financial_research_summary.txt']; }
+                 if (fileContents['financial_research_report.txt']) { results[0].content = { ...(results[0].content || {}), report: fileContents['financial_research_report.txt'] }; }
              }
 
-            // Handle the processed results (store, check alerts, etc.)
-            if (agentId) {
-                const researchContext = this.getResearchContext(agentId);
-                if (researchContext) {
-                    const { userId, preferenceId } = researchContext;
-                    // Send summary to frontend via WebSocket
-                    const finalSummary = results[0]?.summary || `Agent ${agentId} completed. Insights: ${results.length}`;
-                    this.broadcastToWs({ type: 'task_summary', data: finalSummary, files: event.files || [], suggestions: [], agentId });
-                    // Process results asynchronously (store, alert check)
-                    this.handleFinalResults(userId, preferenceId, results);
-                } else {
-                    log(`Error: Could not find context for agent ${agentId} to handle final results.`);
-                    this.broadcastToWs({ type: 'task_error', data: `Internal Error: Missing context for agent ${agentId}`, agentId });
-                }
-            } else {
+             if (agentId) {
+                 const researchContext = this.getResearchContext(agentId);
+                 if (researchContext) {
+                     const { userId, preferenceId } = researchContext;
+                     // --- Add Log before final summary call ---
+                     log(`Calling generateEnhancedSummary for agent ${agentId}`);
+                     // ------------------------------------------
+                     const finalSummary = await this.generateEnhancedSummary(results, agentId);
+                     this.broadcastToWs({
+                         type: 'task_summary',
+                         summary: finalSummary, // Broadcast final (potentially AI) summary
+                         files: event.files?.map(f => f.name) || [],
+                         agentId
+                     });
+                     this.handleFinalResults(userId, preferenceId, results); // Process in background
+                 } else { 
+                      log(`Error: Could not find context for agent ${agentId} to handle final results.`);
+                      this.broadcastToWs({ type: 'task_error', data: `Internal Error: Missing context for agent ${agentId}`, agentId });
+                 } 
+             } else { 
                  log(`Error: Received final_result event with null agentId.`);
                  this.broadcastToWs({ type: 'task_error', data: `Internal Error: Received final_result without agentId`, agentId: null });
-            }
-             // Don't set payload here; final actions handled by handleFinalResults
+              }
+             payload = null; // Don't send raw final_result as status
              break;
 
         default:
-           // Handle unexpected event types
            const unhandledEvent = event as any;
-           log(`Unhandled OpenManus event type: ${unhandledEvent.type}`);
-           payload = { type: 'system_info', data: `Received unhandled OpenManus event: ${JSON.stringify(unhandledEvent)}`, agentId };
+           log(`Unhandled OpenManus event type: ${(unhandledEvent as any).type}`);
+           payload = null;
       }
 
-      // Broadcast mapped event to frontend WebSocket clients
+      // Broadcast regular payload (status, error)
       if (payload) {
         this.broadcastToWs(payload);
       }
+      // Broadcast LLM insight payload separately
+      if (insightPayload) {
+          this.broadcastToWs(insightPayload);
+      }
     };
 
-    // Register the handler with the connector
     this.openManusConnector.onEvent(handler);
-    log("OpenManus event handler set up.");
+    log("OpenManus event handler set up (AI Insights Enabled: " + this.llmConfigured + ")");
   }
 
   // --- MAIN RESEARCH DISPATCHER (Refactored for OpenManus) ---
@@ -598,6 +732,74 @@ export class SentinelAgent {
          if (agentId) this.clearResearchContext(agentId);
     }
  }
+
+  // Add this getter method
+  public getConnector(): OpenManusConnector | null {
+      return this.openManusConnector;
+  }
+
+  // --- ADDED: Method to handle commands from WebSocket ---
+  public async handleClientCommand(commandData: any, clientWs: WebSocket): Promise<void> {
+      log(`Handling command from client:`, commandData);
+
+      const action = commandData?.action;
+      const agentId = commandData?.agentId; // May be needed for targeting later
+
+      try {
+          switch (action) {
+              case 'start_research':
+                  const preferenceId = commandData?.preferenceId;
+                  const userId = commandData?.userId; // Assuming userId might be passed or retrieved via session/auth later
+
+                  if (typeof preferenceId !== 'number') {
+                      throw new Error('Invalid or missing preferenceId for start_research action.');
+                  }
+
+                  // TODO: Authenticate/Authorize userId if necessary before proceeding
+
+                  // Call the existing method to perform research
+                  // Assuming userId=1 for now, replace with actual user ID retrieval
+                  if (!userId) {
+                       log("Warning: No userId provided in command, using placeholder 1. Implement proper user retrieval.");
+                       // You might want to throw an error here instead if userId is strictly required
+                  }
+                  const actualUserId = userId || 1; // Replace 1 with proper user ID logic
+
+                  // Perform research returns agentId or null/throws error
+                  const researchInfo = await this.performResearch(actualUserId, preferenceId);
+
+                  if (researchInfo && researchInfo.agentId) {
+                      // Research started successfully, agentId was broadcasted by performResearch
+                      log(`Research initiated successfully by client command. Agent ID: ${researchInfo.agentId}`);
+                      // Optionally send a confirmation back to the specific client?
+                      // clientWs.send(JSON.stringify({ type: 'status', message: `Research started with Agent ID: ${researchInfo.agentId}`, agentId: researchInfo.agentId }));
+                  } else {
+                      // performResearch handled broadcasting errors, but we can log here too
+                      log(`performResearch did not return a valid agentId.`);
+                       // Error should have been broadcasted by performResearch
+                  }
+                  break;
+
+               default:
+                  throw new Error(`Unsupported client command action: ${action}`);
+          }
+      } catch (error: any) {
+          log(`Error handling client command "${action}":`, error.message);
+          // Send error back to the specific client who sent the command
+          try {
+              clientWs.send(JSON.stringify({
+                  type: 'task_error', // Use task_error type
+                  data: `Failed to process command "${action}": ${error.message}`,
+                  agentId: agentId || null // Include agentId if available
+              }));
+          } catch (sendError) {
+              log("Failed to send error message back to client:", sendError);
+          }
+          // Also broadcast a general error if appropriate? Maybe not needed if performResearch handles it.
+          // this.broadcastStatus(`ERROR processing client command: ${error.message}`, agentId || null);
+      }
+  }
+  // --- END ADDED METHOD ---
 
 } // End class SentinelAgent
 

@@ -3,8 +3,8 @@ import { WebSocket } from 'ws'; // Assuming usage of ws library
 import type { ResearchResult } from "../agents/SentinelAgent"; // Adjust path if necessary
 
 // Define types for WebSocket messages (align with Python service)
-type OpenManusEvent =
-  | { type: 'status'; message: string }
+export type OpenManusEvent =
+  | { type: 'agent_status'; message?: string; data?: string }
   | { type: 'terminal_output'; content: string }
   | { type: 'file_created' | 'file_updated'; file: { name: string; content?: string } }
   | { type: 'error'; message: string }
@@ -140,7 +140,7 @@ export class OpenManusConnector {
 
         this.socket.onopen = () => {
           log(`WebSocket connected for agent ID: ${this.agentId}`);
-          this.emitEvent({ type: 'status', message: 'Connected to agent stream.' });
+          this.emitEvent({ type: 'agent_status', message: 'Connected to agent stream.' });
         };
 
         this.socket.onmessage = (event) => {
@@ -164,7 +164,7 @@ export class OpenManusConnector {
 
         this.socket.onclose = (event) => {
           log(`WebSocket closed for agent ID ${this.agentId}. Code: ${event.code}, Reason: ${event.reason}`);
-          this.emitEvent({ type: 'status', message: `Disconnected from agent stream (Code: ${event.code})` });
+          this.emitEvent({ type: 'agent_status', message: `Disconnected from agent stream (Code: ${event.code})` });
           this.socket = null; // Clear the socket reference
           // Maybe attempt reconnection here if needed
         };
@@ -246,5 +246,35 @@ Please provide detailed findings, including data processing steps, generated fil
     }
     this.agentId = null;
     this.eventHandlers = []; // Clear handlers on close
+  }
+
+  // Method to get file content via HTTP
+  public async getFileContent(agentId: string, filename: string): Promise<Response> {
+    // Validate filename to prevent path traversal on the client side as well
+    if (filename.includes('..') || filename.startsWith('/')) {
+        log(`Invalid filename requested for download: ${filename}`);
+        throw new Error("Invalid filename");
+    }
+    
+    const url = `${this.baseUrl}/api/workspace/files/${agentId}/${encodeURIComponent(filename)}/content`;
+    log(`Requesting file content from: ${url}`);
+    const options: RequestInit = {
+        method: 'GET'
+    };
+
+    try {
+        // Use fetch directly (or fetchWithRetry if needed for this endpoint too)
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            const errorBody = await response.text();
+            log(`Failed to fetch file content. Status: ${response.status}, Body: ${errorBody}`);
+            throw new Error(`Failed to fetch file: ${response.statusText} - ${errorBody}`);
+        }
+        log(`Successfully initiated file content fetch for ${filename}`);
+        return response; // Return the raw Response object to be streamed
+    } catch (error) {
+        log(`Error fetching file content for ${filename}:`, error);
+        throw error;
+    }
   }
 } 

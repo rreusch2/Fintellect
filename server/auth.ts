@@ -1,5 +1,6 @@
 import passport from "passport";
 import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { type Express } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -28,6 +29,9 @@ const crypto = {
   },
   generateRememberToken: () => {
     return randomBytes(32).toString("hex");
+  },
+  generateRandomPassword: () => {
+    return randomBytes(16).toString("hex");
   },
 };
 
@@ -90,6 +94,53 @@ export function setupAuth(app: Express) {
     })
   );
 
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID || '',
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+        callbackURL: process.env.NODE_ENV === "production" 
+          ? "https://fintellectai.co/api/auth/google/callback" 
+          : "http://localhost:5001/api/auth/google/callback",
+        passReqToCallback: true,
+      },
+      async (req, accessToken, refreshToken, profile, done) => {
+        try {
+          const [existingUser] = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, profile.emails?.[0]?.value || ''))
+            .limit(1);
+
+          if (existingUser) {
+            return done(null, existingUser);
+          }
+
+          const email = profile.emails?.[0]?.value || '';
+          const username = email.split('@')[0] + '_' + Math.floor(Math.random() * 1000);
+          
+          const hashedPassword = await crypto.hash(crypto.generateRandomPassword());
+
+          const [newUser] = await db
+            .insert(users)
+            .values({
+              username,
+              email,
+              password: hashedPassword,
+              hasPlaidSetup: false,
+              hasCompletedOnboarding: false,
+              onboardingStep: 1
+            })
+            .returning();
+
+          return done(null, newUser);
+        } catch (err) {
+          return done(err as Error);
+        }
+      }
+    )
+  );
+
   passport.serializeUser((user, done) => {
     done(null, user.id);
   });
@@ -107,6 +158,81 @@ export function setupAuth(app: Express) {
     }
   });
 
+  app.get('/api/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+
+  app.get('/api/auth/google/callback', 
+    passport.authenticate('google', { failureRedirect: process.env.NODE_ENV === "production" ? '/login' : 'http://localhost:5173/login' }),
+    (req, res) => {
+      // For development, redirect to the frontend server (port 5173)
+      const frontendBaseUrl = process.env.NODE_ENV === "production" 
+        ? '' 
+        : 'http://localhost:5173';
+        
+      // For new Google users, send them to username setup page first
+      if (req.user && req.user.username && req.user.username.includes('_')) {
+        // Check if username is auto-generated (contains underscore)
+        res.redirect(`${frontendBaseUrl}/google-username-setup`);
+      } else if (req.user && req.user.hasCompletedOnboarding) {
+        // For returning users who completed onboarding
+        res.redirect(`${frontendBaseUrl}/dashboard`);
+      } else {
+        // For users who need to complete onboarding
+        res.redirect(`${frontendBaseUrl}/onboarding`);
+      }
+    }
+  );
+
+  // Route for setting username for Google users
+  app.post('/api/auth/google/username', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send('Not authenticated');
+    }
+
+    const { username } = req.body;
+    
+    // Validate username
+    if (!username || username.length < 3) {
+      return res.status(400).send('Username must be at least 3 characters');
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).send('Username can only contain letters, numbers, and underscores');
+    }
+
+    try {
+      // Check if username is already taken
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (existingUser && existingUser.id !== req.user.id) {
+        return res.status(400).send('Username already exists');
+      }
+
+      // Update the user's username
+      const [updatedUser] = await db
+        .update(users)
+        .set({ username })
+        .where(eq(users.id, req.user.id))
+        .returning();
+
+      res.json({ 
+        success: true, 
+        user: { 
+          id: updatedUser.id, 
+          username: updatedUser.username 
+        } 
+      });
+    } catch (error) {
+      console.error('Error updating username:', error);
+      res.status(500).send('Failed to update username');
+    }
+  });
+
   app.post("/api/login", (req, res, next) => {
     const { username, password, rememberMe } = req.body;
 
@@ -120,7 +246,6 @@ export function setupAuth(app: Express) {
       }
 
       try {
-        // Update last login time and handle remember me
         const updates: any = {
           lastLoginAt: new Date(),
         };
@@ -139,7 +264,6 @@ export function setupAuth(app: Express) {
           }
         }
 
-        // Update user in database
         await db.update(users)
           .set(updates)
           .where(eq(users.id, user.id));
@@ -169,17 +293,14 @@ export function setupAuth(app: Express) {
     try {
       const { username, email, password } = req.body;
 
-      // Validate required fields
       if (!username || !email || !password) {
         return res.status(400).send("Username, email, and password are required");
       }
 
-      // Validate email format
       if (!email.includes('@')) {
         return res.status(400).send("Invalid email format");
       }
 
-      // Check if user already exists
       const [existingUser] = await db
         .select()
         .from(users)
@@ -190,7 +311,6 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Username already exists");
       }
 
-      // Check if email already exists
       const [existingEmail] = await db
         .select()
         .from(users)
@@ -201,10 +321,8 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Email already exists");
       }
 
-      // Hash the password
       const hashedPassword = await crypto.hash(password);
 
-      // Create the new user
       const [newUser] = await db
         .insert(users)
         .values({
@@ -216,12 +334,10 @@ export function setupAuth(app: Express) {
         })
         .returning();
 
-      // Log the user in after registration
       req.login(newUser, (err) => {
         if (err) {
           return next(err);
         }
-        // Return user data with the response
         return res.json({
           success: true,
           user: {
@@ -248,7 +364,6 @@ export function setupAuth(app: Express) {
         });
       }
 
-      // Destroy the session
       req.session.destroy((err) => {
         if (err) {
           console.error("Session destruction error:", err);
@@ -258,7 +373,6 @@ export function setupAuth(app: Express) {
           });
         }
 
-        // Clear the session cookie
         res.clearCookie('connect.sid', {
           path: '/',
           httpOnly: true,

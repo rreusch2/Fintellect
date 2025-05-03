@@ -1,216 +1,128 @@
-import React, { useEffect, useRef } from 'react';
-import { Bot, FileDown, Zap, MessageSquare, CheckSquare, AlertTriangle, ClipboardList, CheckCircle2, Lightbulb } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
+import React, { useRef, useEffect } from 'react';
+import { FileText, AlertTriangle, Info, Command, Download, Zap } from 'lucide-react';
 
-// Use the LogLine interface defined in SentinelPage or move to types file
+// Interface matching SentinelPage
 interface LogLine {
-  id: number; 
-  type: 'agent_status' | 'terminal_stdout' | 'terminal_stderr' | 'user_command' | 'task_summary' | 'task_error' | 'system_info' | 'system_error'; // Updated types
-  data: string;
-  files?: { name: string, path: string }[];
-  suggestions?: { short: string, full: string }[];
+  id: number;
+  type: 'agent_status' | 'user_command' | 'task_summary' | 'task_error' | 'system_info' | 'system_error' | 'agent_insight' | 'agent_summary';
+  data: any;
+  files?: { name: string, path?: string }[];
+  summary?: string;
+  agentId?: string | null;
+  timestamp?: string;
 }
 
 interface AgentActivityLogProps {
   logs: LogLine[];
-  onCommandSubmit: (command: string) => void;
+  agentId: string | null | undefined;
 }
 
-const AgentActivityLog: React.FC<AgentActivityLogProps> = ({ logs, onCommandSubmit }) => {
-  const logsEndRef = useRef<HTMLDivElement>(null);
-
-  // Filter for activity feed (excluding completion messages)
-  const activityLogs = logs.filter(
-    log => [
-        'agent_status',
-        'user_command',
-        'system_info', 
-        'system_error'
-    ].includes(log.type) && 
-    // Also exclude the end-of-task markers from main feed
-    !log.data.includes('--- End of Task')
-  );
-
-  // Find the last completion/error log entry
-  const completionLog = logs.slice().reverse().find(log => log.type === 'task_summary' || log.type === 'task_error');
+const AgentActivityLog: React.FC<AgentActivityLogProps> = ({ logs, agentId }) => {
+  const logsEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activityLogs]); // Scroll based on activity logs
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
 
-  const handleSuggestionClick = (fullPrompt: string) => {
-      // For now, just log that it was clicked, don't send as a command
-      console.log("Suggestion clicked:", fullPrompt);
-      // onCommandSubmit(fullPrompt); // <-- Temporarily disable sending suggestion as command
-      // TODO: Implement logic to send this prompt to the AI agent, not the shell
-      alert("Sending suggested prompts to the AI agent is not yet implemented."); // Placeholder feedback
+  const renderLogIcon = (type: LogLine['type']) => {
+    switch (type) {
+      case 'agent_status': return <Info size={14} className="text-blue-400" />;
+      case 'user_command': return <Command size={14} className="text-purple-400" />;
+      case 'task_summary': return <FileText size={14} className="text-green-400" />;
+      case 'task_error': return <AlertTriangle size={14} className="text-red-400" />;
+      case 'system_info': return <Info size={14} className="text-gray-500" />;
+      case 'system_error': return <AlertTriangle size={14} className="text-orange-400" />;
+      case 'agent_insight': return <Zap size={14} className="text-yellow-400" />;
+      case 'agent_summary': return <Zap size={14} className="text-cyan-400" />;
+      default: return <Info size={14} className="text-gray-400" />;
+    }
   };
 
-  // Function to process text for special formatting
-  const renderFormattedText = (text: string) => {
-    // Check if this is a research plan
-    if (text.includes('## RESEARCH PLAN')) {
-      const [planHeader, ...planItems] = text.split('\n');
-      return (
-        <div className="my-2 pl-2 border-l-2 border-indigo-500">
-          <h4 className="font-semibold text-indigo-300 flex items-center gap-1.5 mb-2">
-            <ClipboardList size={16} />
-            Research Plan
-          </h4>
-          <ul className="list-decimal pl-5 space-y-1 text-gray-300">
-            {planItems.map((item, i) => 
-              item.trim() && (
-                <li key={i} className="text-sm">
-                  {item.replace(/^\d+\.\s*/, '')}
-                </li>
-              )
+  const renderLogContent = (log: LogLine) => {
+    switch (log.type) {
+      case 'task_summary':
+        return (
+          <div>
+            <p className="font-medium text-green-300">Task Summary:</p>
+            <p className="whitespace-pre-wrap">{log.summary || log.data}</p>
+            {log.files && log.files.length > 0 && agentId && (
+              <div className="mt-2">
+                <p className="text-xs text-gray-400 mb-1">Generated Files:</p>
+                <div className="flex flex-wrap gap-2">
+                  {log.files.map((file, index) => (
+                    <a
+                      key={index}
+                      href={`/download/sentinel/${agentId}/${encodeURIComponent(file.name)}`}
+                      download={file.name}
+                      className="flex items-center gap-1 text-xs bg-gray-700 hover:bg-gray-600 px-2 py-0.5 rounded text-blue-300 transition duration-150 ease-in-out"
+                      title={`Download ${file.name}`}
+                    >
+                      <Download size={12} />
+                      {file.name}
+                    </a>
+                  ))}
+                </div>
+              </div>
             )}
-          </ul>
-        </div>
-      );
+             {log.files && log.files.length > 0 && !agentId && (
+                 <p className="text-xs text-yellow-500 mt-1">(Agent ID missing, cannot create download links)</p>
+             )}
+          </div>
+        );
+      case 'agent_insight':
+        return <span className="text-yellow-300 italic">{log.data}</span>;
+      case 'agent_summary':
+        return <span className="text-cyan-300">{log.data}</span>;
+      case 'task_error':
+      case 'system_error':
+        return <span className="text-red-400">{log.data}</span>;
+      case 'user_command':
+        return <span className="text-purple-300 italic">User: {log.data}</span>;
+
+      default:
+        if (log.type === 'agent_status' && typeof log.data === 'string') {
+            return <span className="text-blue-300">{log.data}</span>;
+        }
+        if (log.type === 'agent_status' && typeof log.data === 'object' && log.data !== null) {
+            return <span className="text-blue-300">Status: {log.data.status || JSON.stringify(log.data)}</span>;
+        }
+        if (typeof log.data === 'string' || typeof log.data === 'number') {
+             return <span className="text-gray-300">{log.data}</span>;
+        }
+        return <span className="text-gray-500 text-xs">{JSON.stringify(log.data)}</span>;
+
     }
-    
-    // Check for completed tasks
-    if (text.includes('✓ COMPLETED:')) {
-      return (
-        <div className="flex items-start gap-2 text-green-300">
-          <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" />
-          <span>
-            {text.replace('✓ COMPLETED:', '')}
-          </span>
-        </div>
-      );
-    }
-    
-    // Check for task start markers
-    if (text.includes('Starting Task ')) {
-      return (
-        <div className="font-medium text-blue-400">
-          {text}
-        </div>
-      );
-    }
-    
-    // Check for insights
-    if (text.includes('🔍 INSIGHT:')) {
-      return (
-        <div className="flex items-start gap-2 bg-indigo-950/30 p-2 rounded border-l-2 border-indigo-500">
-          <Lightbulb size={16} className="mt-0.5 text-yellow-400 flex-shrink-0" />
-          <span className="text-gray-200">
-            {text.replace('🔍 INSIGHT:', '')}
-          </span>
-        </div>
-      );
-    }
-    
-    // Check for file listings
-    if (text.includes('📁 GENERATED FILES:')) {
-      return (
-        <div className="flex items-start gap-2 bg-gray-800/50 p-2 rounded">
-          <FileDown size={16} className="mt-0.5 text-blue-400 flex-shrink-0" />
-          <span>
-            {text.replace('📁 GENERATED FILES:', 'Generated files:')}
-          </span>
-        </div>
-      );
-    }
-    
-    // Default rendering
-    return <span>{text}</span>;
   };
 
   return (
-    <div className="agent-activity-log flex flex-col h-full bg-gradient-to-b from-gray-950 to-gray-900 rounded-lg overflow-hidden border border-gray-700">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-gray-900/80 backdrop-blur-sm text-xs text-gray-400">
-        <div className="flex items-center gap-1">
-            <Bot size={14} />
-            <span>Agent Activity Feed</span>
-        </div>
-        {/* Maybe add a status indicator here too */}
-      </div>
-      
+    <div className="agent-activity-log flex flex-col h-full bg-gray-950 rounded-lg overflow-hidden border border-gray-700">
       {/* Log Area */}
       <div className="flex-1 overflow-y-auto p-3 text-sm space-y-2">
-        {activityLogs.map((log) => (
-              <div key={log.id} className="flex gap-2 items-start">
-                <div className="mt-0.5 flex-shrink-0">
-                  {log.type === 'agent_status' && <Bot size={14} className="text-blue-400" />}
-                  {log.type === 'user_command' && <MessageSquare size={14} className="text-cyan-400" />}
-                  {log.type === 'system_error' && <span className="text-red-500 font-bold text-xs">!</span>}
-                  {log.type === 'system_info' && <span className="text-gray-500 font-bold text-xs">i</span>}
-                </div>
-                <div className={`flex-1 ${log.type === 'system_error' ? 'text-red-400' : 'text-gray-300'}`}>
-                    {renderFormattedText(log.data)}
-                </div>
+        {logs.length === 0 && (
+          <p className="text-center text-gray-500 italic mt-4">Agent activity log is empty.</p>
+        )}
+        {logs.map((log) => {
+          const content = renderLogContent(log);
+          if (!content && typeof content !== 'string' && typeof content !== 'number') return null;
+
+          return (
+            <div key={log.id} className={`flex items-start gap-2 ${log.type === 'agent_insight' ? 'pl-2 border-l-2 border-yellow-500/50 my-1 py-1 bg-yellow-950/10' : log.type === 'agent_summary' ? 'pl-2 border-l-2 border-cyan-500/50 my-1 py-1 bg-cyan-950/10' : ''}`}>
+              <div className="flex-shrink-0 mt-0.5">{renderLogIcon(log.type)}</div>
+              <div className="flex-1 break-words">
+                {content}
               </div>
-            )
-        )}
-        {activityLogs.length === 0 && !completionLog && (
-             <p className="text-muted-foreground text-center py-4">Waiting for agent activity...</p>
-        )}
-        <div ref={logsEndRef} /> 
+              {log.timestamp && (
+                 <span className="text-xs text-gray-600 ml-auto pl-2 whitespace-nowrap">
+                     {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                 </span>
+               )}
+            </div>
+          );
+        })}
+        <div ref={logsEndRef} />
       </div>
-
-       {/* Completion Summary Area (Rendered below logs, before suggestions/files) */}
-       {completionLog && (completionLog.type === 'task_summary' || completionLog.type === 'task_error') && (
-           <div className="flex-shrink-0 p-4 border-t border-gray-700/60 bg-gray-900/50 space-y-2">
-               <h4 className={`flex items-center gap-1.5 font-semibold mb-1 ${completionLog.type === 'task_error' ? 'text-red-400' : 'text-blue-300'}`}> 
-                   {completionLog.type === 'task_error' ? <AlertTriangle size={16}/> : <CheckSquare size={16}/>}
-                   {completionLog.type === 'task_error' ? 'Task Failed:' : 'Research Complete:'}
-               </h4>
-               <div className="text-gray-300 text-sm pl-6 whitespace-pre-wrap">
-                 {/* Safely render completion data */} 
-                 {typeof completionLog.data === 'string' && completionLog.data.split('\n').map((line, i) => (
-                   <div key={i} className={line.startsWith('###') ? 'font-semibold text-indigo-300 mt-2' : ''}>
-                     {line}
-                   </div>
-                 ))}
-               </div>
-           </div>
-       )}
-
-       {/* Downloads & Suggestions Area (Rendered at the bottom) */}
-       {completionLog && ((completionLog.files?.length ?? 0) > 0 || (completionLog.suggestions?.length ?? 0) > 0) && (
-           <div className="flex-shrink-0 p-3 border-t border-gray-700 bg-gray-900 space-y-3">
-               {/* Downloadable Files */}
-               {(completionLog.files?.length ?? 0) > 0 && (
-                   <div>
-                       <h5 className="text-xs font-semibold text-gray-400 mb-1.5 flex items-center gap-1">
-                           <FileDown size={14}/> Downloadable Files:
-                       </h5>
-                       <div className="flex flex-wrap gap-2">
-                           {Array.isArray(completionLog.files) && completionLog.files.map((file) => (
-                               <a key={file.name} href={file.path} download={file.name} target="_blank" rel="noopener noreferrer"
-                                 className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded">
-                                 {file.name}
-                               </a>
-                           ))}
-                       </div>
-                   </div>
-               )}
-               {/* Suggested Prompts */}
-               {(completionLog.suggestions?.length ?? 0) > 0 && (
-                   <div>
-                       <h5 className="text-xs font-semibold text-gray-400 mb-1.5 flex items-center gap-1">
-                           <Zap size={14}/> Suggested Next Steps:
-                       </h5>
-                       <div className="flex flex-wrap gap-2">
-                           {Array.isArray(completionLog.suggestions) && completionLog.suggestions.map((suggestion, index) => (
-                               <Button key={index} variant="outline" size="sm"
-                                 className="text-xs h-auto py-1 px-2 border-indigo-600/50 hover:bg-indigo-600/20 text-indigo-300"
-                                 onClick={() => handleSuggestionClick(suggestion.full)}
-                                 title={suggestion.full}>
-                                 {suggestion.short}
-                               </Button>
-                           ))}
-                       </div>
-                   </div>
-               )}
-           </div>
-       )}
     </div>
   );
 };
 
-export default AgentActivityLog; 
+export default AgentActivityLog;

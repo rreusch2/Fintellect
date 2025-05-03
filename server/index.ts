@@ -14,6 +14,7 @@ import path from 'path'; // Import path
 import fs from 'fs'; // Import fs
 // @ts-ignore - Adjust path if needed, suppress resolution error for now
 import { sentinelAgent } from './services/ai/agents/SentinelAgent'; 
+import { PassThrough } from 'stream'; // Import PassThrough for streaming
 
 console.log('Environment Check:');
 console.log('- NODE_ENV:', process.env.NODE_ENV);
@@ -134,7 +135,8 @@ async function startServer() {
     log('Authentication setup complete');
 
     // Register API routes after auth setup
-    registerRoutes(app); // registerRoutes returns void, removed assignment
+    registerRoutes(app);
+    log('API routes registered');
 
     // --- Create HTTP Server from Express App ---
     const server = http.createServer(app);
@@ -179,59 +181,55 @@ async function startServer() {
 
     // --- WebSocket Server Setup ---
     const WS_PATH = '/ws/sentinel/execute';
-    const wss = new WebSocketServer({ 
+    const wss = new WebSocketServer({
       server, // Attach directly to the HTTP server created above
-      path: WS_PATH 
-    }); 
+      path: WS_PATH
+    });
 
     // Give the sentinelAgent instance a reference to the WebSocketServer
+    // This allows the agent to proactively send messages (status, summaries, screenshots)
+    // back to the clients as it performs tasks.
     sentinelAgent.setWebSocketServer(wss);
+    log(`WebSocket server configured. Agent can now push updates.`);
 
     wss.on('connection', (ws, req) => {
-        console.log(`[WSS] Client connected to ${WS_PATH}`);
-        // let isContainerConfirmedReady = false; // Flag for this connection // No longer needed
+        // Extract client identifier if needed (e.g., from query params or cookies via req)
+        // const clientId = url.parse(req.url, true).query.clientId || 'anonymous'; // Example
+        console.log(`[WSS] Client connected to ${WS_PATH}`); // Removed clientId for simplicity for now
 
-        // REMOVE Check initial container status on connect
-        /*
-        sentinelAgent.isContainerRunning().then((isRunning: boolean) => {
-          if (isRunning) {
-            console.log('[WSS] Container already running on connect.');
-            ws.send(JSON.stringify({ type: 'status', event: 'container_ready', message: 'Container ready.' }));
-            // isContainerConfirmedReady = true;
-          }
-        }).catch((err: Error) => {
-            console.error("[WSS] Error checking initial container status:", err);
-        });
-        */
+        // Send initial connection confirmation
+        ws.send(JSON.stringify({
+             type: 'status',
+             event: 'connected',
+             message: 'Connected to Sentinel agent endpoint. Ready for commands.'
+        }));
 
+        // Handle messages FROM the client (typically commands for the agent)
         ws.on('message', async (message) => {
-            let command = '';
+            let commandData: any;
             try {
-                const data = JSON.parse(message.toString());
-                if (typeof data.command === 'string') {
-                    command = data.command;
-                    console.log(`[WSS] Received command: ${command}`);
+                commandData = JSON.parse(message.toString());
+                console.log(`[WSS] Received command/data from client:`, commandData); // Log received data
+
+                // --- Trigger Agent Action ---
+                // Instead of directly executing a shell command here,
+                // pass the command/data to the sentinelAgent to handle.
+                // The agent will then use the 'wss' reference to send
+                // status, summary, screenshot, or error messages back asynchronously.
+
+                // Example: Assume commandData might be { action: 'start_research', topic: '...' }
+                if (commandData && typeof commandData.action === 'string') {
+                    ws.send(JSON.stringify({ type: 'status', message: `Processing action: ${commandData.action}` }));
+                    // Delegate to the agent - this call might return immediately
+                    // while the agent works in the background.
+                    sentinelAgent.handleClientCommand(commandData, ws); // Pass 'ws' if agent needs to reply directly to *this* client
                 } else {
-                    throw new Error('Invalid message format: "command" property missing or not a string.');
+                     throw new Error('Invalid message format: "action" property missing or not a string.');
                 }
+                // --------------------------
 
-                ws.send(JSON.stringify({ type: 'status', message: `Executing command: ${command}` }));
-
-                const onDataCallback = (chunk: string, streamType: 'stdout' | 'stderr') => {
-                    ws.send(JSON.stringify({ type: streamType, data: chunk }));
-                };
-
-                try {
-                    // This likely needs changing - executeInEnvironment was E2B specific
-                    // We need a way to send commands to OpenManus via connector/WS
-                    // For now, just log it
-                    log(`[WSS] Command execution via SentinelAgent needed for: ${command} (Not implemented for OpenManus yet)`);
-                    // const { exitCode } = await sentinelAgent.executeInEnvironment(command, onDataCallback);
-                    ws.send(JSON.stringify({ type: 'status', message: `Command '${command}' received but execution via OpenManus not implemented.`, exitCode: -1 }));
-                } catch (execError: any) {
-                     console.error(`[WSS] Command execution placeholder error: ${execError.message}`);
-                     ws.send(JSON.stringify({ type: 'error', message: `Command execution placeholder failed: ${execError.message}` }));
-                }
+                // NOTE: No direct execution or 'onDataCallback' here anymore.
+                // The agent sends results back proactively via the wss reference.
 
             } catch (error: any) {
                 console.error(`[WSS] Error processing message: ${error.message}`);
@@ -241,20 +239,21 @@ async function startServer() {
 
         ws.on('close', () => {
             console.log(`[WSS] Client disconnected from ${WS_PATH}`);
+            // TODO: Notify sentinelAgent if cleanup is needed for this client's session
         });
 
         ws.on('error', (error) => {
             console.error(`[WSS] WebSocket error: ${error.message}`);
+            // TODO: Potentially notify agent or attempt recovery
         });
 
-        ws.send(JSON.stringify({ type: 'status', message: 'Connected to Sentinel command endpoint.' })); // Changed initial message slightly
     });
-    console.log(`WebSocket endpoint configured at ws://localhost:${PORT}${WS_PATH}`); // Log WS setup
+    console.log(`WebSocket endpoint configured at ws://localhost:${PORT}${WS_PATH}`);
     // -----------------------------
 
     // --- Start Listening using the HTTP Server instance ---
     server.listen(Number(PORT), '0.0.0.0', () => {
-      console.log(`Server running on http://localhost:${PORT}`); 
+      console.log(`Server running on http://localhost:${PORT}`);
     });
     // ----------------------------------------------------
 
@@ -306,32 +305,80 @@ process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
 // ---------------------------------------
 
-// --- Add Download Route for Sentinel Files (Placeholder) ---
-app.get('/download/sentinel/:filename', (req, res) => {
-  const filename = req.params.filename;
-  // IMPORTANT: Sanitize filename to prevent directory traversal vulnerabilities!
-  const safeFilename = path.basename(filename); // Basic sanitization
-  // Construct the full path - ASSUMING agent is accessible or path is known
-  // THIS IS A SIMPLIFICATION - Need robust path construction and agent access
-  const sharedDir = path.resolve(__dirname, './sentinel-shared'); // Assuming index.ts location
-  const filePath = path.join(sharedDir, safeFilename);
+// --- Updated Download Route ---
+app.get('/download/sentinel/:agentId/:filename', async (req, res, next) => {
+  const { agentId, filename } = req.params;
 
-  console.log(`[Download] Attempting to download: ${filePath}`);
+  // Basic validation
+  if (!agentId || !filename) {
+    return res.status(400).send('Agent ID and filename are required.');
+  }
+  // Further sanitize filename if needed, though connector does basic checks
+  const safeFilename = path.basename(filename); // Use basename for safety
+  if (safeFilename !== filename) {
+       return res.status(400).send('Invalid filename format.');
+  }
 
-  // Check if file exists in the agent's shared directory
-  if (fs.existsSync(filePath)) {
-    res.download(filePath, safeFilename, (err) => {
-      if (err) {
-        console.error(`[Download] Error sending file ${safeFilename}:`, err);
-        // Avoid sending error details to client for security
-        if (!res.headersSent) {
-          res.status(500).send('Error downloading file.');
-        }
-      }
+  log(`[Download] Request for file '${safeFilename}' from agent '${agentId}'`);
+
+  try {
+    // Assume sentinelAgent has access to the connector instance
+    // We might need to expose the connector or add a method to SentinelAgent
+    // Let's assume a method getConnector() exists or we access it directly for now
+    const connector = sentinelAgent.getConnector(); // Hypothetical getter
+    if (!connector) {
+      throw new Error("OpenManus connector is not available.");
+    }
+
+    // Request the file content from the Python service via the connector
+    const fileResponse = await connector.getFileContent(agentId, safeFilename);
+
+    // Check if the response body is available
+    if (!fileResponse.body) {
+        throw new Error("File response body is null.");
+    }
+
+    // Set headers for download
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+    // Set Content-Type based on the response from the Python service if available
+    const contentType = fileResponse.headers.get('content-type');
+    if (contentType) {
+      res.setHeader('Content-Type', contentType);
+    } else {
+      res.setHeader('Content-Type', 'application/octet-stream'); // Default fallback
+    }
+
+    // Stream the response body back to the client
+    const nodeStream = PassThrough.fromWeb(fileResponse.body as any); // Convert ReadableStream to Node stream
+    nodeStream.pipe(res);
+
+    nodeStream.on('error', (err) => {
+       log(`[Download] Error streaming file ${safeFilename} for agent ${agentId}:`, String(err));
+       if (!res.headersSent) {
+           res.status(500).send('Error streaming file.');
+       } else {
+           res.end();
+       }
     });
-  } else {
-    console.log(`[Download] File not found: ${filePath}`);
-    res.status(404).send('File not found.');
+
+    nodeStream.on('end', () => {
+        log(`[Download] Successfully streamed file ${safeFilename} for agent ${agentId}`);
+    });
+
+  } catch (error: any) {
+    log(`[Download] Error fetching/processing file ${safeFilename} for agent ${agentId}:`, error.message);
+    // Forward the error using next() for the main error handler, or send specific response
+     if (!res.headersSent) {
+        // Check for specific errors like 404
+        if (error.message.includes('404') || error.message.toLowerCase().includes('not found')) {
+            res.status(404).send('File not found on agent workspace.');
+        } else {
+             res.status(500).send(`Error downloading file: ${error.message}`);
+        }
+     } else {
+        // If headers already sent, we can't change status, just log
+        console.error("Error occurred after headers sent during file download.");
+     }
   }
 });
-// ---------------------------------------------------------
+// -----------------------------

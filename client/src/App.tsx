@@ -19,6 +19,7 @@ import SentinelPage from "./pages/ai/SentinelPage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import GoogleUsernameSetupPage from "./pages/GoogleUsernameSetupPage";
 
 function App() {
   const { user, isLoading } = useUser();
@@ -36,6 +37,7 @@ function App() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/google-username-setup" component={GoogleUsernameSetupPage} />
       <Route>
         <LandingPage />
       </Route>

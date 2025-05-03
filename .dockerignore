@@ -4,4 +4,30 @@ npm-debug.log
 .git
 .gitignore
 README.md
-.vscode 
+.vscode
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.~
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# openmanus-service specific data/reports (if not needed at runtime)
+openmanus-service/anomalies.txt
+openmanus-service/financial_research_report.md
+openmanus-service/integration_guide.md
+openmanus-service/market_data.csv
+openmanus-service/preliminary_findings.txt
+openmanus-service/price_trends.png
+openmanus-service/volume_trends.png

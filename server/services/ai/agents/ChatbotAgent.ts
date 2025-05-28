@@ -7,11 +7,11 @@ import { anthropic, MODEL_NAMES, generateContent } from '../config/anthropic.js'
 import { knowledgeStore } from "../store/KnowledgeStore.js";
 import { DashboardInsightsAgent } from "./DashboardInsightsAgent.js";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
 const model = genAI.getGenerativeModel({ 
-  model: "gemini-pro",
+  model: "gemini-2.0-flash",
   generationConfig: {
-    maxOutputTokens: 2000,
+    maxOutputTokens: 4096,
     temperature: 0.7,
     topP: 0.8,
     topK: 40,

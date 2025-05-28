@@ -104,6 +104,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   plaidAccounts: many(plaidAccounts),
   plaidTransactions: many(plaidTransactions),
   insights: many(insights),
+  budgets: many(budgets),
+  goals: many(goals),
+  conversations: many(conversations),
 }));
 
 export const plaidItemsRelations = relations(plaidItems, ({ one, many }) => ({
@@ -236,3 +239,50 @@ export const selectGoalSchema = createSelectSchema(goals);
 
 export type SelectGoal = typeof goals.$inferSelect;
 export type InsertGoal = typeof goals.$inferInsert;
+
+// Nexus Conversations
+export const conversations = pgTable("conversations", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const conversationMessages = pgTable("conversation_messages", {
+  id: text("id").primaryKey(),
+  conversationId: text("conversation_id").references(() => conversations.id).notNull(),
+  role: text("role").notNull(), // 'user' | 'assistant' | 'tool'
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Conversation Relations
+export const conversationsRelations = relations(conversations, ({ one, many }) => ({
+  user: one(users, {
+    fields: [conversations.userId],
+    references: [users.id],
+  }),
+  messages: many(conversationMessages),
+}));
+
+export const conversationMessagesRelations = relations(conversationMessages, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [conversationMessages.conversationId],
+    references: [conversations.id],
+  }),
+}));
+
+// Conversation Schemas
+export const insertConversationSchema = createInsertSchema(conversations);
+export const selectConversationSchema = createSelectSchema(conversations);
+
+export const insertConversationMessageSchema = createInsertSchema(conversationMessages);
+export const selectConversationMessageSchema = createSelectSchema(conversationMessages);
+
+// Conversation Types
+export type SelectConversation = typeof conversations.$inferSelect;
+export type InsertConversation = typeof conversations.$inferInsert;
+
+export type SelectConversationMessage = typeof conversationMessages.$inferSelect;
+export type InsertConversationMessage = typeof conversationMessages.$inferInsert;

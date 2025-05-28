@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { Pool } from '@neondatabase/serverless';
-import * as schema from "./schema";
+import * as schema from "./schema.js";
 import 'dotenv/config';
 import ws from 'ws';
 import { neonConfig } from '@neondatabase/serverless';
@@ -24,7 +24,6 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   maxUses: 7500,
-  webSocketConstructor: ws,
 });
 
 // Create the database instance with schema
@@ -68,3 +67,5 @@ async function connectWithRetry(maxRetries = 5, delay = 5000) {
 
 // Export the retry function
 export { connectWithRetry };
+
+export * from '../server/db/nexus.js';

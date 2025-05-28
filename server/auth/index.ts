@@ -13,19 +13,28 @@ export function setupAuth(app: Express) {
   app.use(
     session({
       secret: process.env.SESSION_SECRET || 'your-super-secret-key-here',
-      resave: false,
-      saveUninitialized: false,
+      resave: true,
+      saveUninitialized: true,
       store: new MemoryStore({
         checkPeriod: 86400000 // prune expired entries every 24h
       }),
       cookie: {
-        secure: process.env.NODE_ENV === "production",
+        // In development, secure:false is needed for cookies to work with HTTP
+        secure: false, 
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         httpOnly: true,
-        sameSite: 'lax'
+        sameSite: 'lax',
+        path: '/' // Ensure cookie is available for all paths
       }
     })
   );
+  
+  // Debug session middleware
+  app.use((req, res, next) => {
+    console.log('Session ID:', req.sessionID);
+    console.log('Is Authenticated:', req.isAuthenticated());
+    next();
+  });
 
   // Initialize passport AFTER session middleware
   app.use(passport.initialize());
@@ -42,10 +51,18 @@ export function setupAuth(app: Express) {
     try {
       // Add your user lookup logic here
       const user = await db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.id, id)
+        where: (users: any, { eq }: any) => eq(users.id, id)
       });
+      
+      if (!user) {
+        console.error('User not found during deserialization:', id);
+        return done(null, false);
+      }
+      
+      console.log('User deserialized successfully:', user.id);
       done(null, user);
     } catch (err) {
+      console.error('Error during user deserialization:', err);
       done(err);
     }
   });

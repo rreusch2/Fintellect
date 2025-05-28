@@ -1,14 +1,23 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-if (!process.env.GOOGLE_API_KEY) {
-  console.warn("Warning: GOOGLE_API_KEY not found in environment variables");
+if (!process.env.GOOGLE_AI_API_KEY) {
+  throw new Error("GOOGLE_AI_API_KEY environment variable is required");
 }
 
-// Initialize the Google Generative AI client
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
-// Initialize the model
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// Use the new Gemini 2.0 Flash model with enhanced capabilities
+const model = genAI.getGenerativeModel({ 
+  model: "gemini-2.0-flash",
+  generationConfig: {
+    maxOutputTokens: 8192, // Max output tokens for 2.0 Flash
+    temperature: 0.7,
+    topP: 0.8,
+    topK: 40,
+  }
+});
+
+export { genAI, model };
 
 export async function generateContent(prompt: string): Promise<string> {
   try {
@@ -16,7 +25,7 @@ export async function generateContent(prompt: string): Promise<string> {
     const response = await result.response;
     return response.text();
   } catch (error) {
-    console.error("[Gemini] Error generating content:", error);
+    console.error("[Gemini 2.0 Flash] Error generating content:", error);
     throw error;
   }
 }

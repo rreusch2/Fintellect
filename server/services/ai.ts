@@ -4,11 +4,11 @@ import { plaidTransactions, insights } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 
 // Initialize Gemini API with safety limits
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY || "");
 const model = genAI.getGenerativeModel({ 
-  model: "gemini-pro",
+  model: "gemini-2.0-flash",
   generationConfig: {
-    maxOutputTokens: 1000,
+    maxOutputTokens: 2048,
     temperature: 0.7,
     topP: 0.8,
     topK: 40,

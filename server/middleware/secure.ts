@@ -9,6 +9,12 @@ export function requireHTTPS(req: Request, res: Response, next: NextFunction) {
   if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
     next();
   } else {
+    // Detect if request is from the Vite development server
+    const referrer = req.headers.referer || '';
+    if (referrer.includes('localhost:5173') || referrer.includes('127.0.0.1:5173')) {
+      // Don't redirect for local development through Vite
+      return next();
+    }
     res.redirect(`https://${req.headers.host}${req.url}`);
   }
 }

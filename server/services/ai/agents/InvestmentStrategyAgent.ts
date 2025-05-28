@@ -5,12 +5,12 @@ if (!process.env.GEMINI_API_KEY) {
   throw new Error("GEMINI_API_KEY must be set");
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
 const model = genAI.getGenerativeModel({ 
-  model: "gemini-pro",
+  model: "gemini-2.0-flash",
   generationConfig: {
-    maxOutputTokens: 2048,
-    temperature: 0.4, // Lower temperature for more conservative investment advice
+    maxOutputTokens: 4096,
+    temperature: 0.6,
     topP: 0.8,
     topK: 40,
   }

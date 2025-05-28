@@ -32,6 +32,7 @@ const allowedOrigins = [
 if (process.env.NODE_ENV === 'development') {
   allowedOrigins.push(
     'http://localhost:5173',
+    'http://localhost:5174', // Add the new client port
     'http://localhost:5001',
     'capacitor://localhost',
     'http://localhost',
@@ -41,12 +42,16 @@ if (process.env.NODE_ENV === 'development') {
 
 // Configure CORS
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: true, // Allow all origins in development for easier debugging
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Authorization'],
+  maxAge: 86400, // 24 hours in seconds
 };
+
+// Log CORS configuration
+console.log('CORS configuration:', { corsOptions, allowedOrigins });
 
 // Apply CORS pre-flight options
 app.options('*', cors(corsOptions));
@@ -150,8 +155,9 @@ async function startServer() {
       setupStatic(app);
     }
 
-    app.listen(5001, '0.0.0.0', () => {
-      console.log('Server running on http://0.0.0.0:5001');
+    const PORT = parseInt(process.env.PORT || '5001', 10);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
     });
 
     return server;

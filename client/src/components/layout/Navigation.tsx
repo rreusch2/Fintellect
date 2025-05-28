@@ -59,17 +59,15 @@ export function Navigation() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           {/* Logo - Always visible */}
-          <Link href="/dashboard">
-            <a className="flex items-center gap-3">
-              <span className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 animate-gradient tracking-tight">
-                Fintellect
+          <Link href="/dashboard" className="flex items-center gap-3">
+            <span className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 animate-gradient tracking-tight">
+              Fintellect
+            </span>
+            <div className="hidden sm:flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 backdrop-blur-sm">
+              <span className="text-[11px] font-semibold tracking-wider text-primary bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                BETA
               </span>
-              <div className="hidden sm:flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 backdrop-blur-sm">
-                <span className="text-[11px] font-semibold tracking-wider text-primary bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-                  BETA
-                </span>
-              </div>
-            </a>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}

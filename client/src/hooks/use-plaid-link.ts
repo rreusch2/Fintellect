@@ -6,7 +6,7 @@ export function usePlaidLink() {
 
   const handlePlaidSuccess = async (public_token: string) => {
     try {
-      const response = await fetch('/api/plaid/exchange_token', {
+      const response = await fetch('/api/plaid/set-access-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ public_token }),

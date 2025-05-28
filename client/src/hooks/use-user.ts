@@ -1,5 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { InsertUser, SelectUser } from "@db/schema";
+import { useLocation } from 'wouter';
+
+// Define types for user data - adjust these to match your actual schema
+type SelectUser = {
+  id: number;
+  username: string;
+  hasCompletedOnboarding?: boolean;
+  hasPlaidSetup?: boolean;
+  email?: string;
+  [key: string]: any; // For other potential fields
+};
+
+type InsertUser = Omit<SelectUser, 'id'> & {
+  password: string;
+  confirmPassword?: string;
+  rememberMe?: boolean;
+};
 
 type RequestResult = {
   ok: true;
@@ -24,129 +40,228 @@ const defaultFetchOptions = {
   },
 };
 
-async function handleRequest(
-  url: string,
-  method: string,
-  body?: InsertUser
-): Promise<RequestResult> {
+async function fetchUser(): Promise<SelectUser | null> {
   try {
-    const response = await fetch(url, {
-      method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: "include",
-    });
+    console.log('Fetching user data...');
+    const response = await fetch('/api/user', defaultFetchOptions);
+    console.log('User fetch response status:', response.status);
 
     if (!response.ok) {
-      if (response.status >= 500) {
-        return { ok: false, message: response.statusText };
+      if (response.status === 401) {
+        console.log('User not authenticated (401)');
+        return null;
       }
 
-      const message = await response.text();
-      return { ok: false, message };
-    }
+      if (response.status >= 500) {
+        console.error(`Server error: ${response.status}: ${response.statusText}`);
+        return null;
+      }
 
-    return { ok: true };
-  } catch (e: any) {
-    return { ok: false, message: e.toString() };
-  }
-}
-
-async function fetchUser(): Promise<SelectUser | null> {
-  const response = await fetch('/api/user', defaultFetchOptions);
-
-  if (!response.ok) {
-    if (response.status === 401) {
+      console.error(`API error: ${response.status}: ${await response.text()}`);
       return null;
     }
 
-    if (response.status >= 500) {
-      throw new Error(`${response.status}: ${response.statusText}`);
-    }
-
-    throw new Error(`${response.status}: ${await response.text()}`);
+    const userData = await response.json();
+    console.log('User data fetched successfully:', userData);
+    return userData;
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    return null;
   }
-
-  return response.json();
 }
 
 export function useUser() {
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
+  // Query for user data
   const { data: user, error, isLoading, refetch } = useQuery<SelectUser | null, Error>({
     queryKey: ['user'],
     queryFn: fetchUser,
-    staleTime: Infinity,
-    retry: false
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: false,
+    // Don't refetch on window focus to avoid unexpected redirects
+    refetchOnWindowFocus: false,
   });
 
+  // Handle login
   const loginMutation = useMutation<RequestResult, Error, LoginData>({
     mutationFn: async (userData) => {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-        credentials: 'include',
-      });
+      console.log('Login attempt for user:', userData.username);
+      
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData),
+          credentials: 'include',
+        });
 
-      if (!response.ok) {
-        if (response.status >= 500) {
-          return { ok: false, message: response.statusText };
+        console.log('Login response status:', response.status);
+
+        if (!response.ok) {
+          if (response.status >= 500) {
+            return { ok: false, message: response.statusText };
+          }
+          const errorText = await response.text();
+          console.error('Login failed:', errorText);
+          return { ok: false, message: errorText };
         }
-        return { ok: false, message: await response.text() };
-      }
 
-      const data = await response.json();
-      return { ok: true, user: data.user };
+        const data = await response.json();
+        console.log('Login successful, user data received:', data);
+        return { ok: true, user: data.user };
+      } catch (error) {
+        console.error('Login error:', error);
+        return { ok: false, message: error instanceof Error ? error.message : String(error) };
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+    onSuccess: async (data) => {
+      console.log('Login mutation success, updating cache');
+      
+      // Immediately update the user in the cache
+      if (data.ok && data.user) {
+        console.log('Setting user data in cache');
+        queryClient.setQueryData(['user'], data.user);
+        
+        // Fetch fresh user data to ensure session is established
+        console.log('Fetching fresh user data after login');
+        const freshUserData = await fetchUser();
+        
+        if (freshUserData) {
+          console.log('Fresh user data fetched successfully after login');
+          queryClient.setQueryData(['user'], freshUserData);
+          
+          // Redirect based on onboarding status
+          if (freshUserData.hasCompletedOnboarding) {
+            console.log('User has completed onboarding, redirecting to dashboard');
+            setLocation('/dashboard');
+          } else {
+            console.log('User has not completed onboarding, redirecting to onboarding');
+            setLocation('/onboarding');
+          }
+        } else {
+          console.error('Failed to fetch fresh user data after login');
+          // Still try to redirect based on the original data
+          if (data.user.hasCompletedOnboarding) {
+            setLocation('/dashboard');
+          } else {
+            setLocation('/onboarding');
+          }
+        }
+      } else {
+        // If no user data in response, fetch fresh data
+        console.log('No user data in response, refreshing user data');
+        await queryClient.invalidateQueries({ queryKey: ['user'] });
+      }
     },
+    onError: (error) => {
+      console.error('Login mutation error:', error);
+    }
   });
 
+  // Handle logout
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
+      try {
+        const response = await fetch('/api/logout', {
+          method: 'POST',
+          credentials: 'include',
+        });
 
-      if (!response.ok) {
-        const message = await response.text();
-        return { ok: false, message };
-      }
-
-      // Clear any stored user data
-      queryClient.setQueryData(['user'], null);
-      queryClient.clear();
-
-      return { ok: true };
-    },
-  });
-
-  const registerMutation = useMutation<RequestResult, Error, InsertUser>({
-    mutationFn: async (userData) => {
-      const response = await fetch('/api/register', {
-        ...defaultFetchOptions,
-        method: 'POST',
-        body: JSON.stringify(userData),
-      });
-
-      if (!response.ok) {
-        if (response.status >= 500) {
-          return { ok: false, message: response.statusText };
+        if (!response.ok) {
+          const message = await response.text();
+          return { ok: false, message };
         }
-        return { ok: false, message: await response.text() };
-      }
 
-      const data = await response.json();
-      return { ok: true, user: data.user };
+        return { ok: true };
+      } catch (error) {
+        return { 
+          ok: false, 
+          message: error instanceof Error ? error.message : String(error) 
+        };
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+      // Clear user data and redirect to landing page
+      console.log('Logout successful, clearing cache');
+      queryClient.setQueryData(['user'], null);
+      queryClient.clear();
+      setLocation('/');
     },
   });
 
+  // Handle registration
+  const registerMutation = useMutation<RequestResult, Error, InsertUser>({
+    mutationFn: async (userData) => {
+      console.log('Registration attempt for user:', userData.username);
+      
+      try {
+        // First, register the user
+        const response = await fetch('/api/register', {
+          ...defaultFetchOptions,
+          method: 'POST',
+          body: JSON.stringify(userData),
+        });
+
+        console.log('Registration response status:', response.status);
+
+        if (!response.ok) {
+          if (response.status >= 500) {
+            return { ok: false, message: response.statusText };
+          }
+          const errorText = await response.text();
+          console.error('Registration failed:', errorText);
+          return { ok: false, message: errorText };
+        }
+
+        const data = await response.json();
+        console.log('Registration successful, user data received:', data);
+        return { ok: true, user: data.user };
+      } catch (error) {
+        console.error('Registration error:', error);
+        return { 
+          ok: false, 
+          message: error instanceof Error ? error.message : String(error) 
+        };
+      }
+    },
+    onSuccess: async (data) => {
+      console.log('Registration mutation success, updating cache');
+      
+      // Immediately update the user in the cache
+      if (data.ok && data.user) {
+        console.log('Setting user data in cache after registration');
+        queryClient.setQueryData(['user'], data.user);
+        
+        // Fetch fresh user data to ensure session is established
+        console.log('Fetching fresh user data after registration');
+        const freshUserData = await fetchUser();
+        
+        if (freshUserData) {
+          console.log('Fresh user data fetched successfully after registration');
+          queryClient.setQueryData(['user'], freshUserData);
+          
+          // For new registrations, always redirect to onboarding
+          console.log('Redirecting new user to onboarding');
+          setLocation('/onboarding');
+        } else {
+          console.error('Failed to fetch fresh user data after registration');
+          // Still try to redirect to onboarding
+          setLocation('/onboarding');
+        }
+      } else {
+        // If no user data in response, fetch fresh data
+        console.log('No user data in response after registration, refreshing');
+        await queryClient.invalidateQueries({ queryKey: ['user'] });
+      }
+    },
+    onError: (error) => {
+      console.error('Registration mutation error:', error);
+    }
+  });
+
+  // Expose the API
   return {
     user,
     isLoading,

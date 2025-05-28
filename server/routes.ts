@@ -16,6 +16,7 @@ import { promisify } from "util";
 import { PlaidService } from "./services/plaid.js";
 import plaidRouter from "./routes/plaid.js";
 import aiRouter from "./routes/ai.js";
+import nexusRouter from "./routes/nexus.js";
 import { dashboardInsights } from "./services/ai/agents/DashboardInsightsAgent.js";
 import { financialTipAgent } from "./services/ai/agents/FinancialTipAgent.js";
 import mobileAuthRouter from './auth/mobile.js';
@@ -62,6 +63,16 @@ export function registerRoutes(app: Express): Server {
     // For web requests, continue with session auth
     next();
   }, aiRouter);
+
+  // Mount the Nexus router with authentication
+  app.use("/api/nexus", (req, res, next) => {
+    // Check if it's a mobile request (has Authorization header)
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+      return jwtAuth(req, res, next);
+    }
+    // For web requests, continue with session auth
+    next();
+  }, nexusRouter);
 
   app.post("/api/register", async (req, res, next) => {
     try {
@@ -828,15 +839,30 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add this to your routes.ts
+  // User consent endpoint
   app.post("/api/user/consent", async (req, res) => {
+    console.log('User consent request received. Auth status:', {
+      isAuthenticated: req.isAuthenticated(),
+      sessionID: req.sessionID,
+      userId: req.user?.id,
+      headers: req.headers['cookie']
+    });
+    
     if (!req.isAuthenticated()) {
+      console.error('User consent failed: Not authenticated');
       return res.status(401).send("Not logged in");
     }
 
     try {
       const { termsVersion, privacyVersion, consentDate } = req.body;
+      console.log('Consent data received:', { termsVersion, privacyVersion, consentDate });
+      
+      if (!termsVersion || !privacyVersion) {
+        console.error('Missing required consent fields');
+        return res.status(400).json({ message: "Terms version and privacy version are required" });
+      }
 
+      console.log('Updating consent for user:', req.user.id);
       const [updatedUser] = await db
         .update(users)
         .set({
@@ -854,18 +880,28 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (!updatedUser) {
+        console.error('User not found when updating consent');
         return res.status(404).send("User not found");
       }
-
-      res.json({
-        message: "Consent saved successfully",
-        user: {
-          id: updatedUser.id,
-          username: updatedUser.username,
-          hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
-          hasPlaidSetup: updatedUser.hasPlaidSetup,
-          consentVersion: updatedUser.consentVersion,
-        },
+      
+      // Save the session to ensure changes are persisted
+      req.session.save((err) => {
+        if (err) {
+          console.error('Error saving session after consent update:', err);
+          return res.status(500).json({ message: "Session save failed" });
+        }
+        
+        console.log('Session saved after consent update. Session ID:', req.sessionID);
+        res.json({
+          message: "Consent saved successfully",
+          user: {
+            id: updatedUser.id,
+            username: updatedUser.username,
+            hasCompletedOnboarding: updatedUser.hasCompletedOnboarding,
+            hasPlaidSetup: updatedUser.hasPlaidSetup,
+            consentVersion: updatedUser.consentVersion,
+          }
+        });
       });
     } catch (error) {
       console.error("Error saving consent:", error);
@@ -876,10 +912,59 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Error handling middleware
+  // Complete onboarding endpoint
+  app.post("/api/user/complete-onboarding", async (req, res) => {
+    console.log('Complete onboarding request received. Auth status:', {
+      isAuthenticated: req.isAuthenticated(),
+      sessionID: req.sessionID,
+      userId: req.user?.id,
+      headers: req.headers['cookie']
+    });
+    
+    if (!req.isAuthenticated()) {
+      console.error('Complete onboarding failed: Not authenticated');
+      return res.status(401).send("Not logged in");
+    }
+
+    try {
+      console.log('Completing onboarding for user:', req.user.id);
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          hasCompletedOnboarding: true,
+          onboardingStep: 3,
+        })
+        .where(eq(users.id, req.user.id))
+        .returning();
+
+      if (!updatedUser) {
+        console.error('User not found when completing onboarding');
+        return res.status(404).send("User not found");
+      }
+      
+      // Save the session to ensure changes are persisted
+      req.session.save((err) => {
+        if (err) {
+          console.error('Error saving session after onboarding completion:', err);
+          return res.status(500).json({ message: "Session save failed" });
+        }
+        
+        console.log('Session saved after onboarding completion. Session ID:', req.sessionID);
+        res.json({ 
+          message: "Onboarding completed successfully",
+          user: updatedUser
+        });
+      });
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({
+        error: "Failed to complete onboarding",
+        details: process.env.NODE_ENV === "development" ? (error as Error).message : undefined,
+      });
+    }
+  });
 
   // Error handling middleware
-  // Improved error handling middleware
   app.use((err: any, req: any, res: any, next: any) => {
     console.error('Server error:', err.stack);
     const status = err.status || err.statusCode || 500;

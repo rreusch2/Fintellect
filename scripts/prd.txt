@@ -1,0 +1,116 @@
+<context>
+# Overview
+Integration of Nexus (from Suna) into the Fintellect monorepo. This phase focuses on backend and infrastructure setup, not end-user UI. The goal is to enable future agent-driven features by establishing a solid technical foundation.
+
+# Core Features
+## Project Structure Setup
+- What it does: Establishes dedicated directories for Nexus frontend and backend code within the Fintellect monorepo.
+- Why it's important: Organizes the codebase for maintainability and clear separation of concerns while facilitating integration.
+- How it works: Create client/src/nexus, server/nexus, and relevant subdirectories. Copy essential, non-UI specific agent components from the Suna/Nexus project as a starting point.
+
+## Dependency Integration
+- What it does: Adds necessary frontend libraries from Suna/Nexus to Fintellect's package.json.
+- Why it's important: Ensures that the Nexus components will have the required libraries to function once integrated.
+- How it works: Identify and install packages like @uiw/react-codemirror, @react-pdf/renderer, marked, etc., into the Fintellect client.
+
+## Authentication Integration (Fintellect Auth)
+- What it does: Removes Suna's Supabase-based authentication from the copied Nexus frontend components and integrates Fintellect's existing session-based authentication.
+- Why it's important: Ensures a seamless and secure user experience by using a single, consistent authentication system across the entire platform.
+- How it works:
+  - Client-side: Remove Supabase dependencies and client initialization. Create a NexusAuthContext and useNexusAuth hook that leverages Fintellect's useUser hook.
+  - Server-side: Implement nexusAuthMiddleware for Fintellect's Express server to protect Nexus-related API routes and provide user context.
+
+## Database Schema & Data Access Layer (DAL)
+- What it does: Defines and creates new PostgreSQL tables required for Nexus functionality (conversations, messages, agent state, files) within Fintellect's database using Drizzle ORM. Implements a DAL for these tables.
+- Why it's important: Provides persistent storage for user interactions with Nexus agents and agent-generated data, integrated with Fintellect's existing data.
+- How it works: Define schemas in drizzle/schema/nexus.ts. Create migration files and apply them. Implement a NexusDB service/object in server/db/nexus.ts with methods to CRUD Nexus-related data.
+
+## File Storage Integration (Basic Setup)
+- What it does: Implements basic server-side infrastructure for handling file uploads that Nexus agents might perform (e.g., saving generated reports).
+- Why it's important: Prepares for features where agents need to store or retrieve files associated with user interactions.
+- How it works: Configure multer middleware for file uploads, define storage paths (e.g., uploads/nexus/[userId]), and create placeholder API endpoints for file operations.
+
+## Proxy API Layer (Initial Setup)
+- What it does: Establishes initial API routes within the Fintellect server (e.g., under /api/nexus) that will eventually handle communication between the Fintellect frontend and the Nexus backend agent logic.
+- Why it's important: Creates the communication channel necessary for the frontend to trigger agent actions and receive results, secured by Fintellect's authentication.
+- How it works: Create Express routers for Nexus. Apply the nexusAuthMiddleware. Initially, these endpoints might return mock data or simple acknowledgments.
+
+# User Experience
+- User Personas: Primarily developers during this phase. End-users will not see direct changes.
+- Key User Flows: Not applicable for end-users in this phase. Developer flow involves setting up the environment, running migrations, and verifying backend integrations.
+- UI/UX Considerations: No direct end-user UI changes. Focus is on ensuring the backend foundation is solid to support future UI features for Nexus agents. Copied Nexus UI components will be stripped of Suna-specific auth UI elements.
+</context>
+<PRD>
+# Technical Architecture
+## System Components
+- Fintellect frontend (React/TypeScript)
+- Fintellect backend (Node.js/Express)
+- Newly created Nexus modules within Fintellect (client/src/nexus, server/nexus)
+- Fintellect's PostgreSQL Database with Drizzle ORM
+
+## Data Models
+- New PostgreSQL tables: nexus_conversations, nexus_messages, nexus_agent_state, nexus_files.
+- References to Fintellect's existing users table (via userId foreign keys).
+
+## APIs and Integrations
+- Internal Fintellect APIs: Extension of existing auth middleware.
+- New internal API endpoints under /api/nexus (e.g., for conversations, files - initially stubs).
+
+## Infrastructure Requirements
+- Local development environment for Fintellect.
+- Docker: Update docker-compose.yml to include a basic definition or placeholder for a nexus-agent service (which will house the Python backend logic from Suna later).
+
+# Development Roadmap
+- Project Scaffolding: Create client/src/nexus and server/nexus directories. Copy essential non-UI Suna/Nexus frontend components (e.g., agent interaction logic, if any separable from UI) and backend agent core logic (Python parts, to be containerized later) into these directories.
+
+- Dependency Alignment: Add required frontend dependencies (e.g., @uiw/react-codemirror, marked) from Suna/Nexus to Fintellect's client package.json and install them.
+
+- Decouple Suna Auth (Client): Identify and remove/comment out Supabase client libraries, initialization calls, and auth-related UI components (login pages, user profile parts tied to Supabase) from the copied Nexus frontend code.
+
+- Implement Fintellect Auth Context (Client): Create NexusAuthContext.tsx and useNexusAuth hook within client/src/nexus/contexts that uses Fintellect's existing useUser hook to provide user information.
+
+- Implement Auth Middleware (Server): Create nexusAuthMiddleware.ts in server/middleware that verifies Fintellect sessions/tokens and attaches req.user (or equivalent) for Nexus API routes.
+
+- Define DB Schemas (Drizzle): In drizzle/schema/nexus.ts, define the structures for nexus_conversations, nexus_messages, nexus_agent_state, and nexus_files tables, including relationships to the Fintellect users table. Generate and apply migrations.
+
+- Implement Data Access Layer (Server): Create server/db/nexus.ts (or similar) to provide functions for creating, reading, updating, and deleting records in the new Nexus tables (e.g., NexusDB.createConversation(...)).
+
+- Basic File Storage (Server): Configure multer in a new middleware for handling file uploads. Define a basic storage strategy (e.g., uploads/nexus/[userId]/[filename]). Create stubbed API endpoints for upload/download, protected by nexusAuthMiddleware.
+
+- Proxy API Stubs (Server): In server/api/nexus, create initial Express router files (e.g., conversations.ts, agent.ts). Define basic routes (e.g., POST /api/nexus/conversations) protected by nexusAuthMiddleware. These can initially return 200 OK or mock responses.
+
+- Docker Configuration Update: Modify docker-compose.yml to include a service definition for nexus-agent. This service might initially just be a placeholder or build a very basic image, preparing for the later integration of Suna's Python backend.
+
+# Logical Dependency Chain
+- Project Structure & Dependencies: Must be done first to have a place for the new code and its requirements.
+- Database Schema & DAL: Essential for any data persistence; auth integration will rely on user IDs from the main users table.
+- Authentication Middleware (Server): Needed to protect backend routes before they are built.
+- Authentication Context (Client): Allows frontend components (even if not fully functional yet) to be aware of the user's auth state via Fintellect's system.
+- Proxy API Stubs (Server): Connects the frontend and backend, even if just with placeholder logic.
+- File Storage (Server): Can be developed in parallel with API stubs once auth middleware is in place.
+- Docker Updates: Prepares for containerizing the Python backend components of Suna/Nexus later.
+
+# Risks and Mitigations
+- Risk: Difficulty in cleanly separating Suna/Nexus frontend components from Supabase authentication.
+  - Mitigation: Iterative removal of Supabase code, focusing on one component or area at a time. Extensive testing after each removal. Prioritize removing auth logic over UI elements initially if UI is too entangled.
+- Risk: Conflicts between Fintellect's existing dependencies and those required by Nexus.
+  - Mitigation: Carefully review versions. Use npm ls [package-name] to check for conflicts. Test thoroughly after adding new dependencies.
+- Risk: Issues with Drizzle ORM migrations or schema definitions for the new tables.
+  - Mitigation: Develop and test migrations in a local/development database first. Ensure foreign key constraints correctly reference Fintellect's users table.
+- Risk: Integrating Fintellect's session-based authentication with potentially stateless components copied from Nexus.
+  - Mitigation: Ensure the NexusAuthContext correctly propagates auth state. Server-side nexusAuthMiddleware will be the primary gatekeeper for API calls.
+
+# Appendix
+Source Documents:
+- "Nexus Integration Implementation Guide for Fintellect.md"
+- "Authentication and Database Integration Plan for Nexus in Fintellect.md"
+- "Nexus Finance: Personal Finance Agent Features & UI Customizations.md"
+
+Key files to be created/modified (examples):
+- client/src/nexus/contexts/NexusAuthContext.tsx
+- server/middleware/nexusAuthMiddleware.ts
+- drizzle/schema/nexus.ts
+- server/db/nexus.ts
+- server/api/nexus/index.ts (and sub-router files)
+- docker-compose.yml
+</PRD>

@@ -99,22 +99,14 @@ export default function AuthPage() {
         description: "Welcome back!",
       });
 
-      // Force a refetch of user data
-      await refetch();
-      
-      // Check user status
-      if (result.user?.hasCompletedOnboarding) {
-        setLocation("/dashboard");
-      } else {
-        window.location.href = '/onboarding';
-      }
+      // The redirection is now handled in the useUser hook
+      // No need to manually redirect here
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
         description: error.message,
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -133,18 +125,14 @@ export default function AuthPage() {
         description: "Account created successfully",
       });
 
-      // Force a refetch of user data
-      await refetch();
-      
-      // For new registrations, explicitly navigate to onboarding
-      window.location.href = '/onboarding';
+      // The redirection is now handled in the useUser hook
+      // No need to manually redirect here
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
         description: error.message,
       });
-    } finally {
       setIsLoading(false);
     }
   };

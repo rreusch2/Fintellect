@@ -42,38 +42,66 @@ export default function OnboardingPage() {
   const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   useEffect(() => {
+    console.log('User state in OnboardingPage:', user);
     if (!user) return;
     
     if (user.hasCompletedOnboarding && user.hasPlaidSetup) {
+      console.log('User has completed onboarding and Plaid setup, redirecting to dashboard');
       setLocation("/dashboard");
     } else if (user.consentVersion) {
+      console.log('User has accepted terms, showing Plaid setup step');
       setStep(2);
     } else {
+      console.log('User needs to accept terms first');
       setStep(1);
     }
   }, [user, setLocation]);
 
   const acceptTerms = useMutation({
     mutationFn: async () => {
+      console.log('Submitting consent with credentials');
+      console.log('Request headers:', {
+        'Content-Type': 'application/json',
+        'Cookie': document.cookie
+      });
+      
+      const payload = {
+        termsVersion: getLatestVersion('terms-service')?.version,
+        privacyVersion: getLatestVersion('privacy-policy')?.version,
+        consentDate: new Date().toISOString(),
+      };
+      
+      console.log('Consent payload:', payload);
+      
       const response = await fetch("/api/user/consent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          termsVersion: getLatestVersion('terms-service')?.version,
-          privacyVersion: getLatestVersion('privacy-policy')?.version,
-          consentDate: new Date().toISOString(),
-        }),
+        body: JSON.stringify(payload),
+      });
+
+      console.log('Consent response status:', response.status);
+      console.log('Consent response headers:', {
+        'set-cookie': response.headers.get('set-cookie'),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save consent");
+        const errorText = await response.text();
+        console.error('Consent submission failed:', response.status, errorText);
+        throw new Error(errorText || "Failed to save consent");
       }
 
-      return response.json();
+      console.log('Consent submission successful');
+      const data = await response.json();
+      console.log('Consent response data:', data);
+      return data;
     },
-    onSuccess: async () => {
-      await refetch();
+    onSuccess: async (data) => {
+      console.log('Consent saved successfully, refetching user data');
+      // Update the user data with the response from the server
+      const result = await refetch();
+      console.log('User data after consent:', result.data);
+      
       setStep(2);
       toast({
         title: "Terms Accepted",
@@ -81,10 +109,11 @@ export default function OnboardingPage() {
       });
     },
     onError: (error: Error) => {
+      console.error('Consent mutation error:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to save consent. Please try again.",
       });
     },
   });
@@ -103,27 +132,58 @@ export default function OnboardingPage() {
 
   const handlePlaidSuccess = async () => {
     try {
+      console.log('Completing onboarding after Plaid setup');
+      console.log('Request headers:', {
+        'Content-Type': 'application/json',
+        'Cookie': document.cookie
+      });
+      
       const response = await fetch("/api/user/complete-onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
       });
 
+      console.log('Complete onboarding response status:', response.status);
+      console.log('Complete onboarding response headers:', {
+        'set-cookie': response.headers.get('set-cookie'),
+      });
+
       if (!response.ok) {
-        throw new Error("Failed to complete onboarding");
+        const errorText = await response.text();
+        console.error('Complete onboarding failed:', response.status, errorText);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to complete onboarding. Please try again.",
+        });
+        throw new Error(errorText || "Failed to complete onboarding");
       }
 
+      const data = await response.json();
+      console.log('Onboarding completed successfully, user data:', data.user);
+      
+      // Refetch user data to ensure we have the latest state
+      console.log('Refetching user data after completing onboarding');
       await refetch();
+      
       toast({
         title: "Success",
         description: "Bank account connected successfully",
       });
-      window.location.href = "/dashboard";
+      
+      // Use setLocation instead of window.location for a smoother transition
+      // that preserves React state
+      console.log('Redirecting to dashboard after successful onboarding');
+      setLocation("/dashboard");
     } catch (error) {
+      console.error('Error during onboarding completion:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to complete bank account setup",
+        description: typeof error === 'object' && error !== null && 'message' in error
+          ? (error as Error).message
+          : "Failed to complete bank account setup",
       });
     }
   };
@@ -131,22 +191,47 @@ export default function OnboardingPage() {
   const handleDemoMode = async () => {
     setIsDemoLoading(true);
     try {
+      console.log('Enabling demo mode');
       const response = await fetch('/api/plaid/demo', {
         method: 'POST',
         credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to enable demo mode');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Demo mode activation failed:', response.status, errorData);
+        throw new Error(errorData.message || 'Failed to enable demo mode');
       }
 
+      console.log('Demo mode enabled successfully');
       setDemoMode(true);
-      window.location.href = '/dashboard';
+      
+      // Complete onboarding for demo mode
+      const onboardingResponse = await fetch("/api/user/complete-onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      if (!onboardingResponse.ok) {
+        console.warn('Demo mode enabled but onboarding completion failed');
+      } else {
+        console.log('Demo mode onboarding completed successfully');
+      }
+      
+      // Refetch user data to ensure we have the latest state
+      await refetch();
+      
+      // Use setLocation instead of window.location for a smoother transition
+      setLocation('/dashboard');
     } catch (error) {
+      console.error('Error enabling demo mode:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to enable demo mode"
+        description: typeof error === 'object' && error !== null && 'message' in error
+          ? (error as Error).message
+          : "Failed to enable demo mode"
       });
     } finally {
       setIsDemoLoading(false);

@@ -7,13 +7,7 @@
     "dev": "tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --define:process.env.NODE_ENV=\\\"production\\\"",
     "migrate": "tsx db/migrate.ts",
-    "setup-env": "node scripts/setup-env.js",
-    "codespaces:start": "echo '🚀 Starting Fintellect in Codespaces...' && npm run codespaces:backend & npm run codespaces:frontend",
-    "codespaces:backend": "cd server && npm run dev",
-    "codespaces:frontend": "cd client && npm run dev",
-    "codespaces:setup": "echo '⚙️ Setting up Codespaces environment...' && npm install && cd client && npm install && cd .. && echo '✅ Setup complete!'",
-    "docker:test": "docker run --rm python:3.11-slim python3 -c \"print('🐳 Docker is working in Codespaces!')\"",
-    "workspace:clean": "rm -rf /tmp/fintellect-workspace/* && echo '🧹 Workspace cleaned'"
+    "setup-env": "node scripts/setup-env.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
@@ -58,6 +52,7 @@
     "cmdk": "^1.0.0",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
+    "daytona-sdk": "^1.0.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.38.2",
     "drizzle-zod": "^0.6.0",

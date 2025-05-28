@@ -15,6 +15,11 @@ import type { AuthenticatedRequest } from "../auth.js";
 import { setupDemoMode, isDemoMode } from "../services/demo.js";
 import type { JWTPayload } from "../middleware/jwtAuth.js";
 
+// Request with JWT authentication
+interface JWTRequest extends Request {
+  jwtPayload: JWTPayload;
+}
+
 // Extend Request type to include both JWT and session auth
 declare module 'express' {
   interface Request {
@@ -522,9 +527,19 @@ router.post("/fix-categories", async (req, res) => {
   }
 });
 
-router.post("/exchange-public-token", async (req: JWTRequest, res: Response) => {
+router.post("/exchange-public-token", async (req: Request, res: Response) => {
+  // Check for JWT auth first
   if (!req.jwtPayload?.userId) {
-    console.log("[Plaid] Exchange attempt without authentication");
+    // Fall back to session auth
+    if (!req.user?.id) {
+      console.log("[Plaid] Exchange attempt without authentication");
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+  }
+  
+  // Use either JWT or session userId
+  const userId = req.jwtPayload?.userId || req.user?.id;
+  if (!userId) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
@@ -565,7 +580,7 @@ router.post("/exchange-public-token", async (req: JWTRequest, res: Response) => 
     const [plaidItem] = await db
       .insert(plaidItems)
       .values({
-        userId: req.jwtPayload.userId,
+        userId,
         plaidItemId: itemId,
         plaidAccessToken: accessToken,
         plaidInstitutionId: institutionId,
@@ -577,7 +592,7 @@ router.post("/exchange-public-token", async (req: JWTRequest, res: Response) => 
     await db
       .update(users)
       .set({ hasPlaidSetup: true })
-      .where(eq(users.id, req.jwtPayload.userId));
+      .where(eq(users.id, userId));
 
     console.log("[Plaid] Successfully exchanged public token and updated user status");
 

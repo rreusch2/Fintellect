@@ -2,6 +2,7 @@ import { Router } from "express";
 import plaidRoutes from "./plaid.js";
 import investmentRoutes from "./investment.js";
 import aiRoutes from "./ai.js";
+import nexusRoutes from "./nexus.js";
 import { authenticateUser } from "../auth/middleware.js";
 import { jwtAuth } from "../middleware/jwtAuth.js";
 
@@ -30,6 +31,9 @@ export function registerRoutes(app: any) {
 
   // Mount the Investment routes under /api/investment
   router.use("/investment", authenticateUser, investmentRoutes);
+
+  // Add the new Nexus routes
+  router.use("/nexus", nexusRoutes);
 
   // Mount all routes under /api
   app.use("/api", router);

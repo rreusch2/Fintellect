@@ -93,8 +93,14 @@ export default function PlaidLink({
           throw new Error("Failed to create link token");
         }
 
-        const { link_token } = await response.json();
-        setLinkToken(link_token);
+        const data = await response.json();
+        // Handle both formats: {link_token} or {linkToken}
+        const token = data.link_token || data.linkToken;
+        if (!token) {
+          console.error("Missing link token in response:", data);
+          throw new Error("Invalid link token format");
+        }
+        setLinkToken(token);
       } catch (error) {
         console.error("Error creating link token:", error);
         toast({

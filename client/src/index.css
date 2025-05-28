@@ -31,6 +31,16 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+
+    /* Sidebar colors for Nexus-style UI */
+    --sidebar: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 224.3 76.3% 48%;
  
     --radius: 0.5rem;
   }
@@ -38,11 +48,12 @@
 
 @layer base {
   * {
-    @apply border-border;
+    /* @apply border-border; */
   }
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
   
   a {
@@ -77,5 +88,51 @@
 
   .card-hover {
     @apply hover:border-blue-500 transition-colors;
+  }
+
+  /* Nexus-style chat enhancements */
+  .chat-message {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .chat-message:hover {
+    @apply scale-[1.02];
+  }
+
+  .nexus-gradient {
+    @apply bg-gradient-to-r from-blue-500 to-purple-600;
+  }
+
+  .nexus-gradient-hover {
+    @apply hover:from-blue-600 hover:to-purple-700;
+  }
+
+  /* Smooth scrolling for chat */
+  .chat-scroll {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar for sidebar */
+  .nexus-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .nexus-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .nexus-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 2px;
+  }
+
+  .nexus-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Backdrop blur effects */
+  .nexus-backdrop {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 }

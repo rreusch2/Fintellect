@@ -1,13 +1,10 @@
-import { config } from '../config';
+// Use relative URLs for all environments to work with the Vite proxy
+const API_BASE = '';
 
-const API_BASE = process.env.NODE_ENV === 'production' 
-  ? '' // Use relative URLs in production
-  : config.apiUrl; // Use absolute URLs in development
-
-export async function apiCall(endpoint: string, options = {}) {
+export async function apiCall(endpoint: string, options: RequestInit = {}) {
   const url = `${API_BASE}${endpoint}`;
-  const defaultOptions = {
-    credentials: 'include',
+  const defaultOptions: RequestInit = {
+    credentials: 'include' as RequestCredentials,
     headers: {
       'Content-Type': 'application/json'
     }

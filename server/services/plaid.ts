@@ -3,13 +3,14 @@ import { db } from '@db';
 import { plaidItems, plaidAccounts, plaidTransactions } from '@db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { suggestCategory } from './categories';
+import { plaidConfig } from '../config/plaid';
 
 if (!process.env.PLAID_CLIENT_ID || !process.env.PLAID_SECRET) {
   throw new Error('Missing required Plaid API credentials');
 }
 
 const configuration = new Configuration({
-  basePath: PlaidEnvironments.sandbox,
+  basePath: plaidConfig.env === 'production' ? PlaidEnvironments.production : PlaidEnvironments.sandbox,
   baseOptions: {
     headers: {
       'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,

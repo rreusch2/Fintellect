@@ -3,6 +3,7 @@ import { ChatbotAgent } from "../services/ai/agents/ChatbotAgent.js";
 import { DashboardInsightsAgent } from "../services/ai/agents/DashboardInsightsAgent.js";
 import { knowledgeStore } from "../services/ai/store/KnowledgeStore.js";
 import { anthropic, MODEL_NAMES } from "../services/ai/config/anthropic.js";
+import { mcpAgentManager } from "../services/ai/mcp/agent_manager.js";
 import type { Request } from "express";
 import type { JWTPayload } from "../middleware/jwtAuth.js";
 
@@ -86,6 +87,23 @@ router.post("/chat", async (req: AuthenticatedRequest, res) => {
     res.status(500).json({ 
       error: "Failed to process chat message",
       details: process.env.NODE_ENV === "development" ? error : undefined
+    });
+  }
+});
+
+// MCP Agent routes
+router.post("/mcp/thrive", async (req: AuthenticatedRequest, res) => {
+  try {
+    // Initialize MCP Agent Manager if not already initialized
+    await mcpAgentManager.initialize();
+    
+    // Call the Thrive agent handler
+    return mcpAgentManager.handleThriveRequest()(req, res);
+  } catch (error) {
+    console.error("Error in Thrive agent:", error);
+    res.status(500).json({ 
+      error: "Failed to process expense optimization request",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
     });
   }
 });

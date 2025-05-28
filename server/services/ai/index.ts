@@ -6,7 +6,7 @@ import { plaidTransactions } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 import { normalizeCategory } from "./store/CategoryMap";
 
-// Initialize Gemini
+// Initialize Gemini 2.0 Flash
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY || '');
 
 export async function generateSavingsTips(userId: number) {
@@ -43,8 +43,16 @@ export async function generateSavingsTips(userId: number) {
         .map(([category, amount]) => `${category}: $${(amount/100).toFixed(2)}`)
         .join('\n'));
 
-    // Generate response using Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Generate response using Gemini 2.0 Flash
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.0-flash",
+      generationConfig: {
+        maxOutputTokens: 2048,
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40,
+      }
+    });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();

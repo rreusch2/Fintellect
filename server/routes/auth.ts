@@ -121,6 +121,7 @@ export function registerAuthRoutes(router: Router) {
   router.post('/register', async (req, res, next) => {
     try {
       const { username, password } = req.body;
+      console.log('Registration attempt for:', username);
 
       // Check if user already exists
       const [existingUser] = await db
@@ -130,6 +131,7 @@ export function registerAuthRoutes(router: Router) {
         .limit(1);
 
       if (existingUser) {
+        console.log('Registration failed: Username already exists');
         return res.status(400).json({ message: "Username already exists" });
       }
 
@@ -147,37 +149,58 @@ export function registerAuthRoutes(router: Router) {
         })
         .returning();
 
+      console.log('New user created:', newUser.id);
+
       // Log the user in after registration
       req.login(newUser, (err) => {
         if (err) {
+          console.error('Login after registration failed:', err);
           return next(err);
         }
-        return res.json({
-          message: "Registration successful",
-          user: { 
-            id: newUser.id, 
-            username: newUser.username,
-            hasCompletedOnboarding: newUser.hasCompletedOnboarding,
-            hasPlaidSetup: newUser.hasPlaidSetup
-          },
+        
+        // Force session save to ensure it's stored before responding
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('Session save error after registration:', saveErr);
+            return next(saveErr);
+          }
+          
+          console.log('User logged in after registration, session saved. Session ID:', req.sessionID);
+          console.log('Is authenticated after registration:', req.isAuthenticated());
+          
+          return res.json({
+            success: true,
+            user: { 
+              id: newUser.id, 
+              username: newUser.username,
+              hasCompletedOnboarding: newUser.hasCompletedOnboarding,
+              hasPlaidSetup: newUser.hasPlaidSetup
+            },
+          });
         });
       });
     } catch (error) {
+      console.error('Registration error:', error);
       next(error);
     }
   });
 
   router.post('/login', (req, res, next) => {
     const { username, password, rememberMe } = req.body;
+    console.log('Login attempt for:', username);
 
     passport.authenticate('local', async (err: any, user: Express.User, info: IVerifyOptions) => {
       if (err) {
+        console.error('Authentication error:', err);
         return next(err);
       }
 
       if (!user) {
-        return res.status(400).json({ message: info.message ?? "Login failed" });
+        console.log('Login failed:', info?.message || 'Unknown reason');
+        return res.status(400).json({ message: info?.message ?? "Login failed" });
       }
+
+      console.log('User authenticated successfully:', user.id);
 
       try {
         // Update last login time and handle remember me
@@ -195,7 +218,7 @@ export function registerAuthRoutes(router: Router) {
           updates.rememberToken = null;
           if (req.session.cookie) {
             req.session.cookie.expires = undefined;
-            req.session.cookie.maxAge = undefined;
+            req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // Default to 24 hours
           }
         }
 
@@ -204,33 +227,59 @@ export function registerAuthRoutes(router: Router) {
           .set(updates)
           .where(eq(users.id, user.id));
 
-        req.logIn(user, (err) => {
-          if (err) {
-            return next(err);
+        req.logIn(user, (loginErr) => {
+          if (loginErr) {
+            console.error('Login error after authentication:', loginErr);
+            return next(loginErr);
           }
-
-          return res.json({
-            message: "Login successful",
-            user: { 
-              id: user.id, 
-              username: user.username,
-              hasCompletedOnboarding: user.hasCompletedOnboarding,
-              hasPlaidSetup: user.hasPlaidSetup
-            },
+          
+          // Force session save to ensure it's stored before responding
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              console.error('Session save error after login:', saveErr);
+              return next(saveErr);
+            }
+            
+            console.log('User logged in, session saved. Session ID:', req.sessionID);
+            console.log('Is authenticated after login:', req.isAuthenticated());
+            
+            return res.json({
+              message: "Login successful",
+              user: { 
+                id: user.id, 
+                username: user.username,
+                hasCompletedOnboarding: user.hasCompletedOnboarding,
+                hasPlaidSetup: user.hasPlaidSetup
+              },
+            });
           });
         });
       } catch (error) {
+        console.error('Error during login process:', error);
         next(error);
       }
     })(req, res, next);
   });
 
   router.post('/logout', (req, res) => {
+    console.log('Logout requested for user:', req.user?.id);
+    
     req.logout((err) => {
       if (err) {
+        console.error('Logout error:', err);
         return res.status(500).json({ message: "Logout failed" });
       }
-      res.json({ message: "Logout successful" });
+      
+      // Destroy the session completely
+      req.session.destroy((destroyErr) => {
+        if (destroyErr) {
+          console.error('Session destruction error:', destroyErr);
+          return res.status(500).json({ message: "Logout partially failed" });
+        }
+        
+        console.log('User logged out and session destroyed successfully');
+        res.json({ message: "Logout successful" });
+      });
     });
   });
 

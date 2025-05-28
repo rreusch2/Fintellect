@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useUser } from "@/hooks/use-user";
-import { Button } from "@/components/ui/button";
+import { useUser } from "../hooks/use-user";
+import { Button } from "../components/ui/button";
 import { useLocation, Link } from "wouter";
-import { Navigation } from "@/components/layout/Navigation";
+import { Navigation } from "../components/layout/Navigation";
 import { 
   Bot, 
   Brain, 
@@ -14,18 +14,33 @@ import {
   Shield,
   Clock,
   Zap,
-  Lock
+  Lock,
+  Radar
 } from "lucide-react";
-import { AIDisclaimer } from "@/components/legal/AIDisclaimer";
+import { AIDisclaimer } from "../components/legal/AIDisclaimer";
 import { motion } from "framer-motion";
-import { BetaFeedback } from "@/components/feedback/BetaFeedback";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
-import { Footer } from "@/components/layout/Footer";
-import { FeatureRequestModal } from "@/components/ai/FeatureRequestModal";
-import { usePageTitle } from "@/hooks/use-page-title";
+import { BetaFeedback } from "../components/feedback/BetaFeedback";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
+import { useToast } from "../hooks/use-toast";
+import { Footer } from "../components/layout/Footer";
+import { FeatureRequestModal } from "../components/ai/FeatureRequestModal";
+import { usePageTitle } from "../hooks/use-page-title";
 
 const aiServices = [
+  {
+    title: "Nexus Analyst",
+    description: "Your financial markets research specialist. Get in-depth stock analysis, sentiment tracking, financial statement breakdowns, and investment recommendations.",
+    icon: Radar,
+    features: [
+      "Stock and investment research",
+      "Sentiment analysis",
+      "Financial statement analysis",
+      "Market trend identification"
+    ],
+    route: "/nexus/analyst",
+    color: "bg-indigo-500/10 text-indigo-400",
+    status: "active"
+  },
   {
     title: "AI Financial Assistant",
     description: "Your personal AI-powered financial advisor available 24/7. Get real-time insights, spending analysis, and personalized recommendations through natural conversation.",
@@ -51,6 +66,20 @@ const aiServices = [
       "Intelligent goal planning"
     ],
     route: "/ai/investment",
+    color: "bg-purple-500/10 text-purple-400",
+    status: "active"
+  },
+  {
+    title: "Thrive - Expense Optimizer",
+    description: "Your resourceful ally for finding savings and optimization opportunities in your spending. Get actionable recommendations to reduce costs and improve your financial efficiency.",
+    icon: CircleDollarSign,
+    features: [
+      "Subscription optimization",
+      "Bill negotiation assistance",
+      "Spending pattern analysis",
+      "Merchant comparison"
+    ],
+    route: "/ai/expense-optimizer",
     color: "bg-purple-500/10 text-purple-400",
     status: "active"
   }

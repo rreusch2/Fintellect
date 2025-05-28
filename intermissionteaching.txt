@@ -1,0 +1,113 @@
+Alright Claude Code agent, get ready for a deep dive into the Model Context Protocol (MCP). As you assist in the development of Fintellect, understanding MCP will be crucial for building powerful and context-aware AI financial features and agents. Think of MCP as a standardized way for you, as an AI agent, to connect with the vast amounts of data and tools necessary to provide insightful financial assistance.
+Here's what you need to know:
+1. What is MCP and Why Does it Matter?
+•
+MCP is an open protocol that standardizes how applications provide context to Large Language Models (LLMs) like the one powering you. Think of it as a "USB-C port for AI applications". Just like USB-C allows various devices to connect using a common interface, MCP provides a unified way for AI models to access different data sources and tools.
+•
+The core problem MCP solves is the isolation of LLMs from relevant data. Without a standard way to connect, every new data source or tool requires a custom integration, which is inefficient and doesn't scale.
+•
+MCP acts as a bridge between LLMs and external systems. This allows you to go beyond your training data and access real-time information, specific user data (like linked bank accounts via Plaid), and perform actions through tools. This is essential for building truly helpful AI agents for Fintellect.
+•
+By using MCP, you can help Fintellect users with tasks that require up-to-date information (e.g., current investment performance), access to their financial data (e.g., analyzing spending habits), and the ability to take actions (if Fintellect integrates tools for financial transactions in the future).
+•
+MCP is gaining significant traction in the AI community as the need for better AI interaction with external resources becomes apparent. Early adopters and development tool companies are already integrating it.
+2. Core Architecture: Clients, Servers, and Hosts
+•
+MCP follows a client-server architecture.
+◦
+MCP Servers are lightweight programs that expose specific capabilities (data, tools, prompts) through the standardized MCP protocol. For Fintellect, you might interact with MCP servers that connect to financial databases, APIs (potentially even Plaid APIs indirectly through a server), or other relevant services.
+◦
+MCP Clients are protocol clients within host applications that maintain a 1:1 connection with servers. In your case, as a Claude Code agent, you reside within an MCP host (like Cursor or Claude Desktop) that acts as an MCP client.
+◦
+MCP Hosts are applications like Claude Desktop, IDEs (such as Cursor where Claude Code operates), or other AI tools that want to access data and tools through MCP. Fintellect itself could potentially become an MCP client in the future to connect to various financial MCP servers.
+3. Key MCP Concepts You Should Know
+•
+Resources: These are file-like data that MCP servers can expose to clients. Think of them as providing you with read-only access to specific data, like a user's transaction history or a company's financial report. The client application decides how and when to use these resources. Currently, in Claude Desktop, users might need to explicitly select resources.
+•
+Tools: These are executable functions that MCP servers expose to clients. They allow you, through the host client, to interact with external systems, perform calculations, or take actions (with user approval). For Fintellect, tools could be developed for tasks like fetching real-time stock prices, running financial analysis algorithms, or (in the future) initiating transactions. Tools are model-controlled, meaning they are intended for the AI to invoke.
+•
+Prompts: MCP allows servers to offer pre-written templates that help users accomplish specific tasks. These prompts can include placeholders for arguments. When a client requests a prompt, the server provides the message template. For Fintellect, a server could provide prompts for "Summarize recent spending," "Compare budget to actual for [month]," or "Find investment opportunities based on [risk profile]".
+•
+Sampling: This is a feature that allows MCP servers to request LLM completions through the client. This enables more sophisticated agentic behaviors while maintaining security and privacy. However, this feature is not yet supported in Claude Desktop.
+4. How MCP Enhances AI Agents like You
+•
+MCP allows you to access a growing list of pre-built integrations provided by the community and Anthropic, which you can directly utilize. This means less time spent on custom coding for common integrations.
+•
+It provides the flexibility to potentially switch between LLM providers and vendors in the future, as MCP is an open standard.
+•
+MCP includes considerations for securing data within the user's infrastructure. This is paramount for a financial platform like Fintellect.
+•
+By providing access to relevant context through resources and the ability to perform actions through tools, MCP enables you to be a more capable and effective AI agent for Fintellect users. You can provide more accurate, personalized, and actionable financial advice and assistance.
+•
+MCP facilitates the creation of more complex workflows by allowing you to chain together multiple tool calls to accomplish a user's goal.
+5. Building and Using MCP Servers with Claude Code
+•
+Claude Code is specifically designed to speed up MCP development. You can leverage your coding capabilities to help build custom MCP servers and clients.
+•
+When building MCP servers, you should clearly define:
+◦
+What resources the server will expose.
+◦
+What tools it will provide.
+◦
+Any prompts it should offer.
+◦
+What external systems it needs to interact with (like databases or APIs relevant to Fintellect).
+•
+A good development workflow involves starting with core functionality and iterating to add more features. You can ask for explanations of code you don't understand, request modifications, and even have Claude Code help with testing and handling edge cases.
+•
+Claude Code can assist in implementing key MCP features such as resource management, tool definitions, prompt templates, error handling, logging, and connection/transport setup.
+•
+Best practices for building MCP servers include breaking down complex servers, testing components thoroughly, keeping security in mind (validating inputs, limiting access), documenting code well, and following MCP specifications carefully.
+•
+After Claude Code helps build a server, remember to review the code, test it with the MCP Inspector tool (if available in your environment), and iterate based on feedback.
+•
+Claude Code can also help you modify and improve your server as Fintellect's requirements evolve.
+6. Integrating with Claude Desktop (and Potential Future Clients)
+•
+For users of Claude Desktop, MCP allows them to install pre-built servers created by Anthropic and the community, such as a Filesystem MCP Server.
+•
+To use MCP servers with Claude Desktop, you need to configure the claude_desktop_config.json file by adding the server details (command to run, arguments, etc.).
+•
+Claude Desktop displays a hammer icon when MCP servers are configured, allowing users to access the available tools.
+•
+Remember that servers are currently locally run, so MCP primarily supports desktop hosts, although remote hosts are in active development.
+•
+While Claude Desktop is a key client, the MCP ecosystem aims to support various clients, including IDEs like Cursor where you operate. In the future, Fintellect itself could potentially integrate an MCP client.
+7. Understanding the MCP Workflow
+•
+When a user asks a question in an MCP host (like Claude Desktop or potentially Fintellect in the future), the host needs to retrieve available tools from the connected MCP servers.
+•
+The host then sends the user's question along with the available tools to the LLM.
+•
+Based on the question and the tool descriptions, the LLM decides which tool(s) to use.
+•
+The MCP client within the host then calls the appropriate MCP server(s) to execute the selected tool(s).
+•
+The MCP server performs the necessary action (e.g., querying a database, calling an API) and returns the result to the client.
+•
+The client can then send this tool result back to the LLM to generate a final answer for the user.
+8. The Growing MCP Ecosystem
+•
+Anthropic is providing pre-built MCP servers for popular systems like Google Drive, Slack, GitHub, and databases.
+•
+There's a growing movement to create marketplaces and server-hosting solutions to make MCP server discovery and usability easier. This could be significant for Fintellect in the future, allowing easy integration with various financial services via standardized MCP servers.
+•
+You can also find open-source repositories of MCP servers to explore and contribute to.
+9. MCP vs. Function Calling
+•
+While function calling (like that in OpenAI's API) also allows LLMs to interact with external tools, MCP aims to be a more standardized and generalizable protocol across different integrations and potentially different LLM providers. MCP can be seen as an evolution of the concepts behind function calling, providing a more robust and structured framework.
+10. Claude Code Specific Tips for Working with MCP
+•
+Utilize context priming by providing Claude Code with essential files and information about your codebase at the start of a session to help it understand the project context quickly.
+•
+Remember that context is king. When working with MCP, ensure Claude Code has the necessary context about available MCP servers and their tools to effectively assist you.
+•
+Pay attention to Claude Code's release notes (/release) to stay updated on new features and improvements related to MCP integration.
+•
+You can use slash commands (/mcp) in Claude Code to interact with configured MCP servers and potentially trigger predefined prompts.
+•
+Claude Code allows you to add MCP servers quickly using JSON format. This can streamline the setup process.
+•
+Explore the Claud mcp add wizard as another way to step-by-step add new MCP servers.
+By understanding these concepts, Claude Code agent, you will be well-equipped to assist in building and enhancing Fintellect using the power of the Model Context Protocol. Embrace this new standard, explore the available resources and tools, and help create a more connected and intelligent financial platform for users. Remember to always prioritize security and follow best practices as you integrate MCP into Fintellect.

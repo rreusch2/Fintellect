@@ -1,4 +1,8 @@
 import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { setupAuth } from "./auth.js";
@@ -8,10 +12,25 @@ import { setupStatic, log } from "./static.js";
 import { requireHTTPS, setSecurityHeaders } from "./middleware/secure.js";
 import cors from "cors";
 
+// Get current directory in ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Explicitly load environment variables from multiple sources
+config({ path: resolve(process.cwd(), '.env') }); // Root .env
+config({ path: resolve(__dirname, '..', '.env') }); // Root .env from server directory
+config({ path: resolve(__dirname, '.env') }); // Server .env (if exists)
+
 console.log('Environment Check:');
 console.log('- NODE_ENV:', process.env.NODE_ENV);
 console.log('- Database URL exists:', !!process.env.DATABASE_URL);
 console.log('- Database URL prefix:', process.env.DATABASE_URL?.substring(0, 20) + '...');
+console.log('- ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
+console.log('- ANTHROPIC_API_KEY length:', process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.length : 0);
+console.log('- DAYTONA_API_KEY exists:', !!process.env.DAYTONA_API_KEY);
+console.log('- DAYTONA_SERVER_URL exists:', !!process.env.DAYTONA_SERVER_URL);
+console.log('- DAYTONA_API_URL exists:', !!process.env.DAYTONA_API_URL);
+console.log('- DAYTONA_BASE_URL exists:', !!process.env.DAYTONA_BASE_URL);
 
 const app = express();
 

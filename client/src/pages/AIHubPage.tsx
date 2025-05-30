@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useUser } from "../hooks/use-user";
-import { Button } from "../components/ui/button";
+import { useUser } from "../hooks/use-user.js";
+import { Button } from "../components/ui/button.jsx";
 import { useLocation, Link } from "wouter";
-import { Navigation } from "../components/layout/Navigation";
+import { Navigation } from "../components/layout/Navigation.jsx";
 import { 
   Bot, 
   Brain, 
@@ -17,14 +17,14 @@ import {
   Lock,
   Radar
 } from "lucide-react";
-import { AIDisclaimer } from "../components/legal/AIDisclaimer";
+import { AIDisclaimer } from "../components/legal/AIDisclaimer.jsx";
 import { motion } from "framer-motion";
-import { BetaFeedback } from "../components/feedback/BetaFeedback";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
-import { useToast } from "../hooks/use-toast";
-import { Footer } from "../components/layout/Footer";
-import { FeatureRequestModal } from "../components/ai/FeatureRequestModal";
-import { usePageTitle } from "../hooks/use-page-title";
+import { BetaFeedback } from "../components/feedback/BetaFeedback.jsx";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip.jsx";
+import { useToast } from "../hooks/use-toast.js";
+import { Footer } from "../components/layout/Footer.jsx";
+import { FeatureRequestModal } from "../components/ai/FeatureRequestModal.jsx";
+import { usePageTitle } from "../hooks/use-page-title.js";
 
 const aiServices = [
   {

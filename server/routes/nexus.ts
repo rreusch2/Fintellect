@@ -181,6 +181,58 @@ router.post('/conversations/:id/messages', authenticateUser, async (req, res) =>
   }
 });
 
+// Delete a conversation
+router.delete('/conversations/:id', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const conversationId = req.params.id;
+
+    console.log(`Deleting conversation ${conversationId} for user ${userId}`);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Verify conversation belongs to user
+    const conversation = await db.query.conversations.findFirst({
+      where: and(
+        eq(conversations.id, conversationId),
+        eq(conversations.userId, userId)
+      )
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    // Clean up any active agents
+    const agent = activeAgents.get(conversationId);
+    if (agent) {
+      agent.removeAllListeners();
+      activeAgents.delete(conversationId);
+    }
+
+    // Delete all messages first (foreign key constraint)
+    await db.delete(conversationMessages).where(
+      eq(conversationMessages.conversationId, conversationId)
+    );
+
+    // Delete the conversation
+    await db.delete(conversations).where(
+      and(
+        eq(conversations.id, conversationId),
+        eq(conversations.userId, userId)
+      )
+    );
+
+    console.log(`Successfully deleted conversation ${conversationId}`);
+    res.json({ success: true, message: 'Conversation deleted' });
+  } catch (error) {
+    console.error('Error deleting conversation:', error);
+    res.status(500).json({ error: 'Failed to delete conversation' });
+  }
+});
+
 // Stream conversation updates (Server-Sent Events)
 router.get('/conversations/:id/stream', authenticateUser, async (req, res) => {
   const userId = req.user?.id;
@@ -208,11 +260,13 @@ router.get('/conversations/:id/stream', authenticateUser, async (req, res) => {
   }
 
   // Set up SSE headers
+  const origin = req.headers.origin || 'http://localhost:5175';
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Headers': 'Cache-Control'
   });
 
@@ -228,14 +282,17 @@ router.get('/conversations/:id/stream', authenticateUser, async (req, res) => {
 
   // Set up event listeners for real-time streaming
   const onStreamChunk = (chunk: string) => {
+    console.log(`[SSE] Forwarding streamChunk:`, chunk.substring(0, 50) + '...');
     res.write(`data: ${JSON.stringify({ type: 'streamChunk', content: chunk })}\n\n`);
   };
 
   const onToolResult = (result: any) => {
+    console.log(`[SSE] Forwarding toolResult:`, result);
     res.write(`data: ${JSON.stringify({ type: 'toolResult', result })}\n\n`);
   };
 
   const onMessage = async (message: any) => {
+    console.log(`[SSE] Forwarding message:`, message);
     // Save assistant message to database
     if (message.role === 'assistant') {
       try {
@@ -255,10 +312,12 @@ router.get('/conversations/:id/stream', authenticateUser, async (req, res) => {
   };
 
   const onStatusChange = (status: string) => {
+    console.log(`[SSE] Forwarding statusChange:`, status);
     res.write(`data: ${JSON.stringify({ type: 'statusChange', status })}\n\n`);
   };
 
   const onError = (error: any) => {
+    console.log(`[SSE] Forwarding error:`, error);
     res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
   };
 
@@ -314,6 +373,90 @@ router.post('/test-docker-tool', async (req, res) => {
     });
   } catch (error) {
     console.error('[TEST] Error testing LocalDockerTool:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Test endpoint for FinancialAgent
+router.post('/test-financial-agent', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { message = 'Analyze current market conditions' } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { FinancialAgent } = await import('../nexus/services/FinancialAgent');
+    const testConversationId = `test-${Date.now()}`;
+    const agent = new FinancialAgent(testConversationId, userId.toString());
+    
+    console.log('[TEST] Creating FinancialAgent test...');
+    
+    // Collect all events from the agent
+    const events: any[] = [];
+    const eventPromise = new Promise((resolve) => {
+      let messageCount = 0;
+      const maxMessages = 5; // Prevent infinite waiting
+      
+      agent.on('streamChunk', (chunk) => {
+        events.push({ type: 'streamChunk', data: chunk, timestamp: new Date().toISOString() });
+      });
+      
+      agent.on('toolResult', (result) => {
+        events.push({ type: 'toolResult', data: result, timestamp: new Date().toISOString() });
+      });
+      
+      agent.on('message', (message) => {
+        messageCount++;
+        events.push({ type: 'message', data: message, timestamp: new Date().toISOString() });
+        
+        // Resolve after we get a few messages or detect completion
+        if (messageCount >= maxMessages || 
+            (message.content && message.content.includes('Analysis completed'))) {
+          setTimeout(() => resolve(events), 1000); // Give a moment for any final events
+        }
+      });
+      
+      agent.on('statusChange', (status) => {
+        events.push({ type: 'statusChange', data: status, timestamp: new Date().toISOString() });
+        if (status === 'ready') {
+          setTimeout(() => resolve(events), 500); // Give a moment for any final events
+        }
+      });
+      
+      agent.on('error', (error) => {
+        events.push({ type: 'error', data: error, timestamp: new Date().toISOString() });
+        resolve(events);
+      });
+      
+      // Timeout after 30 seconds
+      setTimeout(() => {
+        resolve(events);
+      }, 30000);
+    });
+    
+    // Start processing the message
+    agent.processUserMessage(message);
+    
+    // Wait for completion
+    await eventPromise;
+    
+    console.log('[TEST] FinancialAgent test completed with', events.length, 'events');
+    
+    res.json({
+      success: true,
+      message: 'FinancialAgent test completed',
+      events,
+      eventCount: events.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[TEST] Error testing FinancialAgent:', error);
     res.status(500).json({
       success: false,
       error: error.message,

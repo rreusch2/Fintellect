@@ -108,4 +108,45 @@ router.post("/mcp/thrive", async (req: AuthenticatedRequest, res) => {
   }
 });
 
+// Get conversation messages
+router.get('/conversations/:conversationId/messages', async (req: Request, res: Response) => {
+  try {
+    const { conversationId } = req.params;
+    const conversation = conversations.get(conversationId);
+    
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    res.json({ messages: conversation.messages });
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// Get workspace files for a conversation
+router.get('/conversations/:conversationId/workspace/files', async (req: Request, res: Response) => {
+  try {
+    const { conversationId } = req.params;
+    
+    // This would integrate with your sandbox/file system
+    // For now, return mock data that would come from the sandbox
+    const mockFiles = [
+      {
+        name: 'market_analysis.py',
+        path: '/workspace/market_analysis.py',
+        size: 1110,
+        modified: new Date().toISOString(),
+        content: '# Market Analysis Script\nimport yfinance as yf\nimport pandas as pd\n\n# Fetch market data\nprint("Analyzing market conditions...")\n'
+      }
+    ];
+    
+    res.json({ files: mockFiles });
+  } catch (error) {
+    console.error('Error fetching workspace files:', error);
+    res.status(500).json({ error: 'Failed to fetch workspace files' });
+  }
+});
+
 export default router; 

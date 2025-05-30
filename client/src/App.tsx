@@ -19,6 +19,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/toaster";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import AnalystPage from "./pages/nexus/AnalystPage";
+import TestDaytona from "./pages/nexus/TestDaytona";
 
 // Create a separate redirect component to handle navigation
 function AIHubRedirect() {
@@ -91,6 +92,7 @@ function App() {
       <Route path="/terms" component={TermsPage} />
       <Route path="/profile" component={ProfileSettingsPage} />
       <Route path="/nexus/analyst/:conversationId?" component={AnalystPage} />
+      <Route path="/nexus/test-daytona" component={TestDaytona} />
       <Route path="/">
         {user?.hasCompletedOnboarding ? (
           <DashboardPage />

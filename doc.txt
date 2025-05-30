@@ -26,6 +26,8 @@ Key Premium Features:
    - Investment opportunity notifications
    - Market impact analysis
 
+   dtn_5987bd121f9fe5ebbe9ea7ec5f29c163a3b811c8352356bff335285e3e7e448b
+
 4. Advanced Goals AI Coach
    - Milestone planning with AI guidance
    - Dynamic goal adjustments

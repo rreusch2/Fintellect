@@ -255,19 +255,26 @@ router.post('/conversations/:id/messages', authenticateUser, async (req, res) =>
   try {
     const userId = req.user?.id;
     const conversationId = req.params.id;
-    const { content } = req.body;
+    const { content, role, metadata } = req.body;
 
-    console.log(`Processing message for conversation ${conversationId}, user ${userId}:`, content);
+    console.log(`🔥 [NEXUS] Processing message for conversation ${conversationId}, user ${userId}:`);
+    console.log(`🔥 [NEXUS] Role: ${role || 'user'}`);
+    console.log(`🔥 [NEXUS] Content length: ${content?.length || 0}`);
+    console.log(`🔥 [NEXUS] Content preview: ${content?.substring(0, 200) + '...' || 'NO CONTENT'}`);
+    console.log(`🔥 [NEXUS] Metadata:`, metadata);
 
     if (!userId) {
+      console.error('🔥 [NEXUS] ❌ User not authenticated');
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
     if (!content) {
+      console.error('🔥 [NEXUS] ❌ Message content is required');
       return res.status(400).json({ error: 'Message content is required' });
     }
 
     // Verify conversation belongs to user
+    console.log(`🔥 [NEXUS] 🔍 Verifying conversation ownership...`);
     const conversation = await db.query.conversations.findFirst({
       where: and(
         eq(conversations.id, conversationId),
@@ -276,41 +283,73 @@ router.post('/conversations/:id/messages', authenticateUser, async (req, res) =>
     });
 
     if (!conversation) {
+      console.error(`🔥 [NEXUS] ❌ Conversation ${conversationId} not found for user ${userId}`);
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    // Add user message to database
-    await db.insert(conversationMessages).values({
-      id: randomUUID(),
+    console.log(`🔥 [NEXUS] ✅ Conversation verified`);
+
+    const messageRole = role || 'user';
+    const messageId = metadata?.messageId || randomUUID();
+
+    console.log(`🔥 [NEXUS] 💾 Saving message to database...`);
+    console.log(`🔥 [NEXUS] Message ID: ${messageId}`);
+    console.log(`🔥 [NEXUS] Message role: ${messageRole}`);
+
+    // Save message to database
+    const savedMessage = await db.insert(conversationMessages).values({
+      id: messageId,
       conversationId,
-      role: 'user',
+      role: messageRole,
       content,
       createdAt: new Date()
-    });
+    }).returning();
 
-    // Use local FinancialAgent with real file creation
-    let agent = activeAgents.get(conversationId);
-    if (!agent) {
-      console.log(`Creating new FinancialAgent for conversation ${conversationId}`);
-      agent = new FinancialAgent(conversationId, userId.toString());
-      activeAgents.set(conversationId, agent);
+    console.log(`🔥 [NEXUS] ✅ Saved ${messageRole} message to database for conversation ${conversationId}`);
+    console.log(`🔥 [NEXUS] Saved message details:`, savedMessage[0]);
+
+    // Only trigger AI processing for user messages, not assistant messages
+    if (messageRole === 'user') {
+      console.log(`🔥 [NEXUS] 🤖 Processing user message with FinancialAgent...`);
+      
+      // Use local FinancialAgent with real file creation
+      let agent = activeAgents.get(conversationId);
+      if (!agent) {
+        console.log(`🔥 [NEXUS] Creating new FinancialAgent for conversation ${conversationId}`);
+        agent = new FinancialAgent(conversationId, userId.toString());
+        activeAgents.set(conversationId, agent);
+      } else {
+        console.log(`🔥 [NEXUS] Using existing FinancialAgent for conversation ${conversationId}`);
+      }
+
+      // Process the message (don't await - let it stream)
+      console.log(`🔥 [NEXUS] Starting message processing for: "${content}"`);
+      agent.processMessage(content).catch(error => {
+        console.error('🔥 [NEXUS] Error in processMessage:', error);
+      });
+
+      const response = { 
+        success: true, 
+        message: 'Message sent',
+        sandboxId: agent.getCurrentSandboxId() // This will be local-workspace-{conversationId}
+      };
+      
+      console.log(`🔥 [NEXUS] 📤 Sending user message response:`, response);
+      res.json(response);
     } else {
-      console.log(`Using existing FinancialAgent for conversation ${conversationId}`);
+      // For assistant messages, just return success (already saved to database)
+      const response = { 
+        success: true, 
+        message: 'Assistant message saved',
+        messageId
+      };
+      
+      console.log(`🔥 [NEXUS] 📤 Sending assistant message response:`, response);
+      res.json(response);
     }
-
-    // Process the message (don't await - let it stream)
-    console.log(`Starting message processing for: "${content}"`);
-    agent.processMessage(content).catch(error => {
-      console.error('Error in processMessage:', error);
-    });
-
-    res.json({ 
-      success: true, 
-      message: 'Message sent',
-      sandboxId: agent.getCurrentSandboxId() // This will be local-workspace-{conversationId}
-    });
   } catch (error) {
-    console.error('Error sending message:', error);
+    console.error('🔥 [NEXUS] ❌ Error sending message:', error);
+    console.error('🔥 [NEXUS] Error stack:', error.stack);
     res.status(500).json({ error: 'Failed to send message' });
   }
 });
@@ -364,6 +403,136 @@ router.delete('/conversations/:id', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('Error deleting conversation:', error);
     res.status(500).json({ error: 'Failed to delete conversation' });
+  }
+});
+
+// Get tool calls for a conversation
+router.get('/conversations/:id/toolcalls', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const conversationId = req.params.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Verify conversation belongs to user
+    const conversation = await db.query.conversations.findFirst({
+      where: and(
+        eq(conversations.id, conversationId),
+        eq(conversations.userId, userId)
+      )
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    // Fetch tool call messages from conversation_messages table
+    const toolCallMessages = await db.query.conversationMessages.findMany({
+      where: and(
+        eq(conversationMessages.conversationId, conversationId),
+        eq(conversationMessages.role, 'tool')
+      ),
+      orderBy: [desc(conversationMessages.createdAt)]
+    });
+
+    console.log(`[NEXUS] Found ${toolCallMessages.length} tool call messages for conversation ${conversationId}`);
+
+    // Transform tool call messages to expected format
+    const toolCalls = toolCallMessages.map((msg, index) => {
+      // Try to parse content if it's JSON
+      let parsedContent;
+      try {
+        parsedContent = JSON.parse(msg.content);
+      } catch {
+        parsedContent = { content: msg.content };
+      }
+
+      return {
+        id: msg.id,
+        messageId: msg.id,
+        toolName: parsedContent.toolName || parsedContent.name || 'Tool Call',
+        toolIndex: parsedContent.toolIndex || index,
+        args: parsedContent.args || {},
+        result: parsedContent.result || parsedContent,
+        status: parsedContent.status || 'success',
+        isSuccess: parsedContent.isSuccess !== undefined ? parsedContent.isSuccess : true,
+        name: parsedContent.name || parsedContent.toolName || 'Tool Call',
+        content: msg.content,
+        timestamp: msg.createdAt?.toISOString(),
+        createdAt: msg.createdAt?.toISOString()
+      };
+    });
+
+    res.json({ toolCalls });
+  } catch (error) {
+    console.error('Error fetching tool calls:', error);
+    res.status(500).json({ error: 'Failed to fetch tool calls' });
+  }
+});
+
+// Save a tool call for a conversation  
+router.post('/conversations/:id/toolcalls', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const conversationId = req.params.id;
+    const { messageId, toolName, toolIndex, args, result, status, isSuccess } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    if (!messageId || !toolName || toolIndex === undefined) {
+      return res.status(400).json({ error: 'messageId, toolName, and toolIndex are required' });
+    }
+
+    // Verify conversation belongs to user
+    const conversation = await db.query.conversations.findFirst({
+      where: and(
+        eq(conversations.id, conversationId),
+        eq(conversations.userId, userId)
+      )
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    // Save tool call as a message with role 'tool'
+    const toolCallContent = JSON.stringify({
+      messageId,
+      toolName,
+      toolIndex,
+      args,
+      result,
+      status: status || 'success',
+      isSuccess: isSuccess !== undefined ? isSuccess : (status === 'success'),
+      timestamp: new Date().toISOString()
+    });
+
+    // Create a unique ID for the tool call message
+    const toolCallMessageId = `tool_${messageId}_${toolIndex}_${Date.now()}`;
+
+    await db.insert(conversationMessages).values({
+      id: toolCallMessageId,
+      conversationId,
+      role: 'tool',
+      content: toolCallContent
+    });
+
+    console.log(`[Tool Call] Saved to database for conversation ${conversationId}:`, {
+      messageId, toolName, toolIndex, status: status || 'success'
+    });
+
+    res.status(201).json({ 
+      success: true,
+      message: 'Tool call saved successfully',
+      toolCallId: toolCallMessageId
+    });
+  } catch (error) {
+    console.error('Error saving tool call:', error);
+    res.status(500).json({ error: 'Failed to save tool call' });
   }
 });
 

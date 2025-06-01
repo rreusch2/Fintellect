@@ -1,5 +1,5 @@
 import { db } from '../../db/index.js'; // Adjusted import path for db instance
-import { nexus_conversations, nexus_messages, nexus_agent_state, nexus_files } from 'drizzle/schema/nexus.js'; // Path relative to baseUrl
+import { nexus_conversations, nexus_messages, nexus_agent_state, nexus_files, nexus_tool_calls } from 'drizzle/schema/nexus.js'; // Path relative to baseUrl
 import { eq, and } from 'drizzle-orm';
 
 export const NexusDB = {
@@ -87,5 +87,39 @@ export const NexusDB = {
   
   async deleteFile(id: number) {
     return await db.delete(nexus_files).where(eq(nexus_files.id, id));
+  },
+
+  // Tool Calls
+  async saveToolCall(conversationId: number, messageId: string, toolName: string, toolIndex: number, args: any, result: any, status: string, isSuccess: boolean = true) {
+    return await db.insert(nexus_tool_calls)
+      .values({ 
+        conversationId, 
+        messageId, 
+        toolName, 
+        toolIndex, 
+        args, 
+        result, 
+        status, 
+        isSuccess,
+        timestamp: new Date()
+      })
+      .returning();
+  },
+
+  async getConversationToolCalls(conversationId: number) {
+    return await db.select().from(nexus_tool_calls)
+      .where(eq(nexus_tool_calls.conversationId, conversationId))
+      .orderBy(nexus_tool_calls.timestamp);
+  },
+
+  async updateToolCall(id: number, data: Partial<typeof nexus_tool_calls.$inferInsert>) {
+    return await db.update(nexus_tool_calls)
+      .set(data)
+      .where(eq(nexus_tool_calls.id, id))
+      .returning();
+  },
+
+  async deleteConversationToolCalls(conversationId: number) {
+    return await db.delete(nexus_tool_calls).where(eq(nexus_tool_calls.conversationId, conversationId));
   }
 }; 

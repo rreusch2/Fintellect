@@ -131,6 +131,8 @@ export function useFintellectAgentStream(
   const updateStatus = useCallback((newStatus: typeof status, errorMessage?: string) => {
     if (!isMountedRef.current) return;
     
+    console.log(`[FintellectAgentStream] 🔄 Status change: ${status} -> ${newStatus}`);
+    
     setStatus(newStatus);
     callbacks.onStreamStatusChange(newStatus);
     
@@ -142,7 +144,7 @@ export function useFintellectAgentStream(
       // For all non-error statuses, clear any previous error
       setError(null);
     }
-  }, [callbacks]);
+  }, [callbacks, status]);
 
   // --- Reset state for new run ---
   const resetStreamState = useCallback(() => {
@@ -279,9 +281,12 @@ export function useFintellectAgentStream(
     // Accumulate XML content
     const newXMLContent = accumulatedXMLContent + content;
     setAccumulatedXMLContent(newXMLContent);
+    console.log('[XML Processing] 📋 Accumulated XML content length:', newXMLContent.length);
+    console.log('[XML Processing] 📋 Looking for XML in:', newXMLContent.substring(0, 300) + '...');
     
     // Extract complete XML chunks
     const xmlChunks = extractXMLChunks(newXMLContent);
+    console.log('[XML Processing] 🔍 Found', xmlChunks.length, 'XML chunks');
     
     for (const chunk of xmlChunks) {
       if (!processedXMLChunks.has(chunk)) {
@@ -343,6 +348,7 @@ export function useFintellectAgentStream(
           };
           
           // Notify callbacks
+          console.log('[XML Processing] 🔧 TOOL STARTED CALLBACK - About to call onToolCallStarted:', activeToolCallData);
           callbacks.onToolCallStarted(activeToolCallData);
           setActiveToolCall(activeToolCallData);
           updateStatus('processing_tool');
@@ -354,6 +360,7 @@ export function useFintellectAgentStream(
           // Use a longer timeout to ensure UI updates properly
           setTimeout(() => {
             if (isMountedRef.current) {
+              console.log('[XML Processing] ✅ TOOL COMPLETED CALLBACK - About to call onToolCallCompleted:', toolResultData);
               callbacks.onToolCallCompleted(toolResultData);
               setActiveToolCall(null);
               setToolCallIndex(prev => prev + 1);
@@ -380,14 +387,21 @@ export function useFintellectAgentStream(
       case 'assistant_chunk':
         // Accumulate streaming text
         if (typeof event.content === 'string') {
+          console.log(`[FintellectAgentStream] 📝 Received chunk (${event.content.length} chars):`, event.content.substring(0, 100) + '...');
+          
           // Sync messageId if this is the first chunk
           if (event.messageId && currentMessageIdRef.current !== event.messageId) {
             console.log(`[FintellectAgentStream] Syncing messageId: ${currentMessageIdRef.current} -> ${event.messageId}`);
             currentMessageIdRef.current = event.messageId;
           }
-          setStreamingText(prev => prev + event.content);
+          setStreamingText(prev => {
+            const newText = prev + event.content;
+            console.log(`[FintellectAgentStream] 📝 Updated streaming text length: ${newText.length}`);
+            return newText;
+          });
           
           // *** NEW: Process XML tool calls from streaming content ***
+          console.log('[FintellectAgentStream] 🔍 Processing chunk for XML content:', event.content.substring(0, 200) + '...');
           processStreamingXMLContent(event.content);
           
           updateStatus('streaming');
@@ -441,6 +455,7 @@ export function useFintellectAgentStream(
 
       case 'tool_started':
         // Tool execution has begun
+        console.log('[FintellectAgentStream] 🔧 SSE TOOL_STARTED EVENT RECEIVED:', event);
         const toolCall: ActiveToolCall = {
           toolName: event.toolName,
           toolIndex: event.toolIndex,
@@ -448,6 +463,7 @@ export function useFintellectAgentStream(
           messageId: event.messageId,
           status: 'executing'
         };
+        console.log('[FintellectAgentStream] 🔧 About to call onToolCallStarted with:', toolCall);
         setActiveToolCall(toolCall);
         callbacks.onToolCallStarted(toolCall);
         updateStatus('processing_tool');
@@ -455,14 +471,23 @@ export function useFintellectAgentStream(
 
       case 'tool_completed':
         // Tool execution finished
+        console.log('[FintellectAgentStream] 🎯 SSE TOOL_COMPLETED EVENT RECEIVED:', event);
         const toolResult: ToolResultPayload = {
           toolName: event.toolName,
           toolIndex: event.toolIndex,
           status: event.status,
           result: event.result,
           error: event.error,
-          messageId: event.messageId
+          messageId: event.messageId,
+          // Add missing properties for ToolCallSidePanel
+          name: event.toolName,
+          content: `Tool executed: ${event.toolName}`,
+          timestamp: new Date().toISOString(),
+          isSuccess: event.status === 'success',
+          args: event.args || {}
         };
+        
+        console.log('[FintellectAgentStream] 🎯 About to call onToolCallCompleted with:', toolResult);
         
         // Clear active tool call if it matches
         if (activeToolCall && 
@@ -477,6 +502,13 @@ export function useFintellectAgentStream(
 
       case 'message_complete':
         // Assistant turn is finished
+        console.log(`[FintellectAgentStream] 🏁 Received message_complete event:`);
+        console.log(`[FintellectAgentStream] 🏁 Event messageId: ${event.messageId}`);
+        console.log(`[FintellectAgentStream] 🏁 Event content length: ${event.content?.length || 0}`);
+        console.log(`[FintellectAgentStream] 🏁 Event content preview: ${event.content?.substring(0, 200) + '...' || 'NO CONTENT'}`);
+        console.log(`[FintellectAgentStream] 🏁 Current streaming text length: ${streamingText.length}`);
+        console.log(`[FintellectAgentStream] 🏁 Current messageId ref: ${currentMessageIdRef.current}`);
+        
         const finalMessage: FintellectUnifiedMessage = {
           id: event.messageId,
           conversationId: '', // Will be set by caller
@@ -485,11 +517,13 @@ export function useFintellectAgentStream(
           timestamp: new Date().toISOString()
         };
         
+        console.log(`[FintellectAgentStream] 🏁 Creating final message:`, finalMessage);
+        
         callbacks.onNewMessage(finalMessage);
         updateStatus('completed');
         
-        // Reset state for next turn
-        resetStreamState();
+        // DON'T reset state immediately - let the status handler save the message first
+        // The status handler will clear these refs when it's done saving
         
         // Close the connection
         if (eventSourceRef.current) {

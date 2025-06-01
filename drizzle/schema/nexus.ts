@@ -36,4 +36,18 @@ export const nexus_files = pgTable('nexus_files', {
   size: integer('size').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   metadata: jsonb('metadata')
+});
+
+export const nexus_tool_calls = pgTable('nexus_tool_calls', {
+  id: serial('id').primaryKey(),
+  conversationId: integer('conversation_id').references(() => nexus_conversations.id).notNull(),
+  messageId: text('message_id').notNull(), // Links to the assistant message
+  toolName: text('tool_name').notNull(),
+  toolIndex: integer('tool_index').notNull(),
+  args: jsonb('args'), // Tool arguments
+  result: jsonb('result'), // Tool execution result
+  status: varchar('status', { length: 20 }).notNull(), // 'success', 'error', 'pending'
+  isSuccess: boolean('is_success').default(true),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull()
 }); 

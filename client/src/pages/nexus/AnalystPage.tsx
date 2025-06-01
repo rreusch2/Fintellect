@@ -50,7 +50,8 @@ import {
   Download,
   Sidebar,
   Computer,
-  FolderOpen
+  FolderOpen,
+  ArrowRight
 } from 'lucide-react';
 import { cn } from '../../lib/utils.js';
 import { useToast } from '../../hooks/use-toast.js';
@@ -106,24 +107,163 @@ const suggestedPrompts = [
   {
     title: "Market Research",
     description: "Research current market conditions and investment opportunities",
-    icon: TrendingUp
+    detailedPrompt: "Research current market conditions and investment opportunities. Please provide a comprehensive analysis of current market trends, sector performance, economic indicators, and identify potential investment opportunities. Include analysis of market volatility, inflation impacts, and emerging sectors with growth potential.",
+    icon: TrendingUp,
+    gradient: "from-emerald-500/10 to-green-500/10",
+    border: "border-emerald-500/20",
+    hover: "hover:border-emerald-500/40 hover:bg-emerald-500/5"
   },
   {
     title: "Budget Optimization", 
     description: "Analyze spending patterns and optimize budget allocation",
-    icon: DollarSign
+    detailedPrompt: "Analyze my spending patterns and create a comprehensive budget optimization plan. Please review my transaction history, identify areas where I can reduce expenses, suggest better budget allocation strategies, and provide actionable recommendations to improve my financial efficiency and increase savings.",
+    icon: DollarSign,
+    gradient: "from-blue-500/10 to-cyan-500/10",
+    border: "border-blue-500/20",
+    hover: "hover:border-blue-500/40 hover:bg-blue-500/5"
   },
   {
     title: "Investment Strategy",
     description: "Develop personalized investment strategy", 
-    icon: Target
+    detailedPrompt: "Develop a personalized investment strategy based on my financial goals and risk tolerance. Please analyze my current financial situation, recommend appropriate asset allocation, suggest specific investment vehicles (stocks, bonds, ETFs, etc.), and create a timeline for achieving my investment objectives.",
+    icon: Target,
+    gradient: "from-purple-500/10 to-violet-500/10",
+    border: "border-purple-500/20",
+    hover: "hover:border-purple-500/40 hover:bg-purple-500/5"
   },
   {
     title: "Financial Goal Planning",
     description: "Create actionable plans for your financial objectives",
-    icon: Sparkles
+    detailedPrompt: "Help me create actionable plans for my financial objectives. Please assist with setting up financial goals such as emergency fund planning, retirement savings, major purchase planning (home, car), debt reduction strategies, and provide step-by-step guidance with timelines and milestones.",
+    icon: Sparkles,
+    gradient: "from-rose-500/10 to-pink-500/10",
+    border: "border-rose-500/20",
+    hover: "hover:border-rose-500/40 hover:bg-rose-500/5"
   }
 ];
+
+// Helper function to format tool names in a user-friendly way
+const getUserFriendlyToolName = (toolName: string): string => {
+  const friendlyNames: Record<string, string> = {
+    'web_search': 'Web Search',
+    'web-search': 'Web Search', 
+    'tavily_search': 'Web Search',
+    'create_file': 'Create File',
+    'create-file': 'Create File',
+    'web_scrape': 'Web Scrape',
+    'web-scrape': 'Web Scrape',
+    'browser_navigate': 'Browse Website',
+    'execute_command': 'Execute Command',
+    'file_operation': 'File Operation'
+  };
+  
+  return friendlyNames[toolName?.toLowerCase()] || 
+         toolName?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 
+         'Tool Execution';
+};
+
+// Helper function to clean and format streaming content
+const formatStreamingContent = (content: string): React.ReactNode => {
+  if (!content) return null;
+  
+  // Remove XML tool calls from the visible content
+  let cleanedContent = content
+    .replace(/<create-file[^>]*>.*?<\/create-file>/gs, '')
+    .replace(/<web-search[^>]*><\/web-search>/g, '')
+    .replace(/<web-scrape[^>]*><\/web-scrape>/g, '')
+    .replace(/<[^>]+>/g, '') // Remove any remaining XML tags
+    .trim();
+    
+  if (!cleanedContent) return null;
+  
+  // Split by lines and format each part
+  const lines = cleanedContent.split('\n');
+  
+  return (
+    <div className="space-y-2">
+      {lines.map((line, index) => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return <br key={index} />;
+        
+        // Format different types of content
+        if (trimmedLine.startsWith('🚀') || trimmedLine.startsWith('🎉')) {
+          return (
+            <div key={index} className="text-lg font-bold text-cyan-300 flex items-center gap-2">
+              <span className="text-2xl">{trimmedLine.charAt(0)}</span>
+              <span>{trimmedLine.slice(2)}</span>
+            </div>
+          );
+        }
+        
+        if (trimmedLine.startsWith('📋') || trimmedLine.startsWith('📄')) {
+          return (
+            <div key={index} className="text-base font-semibold text-blue-300 flex items-center gap-2">
+              <span className="text-xl">{trimmedLine.charAt(0)}</span>
+              <span>{trimmedLine.slice(2)}</span>
+            </div>
+          );
+        }
+        
+        if (trimmedLine.startsWith('✅')) {
+          return (
+            <div key={index} className="text-sm text-green-400 flex items-center gap-2 ml-4">
+              <span className="text-base">{trimmedLine.charAt(0)}</span>
+              <span>{trimmedLine.slice(2)}</span>
+            </div>
+          );
+        }
+        
+        if (trimmedLine.startsWith('🔍')) {
+          return (
+            <div key={index} className="text-sm text-yellow-400 flex items-center gap-2 ml-6">
+              <span className="text-base">{trimmedLine.charAt(0)}</span>
+              <span>{trimmedLine.slice(2)}</span>
+            </div>
+          );
+        }
+        
+        // Format headers starting with ##
+        if (trimmedLine.startsWith('##')) {
+          return (
+            <h3 key={index} className="text-lg font-bold text-white mt-4 mb-2">
+              {trimmedLine.slice(2).trim()}
+            </h3>
+          );
+        }
+        
+        // Format headers starting with #
+        if (trimmedLine.startsWith('#')) {
+          return (
+            <h2 key={index} className="text-xl font-bold text-cyan-300 mt-4 mb-2">
+              {trimmedLine.slice(1).trim()}
+            </h2>
+          );
+        }
+        
+        // Bold text for **text**
+        if (trimmedLine.includes('**')) {
+          const parts = trimmedLine.split('**');
+          return (
+            <div key={index} className="text-slate-200">
+              {parts.map((part, partIndex) => 
+                partIndex % 2 === 1 ? 
+                  <strong key={partIndex} className="font-bold text-white">{part}</strong> : 
+                  <span key={partIndex}>{part}</span>
+              )}
+            </div>
+          );
+        }
+        
+        // Regular text
+        return (
+          <div key={index} className="text-slate-200">
+            {trimmedLine}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const AnalystPage: React.FC = () => {
   const [, navigate] = useLocation();
@@ -148,6 +288,12 @@ const AnalystPage: React.FC = () => {
   // Refs to track streaming state more reliably
   const hasCreatedStreamingMessageRef = useRef(false);
   const currentStreamingMessageIdRef = useRef<string | null>(null);
+  
+  // CRITICAL FIX: Ref to hold conversation ID during new conversation creation
+  const tempConversationIdRef = useRef<string | null>(null);
+  
+  // Track if we've already initiated a save for the current streaming message
+  const isSavingMessageRef = useRef<string | null>(null);
   
   // Smart auto-scroll behavior
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -190,8 +336,29 @@ const AnalystPage: React.FC = () => {
     error: streamError,
     startAgentRun,
   } = useFintellectAgentStream({
-    onNewMessage: (message: FintellectUnifiedMessage) => {
+    onNewMessage: async (message: FintellectUnifiedMessage) => {
       console.log('[AnalystPage] New message received:', message);
+      
+      // Only save user messages immediately. Assistant messages will be saved after streaming completes.
+      if (message.role === 'user' && conversationId) {
+        try {
+          await fetch(getNexusApiUrl(`/conversations/${conversationId}/messages`), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              role: message.role,
+              content: message.content,
+              metadata: { messageId: message.id }
+            })
+          });
+          console.log('[AnalystPage] 💾 User message saved to database');
+        } catch (error) {
+          console.error('[AnalystPage] Failed to save user message:', error);
+        }
+      }
       
       // Update existing streaming message if it exists, otherwise add new
       setMessages(prev => {
@@ -252,7 +419,9 @@ const AnalystPage: React.FC = () => {
       
       setCurrentAssistantMessageId(null);
       hasCreatedStreamingMessageRef.current = false;
-      currentStreamingMessageIdRef.current = null;
+      isSavingMessageRef.current = null;
+      // CRITICAL FIX: Don't clear this here - wait for status handler to save the message first
+      // currentStreamingMessageIdRef.current = null;
     },
     onToolCallStarted: (toolCall: ActiveToolCall) => {
       console.log('[AnalystPage] 🔧 TOOL STARTED:', JSON.stringify(toolCall, null, 2));
@@ -347,9 +516,59 @@ const AnalystPage: React.FC = () => {
         });
       }
     },
-    onToolCallCompleted: (toolResult: ToolResultPayload) => {
+    onToolCallCompleted: async (toolResult: ToolResultPayload) => {
       console.log('[AnalystPage] ✅ TOOL COMPLETED:', toolResult);
       console.log('[AnalystPage] 📊 Current completedTools count before adding:', completedTools.length);
+      console.log('[AnalystPage] 🔍 DEBUGGING TOOL SAVE - conversationId:', conversationId);
+      console.log('[AnalystPage] 🔍 DEBUGGING TOOL SAVE - toolResult details:', {
+        messageId: toolResult.messageId,
+        toolName: toolResult.toolName,
+        toolIndex: toolResult.toolIndex,
+        status: toolResult.status,
+        hasArgs: !!toolResult.args,
+        hasResult: !!toolResult.result
+      });
+      
+      // Save tool call to database
+      if (conversationId) {
+        try {
+          console.log('[AnalystPage] 🚀 Starting tool call save to database...');
+          const payload = {
+            messageId: toolResult.messageId,
+            toolName: toolResult.toolName,
+            toolIndex: toolResult.toolIndex,
+            args: toolResult.args,
+            result: toolResult.result,
+            status: toolResult.status,
+            isSuccess: toolResult.isSuccess !== undefined ? toolResult.isSuccess : toolResult.status === 'success'
+          };
+          console.log('[AnalystPage] 📤 Tool call save payload:', JSON.stringify(payload, null, 2));
+          
+          const response = await fetch(getNexusApiUrl(`/conversations/${conversationId}/toolcalls`), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+          });
+          
+          console.log('[AnalystPage] 📡 Tool save response status:', response.status);
+          console.log('[AnalystPage] 📡 Tool save response ok:', response.ok);
+          
+          if (response.ok) {
+            const responseData = await response.json();
+            console.log('[AnalystPage] 💾 Tool call saved to database successfully:', responseData);
+          } else {
+            const errorText = await response.text();
+            console.error('[AnalystPage] ❌ Tool call save failed:', errorText);
+          }
+        } catch (error) {
+          console.error('[AnalystPage] ❌ Failed to save tool call - network error:', error);
+        }
+      } else {
+        console.warn('[AnalystPage] ⚠️ Cannot save tool call - no conversationId available');
+      }
       
       // Add to completed tools for ToolCallSidePanel
       // Ensure the toolResult has all the properties needed by ToolCallSidePanel
@@ -436,11 +655,109 @@ const AnalystPage: React.FC = () => {
         }
       }
       
+      // Save assistant message to database when streaming completes
+      // Use either the regular conversationId or the temporary one for new conversations
+      const activeConversationId = conversationId || tempConversationIdRef.current;
+      const messageIdToSave = currentStreamingMessageIdRef.current;
+      
+      // DUPLICATE GUARD: Check if we're already saving this message
+      if (status === 'completed' && messageIdToSave && activeConversationId && isSavingMessageRef.current !== messageIdToSave) {
+        console.log('[AnalystPage] 🔄 Stream completed, attempting to save assistant message...');
+        console.log('[AnalystPage] Status:', status);
+        console.log('[AnalystPage] Current streaming message ID:', currentStreamingMessageIdRef.current);
+        console.log('[AnalystPage] Conversation ID:', conversationId);
+        console.log('[AnalystPage] Temp Conversation ID:', tempConversationIdRef.current);
+        console.log('[AnalystPage] Active Conversation ID:', activeConversationId);
+        console.log('[AnalystPage] Current streaming text length:', streamingText.length);
+        console.log('[AnalystPage] Current streaming text preview:', streamingText.substring(0, 200) + '...');
+        
+        // Get the final content from the current messages state and streaming text
+        setMessages(currentMessages => {
+          console.log('[AnalystPage] Current messages in state:', currentMessages.length);
+          const streamingMessage = currentMessages.find(m => m.id === currentStreamingMessageIdRef.current);
+          console.log('[AnalystPage] Found streaming message in state:', !!streamingMessage);
+          
+          if (streamingMessage) {
+            console.log('[AnalystPage] Streaming message content length:', streamingMessage.content.length);
+            console.log('[AnalystPage] Streaming message content preview:', streamingMessage.content.substring(0, 200) + '...');
+            
+            // Use the message content if available, otherwise use streaming text
+            const finalContent = streamingMessage.content.trim() || streamingText.trim();
+            console.log('[AnalystPage] Final content for database:', finalContent.length, 'chars');
+            console.log('[AnalystPage] Final content preview:', finalContent.substring(0, 200) + '...');
+            
+            if (finalContent) {
+              console.log('[AnalystPage] 🚀 Starting API call to save assistant message...');
+              
+              // Set the saving flag to prevent duplicates
+              isSavingMessageRef.current = messageIdToSave;
+              
+              // Save the completed assistant message to database
+              fetch(getNexusApiUrl(`/conversations/${activeConversationId}/messages`), {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                  role: 'assistant',
+                  content: finalContent,
+                  metadata: { messageId: streamingMessage.id }
+                })
+              }).then(response => {
+                console.log('[AnalystPage] 📡 API response status:', response.status);
+                console.log('[AnalystPage] 📡 API response ok:', response.ok);
+                if (response.ok) {
+                  console.log('[AnalystPage] 💾 Final assistant message saved to database successfully');
+                  return response.json();
+                } else {
+                  console.error('[AnalystPage] ❌ API response not ok, status:', response.status);
+                  throw new Error(`HTTP ${response.status}`);
+                }
+              }).then(data => {
+                console.log('[AnalystPage] 📊 Save response data:', data);
+                // Clear both refs after successful save
+                currentStreamingMessageIdRef.current = null;
+                isSavingMessageRef.current = null;
+                console.log('[AnalystPage] 🧹 Cleared refs after successful save');
+              }).catch(error => {
+                console.error('[AnalystPage] ❌ Failed to save final assistant message:', error);
+                console.error('[AnalystPage] Error details:', error.stack);
+                // Clear refs even on error to prevent memory leaks
+                currentStreamingMessageIdRef.current = null;
+                isSavingMessageRef.current = null;
+                console.log('[AnalystPage] 🧹 Cleared refs after error');
+              });
+            } else {
+              console.warn('[AnalystPage] ⚠️ No final content to save - both message content and streaming text are empty');
+            }
+          } else {
+            console.warn('[AnalystPage] ⚠️ Could not find streaming message in state with ID:', currentStreamingMessageIdRef.current);
+            console.log('[AnalystPage] Available message IDs:', currentMessages.map(m => m.id));
+          }
+          return currentMessages; // Don't modify the messages array
+        });
+      } else {
+        console.log('[AnalystPage] 🚫 Not saving assistant message - conditions not met:');
+        console.log('[AnalystPage] Status === "completed":', status === 'completed');
+        console.log('[AnalystPage] Has messageIdToSave:', !!messageIdToSave);
+        console.log('[AnalystPage] Has activeConversationId:', !!activeConversationId);
+        console.log('[AnalystPage] Already saving this message:', isSavingMessageRef.current === messageIdToSave);
+        console.log('[AnalystPage] Current saving message ID:', isSavingMessageRef.current);
+      }
+      
       // Clear current message ID when streaming completes
       if (status === 'completed' || status === 'error') {
         setCurrentAssistantMessageId(null);
         hasCreatedStreamingMessageRef.current = false;
-        currentStreamingMessageIdRef.current = null;
+        // Only clear isSaving ref if we're not actively saving this message
+        if (isSavingMessageRef.current !== messageIdToSave) {
+          isSavingMessageRef.current = null;
+        }
+        // DON'T clear currentStreamingMessageIdRef here - wait until after save completes
+        // currentStreamingMessageIdRef.current = null;
+        // Clear temp conversation ID after successful completion
+        tempConversationIdRef.current = null;
       }
     },
     onStreamError: handleStreamError,
@@ -539,6 +856,7 @@ const AnalystPage: React.FC = () => {
       setCurrentAssistantMessageId(null);
       hasCreatedStreamingMessageRef.current = false;
       currentStreamingMessageIdRef.current = null;
+      isSavingMessageRef.current = null;
       hasUserNavigatedRef.current = false; // Reset navigation flag for new conversation
       setCurrentSandboxId(null); // Clear sandbox ID when switching conversations
       fetchMessagesForConversation(conversationId);
@@ -679,7 +997,8 @@ const AnalystPage: React.FC = () => {
     }
   };
 
-  const startNewConversation = async (prompt?: string) => {
+  const startNewConversation = async (prompt?: string, autoSend: boolean = false) => {
+    console.log(`[AnalystPage] 🎯🎯🎯 STARTNEWCONVERSATION ENTRY - prompt: "${prompt}", autoSend: ${autoSend}`);
     try {
       clearArtifacts();
       setMessages([]);
@@ -687,9 +1006,9 @@ const AnalystPage: React.FC = () => {
       setCurrentAssistantMessageId(null);
       hasCreatedStreamingMessageRef.current = false;
       currentStreamingMessageIdRef.current = null;
+      isSavingMessageRef.current = null;
       hasUserNavigatedRef.current = false; // Reset navigation flag for new conversation
       setCurrentSandboxId(null); // Clear sandbox ID when starting new conversation
-      setInput(prompt || '');
       
       // Create new conversation via API
       const response = await fetch(getNexusApiUrl('/conversations'), {
@@ -713,7 +1032,28 @@ const AnalystPage: React.FC = () => {
       console.log(`[AnalystPage] Created conversation: ${newConvId}`);
       
       await fetchConversations();
+      
+      // CRITICAL FIX: Set conversationId state BEFORE navigation to ensure it's available for message saving
+      console.log(`[AnalystPage] Setting conversationId state to: ${newConvId}`);
+      // Note: We can't use setConversationId here because the URL params haven't changed yet
+      // Instead, we'll navigate and let the useEffect handle it, but we'll pass the ID directly
+      
       navigate(`/nexus/analyst/${newConvId}`);
+      
+      // If autoSend is true and we have a prompt, send it immediately
+      if (autoSend && prompt) {
+        // Set input and send after navigation, but ensure the conversation ID is available
+        console.log(`[AnalystPage] ⏰⏰⏰ STARTNEWCONVERSATION: About to setTimeout for sendMessageWithContent`);
+        console.log(`[AnalystPage] ⏰⏰⏰ STARTNEWCONVERSATION: newConvId = ${newConvId}, prompt = "${prompt}"`);
+        setTimeout(() => {
+          console.log(`[AnalystPage] ⏰⏰⏰ STARTNEWCONVERSATION: Inside setTimeout, calling sendMessageWithContent`);
+          setInput('');
+          // Trigger the message sending directly with the conversation ID
+          sendMessageWithContent(newConvId, prompt);
+        }, 100);
+      } else {
+        setInput(prompt || '');
+      }
       
       toast({ title: "New conversation started" });
     } catch (error) {
@@ -725,10 +1065,86 @@ const AnalystPage: React.FC = () => {
       });
     }
   };
+  
+  const sendMessageWithContent = async (convId: string, content: string) => {
+    if (!content.trim()) {
+      console.log(`[AnalystPage] ⚠️ sendMessageWithContent: Early return due to empty content`);
+      return;
+    }
+    
+    console.log(`[AnalystPage] 🚀🚀🚀 sendMessageWithContent ENTRY - convId: ${convId}`);
+    console.log(`[AnalystPage] 🚀🚀🚀 sendMessageWithContent ENTRY - content: "${content}"`);
+    console.log(`[AnalystPage] 🚀🚀🚀 sendMessageWithContent ENTRY - conversationId from params: ${conversationId}`);
+    
+    // CRITICAL FIX: Temporarily override conversationId in the component state
+    // This ensures the stream status handler has access to the conversation ID
+    const originalConversationId = conversationId;
+    if (!conversationId && convId) {
+      console.log(`[AnalystPage] 🔧 Temporarily setting conversationId to: ${convId}`);
+      // Use a ref to pass the conversation ID to the streaming callbacks
+      tempConversationIdRef.current = convId;
+    }
+    
+    // Add user message immediately
+    const userMessage: FintellectUnifiedMessage = {
+      id: `user-${Date.now()}`,
+      conversationId: convId,
+      role: 'user',
+      content,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    
+    try {
+      // CRITICAL FIX: Start the agent stream FIRST to establish SSE connection
+      // This ensures we receive tool_started/tool_completed events
+      console.log(`[AnalystPage] 🔌🔌🔌 SENDMESSAGEWITHCONTENT: Establishing SSE connection first...`);
+      startAgentRun(convId, content);
+      
+      // Wait a moment for SSE connection to establish
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Then send message to backend to trigger processing
+      console.log(`[AnalystPage] 📤📤📤 SENDMESSAGEWITHCONTENT: Sending message to trigger processing...`);
+      const response = await fetch(getNexusApiUrl(`/conversations/${convId}/messages`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ content })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      console.log(`[AnalystPage] Message sent for processing`);
+      
+      // Get sandbox ID from response if available
+      const responseData = await response.json();
+      if (responseData.sandboxId) {
+        console.log(`[AnalystPage] Received sandbox ID: ${responseData.sandboxId}`);
+        setCurrentSandboxId(responseData.sandboxId);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send message. Please try again.', 
+        variant: 'destructive'
+      });
+    }
+  };
 
   const sendMessage = async () => {
     const content = input.trim();
-    if (!content || !conversationId) return;
+    console.log(`[AnalystPage] 🚀🚀🚀 SENDMESSAGE ENTRY - content: "${content}"`);
+    console.log(`[AnalystPage] 🚀🚀🚀 SENDMESSAGE ENTRY - conversationId: ${conversationId}`);
+    if (!content || !conversationId) {
+      console.log(`[AnalystPage] ⚠️ SENDMESSAGE: Early return - content: ${!!content}, conversationId: ${!!conversationId}`);
+      return;
+    }
     
     if (streamStatus === 'streaming' || streamStatus === 'connecting' || streamStatus === 'processing_tool') {
       toast({ 
@@ -751,10 +1167,16 @@ const AnalystPage: React.FC = () => {
     setInput('');
     
     try {
-      // Start the agent stream
+      // CRITICAL FIX: Start the agent stream FIRST to establish SSE connection
+      // This ensures we receive tool_started/tool_completed events
+      console.log(`[AnalystPage] 🔌🔌🔌 SENDMESSAGE: Establishing SSE connection first...`);
       startAgentRun(conversationId, content);
       
-      // Send message to backend to trigger processing
+      // Wait a moment for SSE connection to establish
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Then send message to backend to trigger processing
+      console.log(`[AnalystPage] 📤📤📤 SENDMESSAGE: Sending message to trigger processing...`);
       const response = await fetch(getNexusApiUrl(`/conversations/${conversationId}/messages`), {
         method: 'POST',
         headers: {
@@ -807,26 +1229,71 @@ const AnalystPage: React.FC = () => {
       console.log(`[AnalystPage] Rendering live streaming content: "${streamingText.substring(0, 100)}..."`);
       return (
         <div className="space-y-2">
-          {/* Streaming text */}
+          {/* Enhanced streaming text with formatting */}
           {streamingText && (
-            <div className="whitespace-pre-wrap">{streamingText}</div>
+            <div className="space-y-1">
+              {formatStreamingContent(streamingText)}
+            </div>
           )}
           
-          {/* Active tool call - show tool progress */}
+          {/* Enhanced tool call progress indicator */}
           {(pageActiveToolCall || streamStatus === 'processing_tool') && (
-            <div className="mt-2">
-              <Button 
-                variant="outline"
-                className="flex items-center gap-2 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/50"
-                onClick={() => {
-                  console.log('[AnalystPage] Progress button clicked, opening ComputerSidebar');
-                  setIsComputerSidebarOpen(true);
-                  setCurrentToolIndex(completedTools.length); // Show the active tool
-                }}
-              >
-                <Terminal className="h-4 w-4" />
-                {pageActiveToolCall ? pageActiveToolCall.toolName : 'Processing'}
-              </Button>
+            <div className="mt-4 space-y-2">
+              <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl p-4 backdrop-blur-sm relative z-0">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                      <Terminal className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-blue-300">
+                        {pageActiveToolCall ? getUserFriendlyToolName(pageActiveToolCall.toolName) : 'Processing Tool'}
+                      </h4>
+                      <p className="text-xs text-slate-400">Nexus Computer is working...</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost"
+                    size="sm"
+                    className="text-blue-300 hover:text-white hover:bg-blue-500/20 h-8 px-3"
+                    onClick={() => {
+                      console.log('[AnalystPage] Progress button clicked, opening ComputerSidebar');
+                      setIsComputerSidebarOpen(true);
+                      setCurrentToolIndex(completedTools.length);
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    <span className="text-xs">View Progress</span>
+                  </Button>
+                </div>
+                
+                {/* Animated progress bar */}
+                <div className="relative">
+                  <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-pulse" style={{ width: '60%' }} />
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full pointer-events-none" style={{ 
+                    animation: 'shimmer 2s infinite linear',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                    backgroundSize: '200% 100%'
+                  }} />
+                </div>
+                
+                {/* Tool details */}
+                {pageActiveToolCall?.args && (
+                  <div className="mt-3 text-xs text-slate-400">
+                    {pageActiveToolCall.args.query && (
+                      <span>Searching: "{pageActiveToolCall.args.query}"</span>
+                    )}
+                    {pageActiveToolCall.args.filePath && (
+                      <span>Creating: {pageActiveToolCall.args.filePath.split('/').pop()}</span>
+                    )}
+                    {pageActiveToolCall.args.url && (
+                      <span>Scraping: {new URL(pageActiveToolCall.args.url).hostname}</span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
           
@@ -836,8 +1303,14 @@ const AnalystPage: React.FC = () => {
     } else {
       // This is a completed message
       console.log(`[AnalystPage] Rendering completed message content: "${message.content.substring(0, 100)}..."`);
-      return (
-        <div className="whitespace-pre-wrap">{message.content}</div>
+      
+      // Format completed messages the same way
+      const formattedContent = formatStreamingContent(message.content);
+      
+      return formattedContent ? (
+        <div className="space-y-1">{formattedContent}</div>
+      ) : (
+        <div className="whitespace-pre-wrap text-slate-200">{message.content}</div>
       );
     }
   };
@@ -846,38 +1319,57 @@ const AnalystPage: React.FC = () => {
     return (
       <div
         key={message.id}
-        className={`flex items-start space-x-3 ${
+        className={`flex items-start space-x-4 ${
           message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
         }`}
       >
-        {/* Avatar */}
-        <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+        {/* Enhanced Avatar with hover effects */}
+        <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg hover:shadow-xl transition-all duration-300 group ${
           message.role === 'user' 
-            ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
-            : 'bg-gradient-to-r from-blue-500 to-purple-600'
+            ? 'bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500' 
+            : 'bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500'
         }`}>
           {message.role === 'user' ? (
-            <span className="text-white font-medium text-sm">U</span>
+            <User className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
           ) : (
-            <Bot className="h-4 w-4 text-white" />
+            <Bot className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
           )}
         </div>
 
-        {/* Message Content */}
-        <div className={`flex-1 max-w-[80%] ${
+        {/* Enhanced Message Content */}
+        <div className={`flex-1 max-w-[85%] ${
           message.role === 'user' ? 'text-right' : 'text-left'
         }`}>
-          <div className={`rounded-lg p-4 ${
+          <div className={`rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden ${
             message.role === 'user'
-              ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white'
-              : 'bg-slate-800/50 text-slate-200 border border-slate-700/50'
+              ? 'bg-gradient-to-br from-emerald-600 to-green-600 text-white border border-emerald-500/30'
+              : 'bg-slate-800/80 text-slate-100 border border-slate-700/50 backdrop-blur-sm'
           }`}>
-            {renderMessageContent(message)}
+            {/* Assistant message background pattern */}
+            {message.role === 'assistant' && (
+              <div className="absolute inset-0 opacity-5 pointer-events-none">
+                <div className="absolute top-2 right-2 w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full blur-xl" />
+                <div className="absolute bottom-2 left-2 w-16 h-16 bg-gradient-to-br from-purple-400 to-blue-400 rounded-full blur-xl" />
+              </div>
+            )}
+            
+            <div className="relative z-10">
+              {renderMessageContent(message)}
+            </div>
           </div>
-          <div className={`text-xs mt-2 ${
-            message.role === 'user' ? 'text-green-200' : 'text-slate-500'
+          
+          {/* Enhanced timestamp with status indicators */}
+          <div className={`flex items-center gap-2 text-xs mt-3 ${
+            message.role === 'user' ? 'justify-end text-emerald-300' : 'text-slate-500'
           }`}>
-            {new Date(message.timestamp).toLocaleTimeString()}
+            {message.role === 'assistant' && (
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                <span>AI Response</span>
+                <span className="text-slate-600">•</span>
+              </div>
+            )}
+            <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
           </div>
         </div>
       </div>
@@ -1063,7 +1555,7 @@ const AnalystPage: React.FC = () => {
           <div className="w-80 border-r border-slate-700/50 flex flex-col">
             <div className="border-b border-slate-700/50 px-6 py-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3" style={{ position: 'relative', zIndex: 9998 }}>
                   <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
                     <MessageSquare className="h-5 w-5 text-white" />
                   </div>
@@ -1102,60 +1594,135 @@ const AnalystPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center p-8">
-            <div className="max-w-2xl w-full text-center space-y-8">
+          <div className="flex-1 flex flex-col items-center justify-center p-6">
+            <div className="max-w-4xl w-full text-center space-y-6">
               <div className="space-y-4">
-                <div className="h-20 w-20 mx-auto rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-blue-500/25">
-                  <Bot className="h-10 w-10 text-white" />
+                <div className="h-16 w-16 mx-auto rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <Bot className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold text-white mb-3">
+                  <h1 className="text-3xl font-bold text-white mb-3">
                     Hey, what would you like Nexus to do today?
                   </h1>
-                  <p className="text-xl text-slate-400">
+                  <p className="text-lg text-slate-400">
                     Get personalized financial insights powered by your real transaction data
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="relative">
-                  <Input
-                    value={input}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Describe what you need help with..."
-                    className="w-full pr-20 pl-4 py-4 text-lg bg-slate-800/50 border-slate-700/50 text-white placeholder-slate-400 rounded-xl focus:border-blue-500/50 focus:ring-blue-500/20"
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                    <Button
-                      onClick={() => sendMessage()}
-                      disabled={!input.trim()}
-                      size="sm"
-                      className="h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
+              {/* AI Chatbot-style Input */}
+              <div className="space-y-6">
+                <div className="w-full max-w-4xl mx-auto">
+                  <div className="relative">
+                    {/* Main input container */}
+                    <div className="relative bg-slate-800/90 border border-slate-600/50 rounded-2xl shadow-2xl backdrop-blur-sm hover:border-slate-500/50 focus-within:border-blue-500/50 transition-all duration-300 overflow-hidden">
+                      {/* Subtle glow effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-blue-500/5 rounded-2xl opacity-0 focus-within:opacity-100 transition-opacity duration-500" />
+                      
+                      <div className="flex items-end gap-3 p-5">
+                        <div className="flex-1 relative">
+                          <Textarea
+                            value={input}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                if (input.trim()) {
+                                  startNewConversation(input.trim(), true); // autoSend = true
+                                }
+                              }
+                            }}
+                            placeholder="Describe what you need help with..."
+                            className="w-full min-h-[80px] max-h-[300px] resize-none bg-transparent border-0 text-white placeholder-slate-400 text-base leading-relaxed focus:ring-0 focus:outline-none relative z-10"
+                            rows={3}
+                            style={{ pointerEvents: 'auto' }}
+                          />
+                        </div>
+                        
+                        {/* Send button */}
+                        <div className="pb-1">
+                          <Button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (input.trim()) {
+                                startNewConversation(input.trim(), true); // autoSend = true
+                              }
+                            }}
+                            disabled={!input.trim()}
+                            size="sm"
+                            className="h-12 w-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 disabled:hover:scale-100 relative z-20"
+                            style={{ pointerEvents: 'auto' }}
+                          >
+                            <Send className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Helper text */}
+                    <div className="flex items-center justify-center mt-3 text-sm text-slate-500">
+                      <span className="flex items-center gap-2">
+                        <Zap className="h-4 w-4" />
+                        Powered by Nexus AI Agent
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 {suggestedPrompts.map((prompt, index) => {
                   const Icon = prompt.icon;
                   return (
                     <button
                       key={index}
-                      onClick={() => startNewConversation(prompt.description)}
-                      className="p-6 rounded-xl bg-slate-800/30 border border-slate-700/50 text-left hover:bg-slate-700/40 hover:border-slate-600/50 transition-all duration-200 group"
+                      onClick={() => setInput(prompt.detailedPrompt)}
+                      className={`group relative p-4 rounded-xl border text-left transition-all duration-200 hover:shadow-lg transform hover:-translate-y-0.5 ${
+                        prompt.border
+                      } ${
+                        prompt.hover
+                      } bg-gradient-to-br ${prompt.gradient} backdrop-blur-sm`}
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-600/20 border border-blue-500/30 flex items-center justify-center group-hover:from-blue-500/30 group-hover:to-purple-600/30 transition-colors">
-                          <Icon className="h-6 w-6 text-blue-400" />
+                      <div className="flex items-start gap-3 relative z-10">
+                        <div className={`h-10 w-10 rounded-lg bg-gradient-to-br shadow-md flex items-center justify-center group-hover:scale-105 transition-transform duration-200 ${
+                          index === 0 ? 'from-emerald-500/20 to-green-500/20 border border-emerald-500/30' :
+                          index === 1 ? 'from-blue-500/20 to-cyan-500/20 border border-blue-500/30' :
+                          index === 2 ? 'from-purple-500/20 to-violet-500/20 border border-purple-500/30' :
+                          'from-rose-500/20 to-pink-500/20 border border-rose-500/30'
+                        }`}>
+                          <Icon className={`h-5 w-5 ${
+                            index === 0 ? 'text-emerald-400' :
+                            index === 1 ? 'text-blue-400' :
+                            index === 2 ? 'text-purple-400' :
+                            'text-rose-400'
+                          }`} />
                         </div>
+                        
                         <div className="flex-1">
-                          <h3 className="font-semibold text-white text-lg mb-2">{prompt.title}</h3>
-                          <p className="text-slate-400 text-sm leading-relaxed">{prompt.description}</p>
+                          <h3 className="font-semibold text-white text-base mb-1 group-hover:text-cyan-300 transition-colors">
+                            {prompt.title}
+                          </h3>
+                          <p className="text-slate-400 text-xs leading-relaxed group-hover:text-slate-300 transition-colors">
+                            {prompt.description}
+                          </p>
+                          
+                          {/* Simple arrow indicator */}
+                          <div className="mt-2 flex items-center gap-1 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <span className={`${
+                              index === 0 ? 'text-emerald-400' :
+                              index === 1 ? 'text-blue-400' :
+                              index === 2 ? 'text-purple-400' :
+                              'text-rose-400'
+                            }`}>Start Analysis</span>
+                            <ArrowRight className={`h-3 w-3 ${
+                              index === 0 ? 'text-emerald-400' :
+                              index === 1 ? 'text-blue-400' :
+                              index === 2 ? 'text-purple-400' :
+                              'text-rose-400'
+                            }`} />
+                          </div>
                         </div>
                       </div>
                     </button>
@@ -1186,8 +1753,9 @@ const AnalystPage: React.FC = () => {
               <Button
                 onClick={() => navigate('/nexus/analyst')}
                 size="sm"
-                className="h-8 w-8 p-0 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50"
+                className="h-8 w-8 p-0 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50 relative z-50"
                 title="New Chat"
+                style={{ pointerEvents: 'auto' }}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -1202,8 +1770,9 @@ const AnalystPage: React.FC = () => {
                   onClick={clearAllConversations}
                   size="sm"
                   variant="ghost"
-                  className="h-6 w-6 p-0 text-slate-500 hover:text-red-400 hover:bg-red-500/10"
+                  className="h-6 w-6 p-0 text-slate-500 hover:text-red-400 hover:bg-red-500/10 relative z-50"
                   title="Clear All Conversations"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -1218,12 +1787,13 @@ const AnalystPage: React.FC = () => {
                   conversations.map((conversation) => (
                     <div
                       key={conversation.id}
-                      className={`group relative rounded-lg border transition-all duration-200 cursor-pointer ${
+                      className={`group relative rounded-lg border transition-all duration-200 cursor-pointer z-40 ${
                         conversation.id === conversationId 
                           ? 'bg-slate-700/80 border-slate-600/80 shadow-lg' 
                           : 'bg-slate-800/30 border-slate-700/30 hover:bg-slate-700/40 hover:border-slate-600/40'
                       }`}
                       onClick={() => navigate(`/nexus/analyst/${conversation.id}`)}
+                      style={{ pointerEvents: 'auto' }}
                     >
                       <div className="p-3">
                         <div className="flex items-start justify-between">
@@ -1244,8 +1814,9 @@ const AnalystPage: React.FC = () => {
                             onClick={(e: React.MouseEvent) => deleteConversation(conversation.id, e)}
                             size="sm"
                             variant="ghost"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0 relative z-50"
                             title="Delete Conversation"
+                            style={{ pointerEvents: 'auto' }}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -1280,15 +1851,25 @@ const AnalystPage: React.FC = () => {
           isComputerSidebarOpen ? "mr-[28rem]" : "mr-0"
         )}>
           <div className="flex-1 flex flex-col h-full">
-            <div className="border-b border-slate-700/50 px-6 py-4 flex-shrink-0">
+            <div className="border-b border-slate-700/50 px-6 py-4 flex-shrink-0 bg-slate-900/30">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">Financial Analysis</h2>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <Sparkles className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">Financial Analysis</h2>
+                    <p className="text-xs text-slate-400">AI-powered insights for your financial data</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3" style={{ position: 'relative', zIndex: 9998 }}>
                   {/* Removed old WorkspaceBadge - now using Computer sidebar Files tab */}
                   
                   {/* Computer Button - Toggle Computer sidebar */}
                   <Button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       console.log('[AnalystPage] Computer button clicked, toggling sidebar');
                       setIsComputerSidebarOpen(!isComputerSidebarOpen);
                     }}
@@ -1299,6 +1880,11 @@ const AnalystPage: React.FC = () => {
                       isComputerSidebarOpen && "bg-blue-500/20 border-blue-500/40 text-blue-200"
                     )}
                     title={`${isComputerSidebarOpen ? 'Hide' : 'Show'} Computer`}
+                    style={{ 
+                      pointerEvents: 'auto !important',
+                      zIndex: 9999,
+                      position: 'relative'
+                    }}
                   >
                     <Computer className="h-4 w-4 mr-2" />
                     <span className="text-xs">
@@ -1308,7 +1894,9 @@ const AnalystPage: React.FC = () => {
                 
                 {/* Removed old Artifacts button - now using Computer sidebar Files tab */}
                 
-                <StatusPill status={mapStreamStatusToStatusPill(streamStatus)} />
+                <div style={{ position: 'relative', zIndex: 9999 }}>
+                  <StatusPill status={mapStreamStatusToStatusPill(streamStatus)} />
+                </div>
               </div>
             </div>
           </div>
@@ -1321,18 +1909,49 @@ const AnalystPage: React.FC = () => {
             <div className="space-y-4">
               {messages.map((msg) => renderMessage(msg))}
               
-              {/* Show connection/processing indicator */}
+              {/* Enhanced connection/processing indicator */}
               {(streamStatus === 'connecting' || (streamStatus === 'streaming' && !messages.find(m => m.id === currentAssistantMessageId))) && (
-                <div className="flex items-start space-x-3">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    <Bot className="h-4 w-4 text-white" />
+                <div className="flex items-start space-x-4">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <Bot className="h-5 w-5 text-white" />
                   </div>
-                  <div className="flex-1 bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
-                    <div className="flex items-center space-x-2 text-slate-400">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">
-                        {streamStatus === 'connecting' ? 'Connecting...' : 'Thinking...'}
-                      </span>
+                  <div className="flex-1 bg-slate-800/80 rounded-xl p-5 border border-slate-700/50 backdrop-blur-sm relative overflow-hidden z-0">
+                    {/* Background decoration */}
+                    <div className="absolute inset-0 opacity-5 pointer-events-none">
+                      <div className="absolute top-2 right-2 w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full blur-xl" />
+                      <div className="absolute bottom-2 left-2 w-16 h-16 bg-gradient-to-br from-purple-400 to-blue-400 rounded-full blur-xl" />
+                    </div>
+                    
+                    <div className="relative z-10">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" />
+                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                        </div>
+                        <span className="text-sm font-medium text-slate-300">
+                          {streamStatus === 'connecting' ? 'Establishing connection...' : 'AI is analyzing your request...'}
+                        </span>
+                      </div>
+                      
+                      {/* Enhanced progress bar */}
+                      <div className="relative">
+                        <div className="h-1.5 bg-slate-700/50 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-pulse" style={{ 
+                            width: streamStatus === 'connecting' ? '30%' : '60%',
+                            transition: 'width 2s ease-in-out'
+                          }} />
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full pointer-events-none" style={{ 
+                          animation: 'shimmer 2s infinite linear',
+                          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                          backgroundSize: '200% 100%'
+                        }} />
+                      </div>
+                      
+                      <div className="mt-2 text-xs text-slate-500">
+                        {streamStatus === 'connecting' ? 'Preparing AI workspace...' : 'Processing with advanced financial algorithms...'}
+                      </div>
                     </div>
                   </div>
                 </div>

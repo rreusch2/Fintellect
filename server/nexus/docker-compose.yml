@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  financial-sandbox:
+    build:
+      context: ./sandbox/docker
+      dockerfile: Dockerfile
+    image: financial-analysis-sandbox:latest
+    ports:
+      - "6080:6080"  # noVNC web interface
+      - "5901:5901"  # VNC port
+      - "9222:9222"  # Chrome remote debugging port
+      - "8000:8000"  # API server port
+      - "8080:8080"  # HTTP server port
+      - "8001:8001"  # Tools server port
+    environment:
+      - ANONYMIZED_TELEMETRY=false
+      - CHROME_PATH=/ms-playwright/chromium-*/chrome-linux/chrome
+      - CHROME_USER_DATA=/app/data/chrome_data
+      - CHROME_PERSISTENT_SESSION=true
+      - CHROME_CDP=http://localhost:9222
+      - DISPLAY=:99
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+      - RESOLUTION=1024x768x24
+      - RESOLUTION_WIDTH=1024
+      - RESOLUTION_HEIGHT=768
+      - VNC_PASSWORD=vncpassword
+      - CHROME_DEBUGGING_PORT=9222
+      - CHROME_DEBUGGING_HOST=localhost
+      - CHROME_FLAGS=--single-process --no-first-run --no-default-browser-check --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-breakpad --disable-component-extensions-with-background-pages --disable-dev-shm-usage --disable-extensions --disable-features=TranslateUI --disable-ipc-flooding-protection --disable-renderer-backgrounding --enable-features=NetworkServiceInProcess2 --force-color-profile=srgb --metrics-recording-only --mute-audio --no-sandbox --disable-gpu
+      # API Keys for Python tools
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-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}
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY:-fc-663d1677fe4749c2b3cdd69bc7fa2980}
+      - FIRECRAWL_URL=${FIRECRAWL_URL:-https://api.firecrawl.dev}
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY:-FHBMVMZXGEKPW8J5}
+      - RAPID_API_KEY=${RAPID_API_KEY:-bf149b5332msh94bfb8fc9ff1029p1c6258jsnbe7bec7141df}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - financial_workspace:/workspace  # Persistent workspace
+    restart: unless-stopped
+    shm_size: '2gb'
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp=unconfined
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "5901"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  financial_workspace:
+    driver: local 

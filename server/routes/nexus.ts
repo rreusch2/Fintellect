@@ -5,11 +5,141 @@ import { conversations, conversationMessages } from '../../db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { FinancialAgent } from '../nexus/services/FinancialAgent';
 import { randomUUID } from 'crypto';
+import fetch from 'node-fetch';
 
 const router = express.Router();
 
+// VERY TOP DEBUG ROUTE
+router.get('/test-stream-reachability', (req, res) => {
+  console.log('!!!!!! /api/nexus/test-stream-reachability WAS HIT !!!!!!');
+  res.status(200).send('Test route in nexus.ts is reachable!');
+});
+
 // Active agents map
 const activeAgents = new Map<string, FinancialAgent>();
+
+// TEMP: Moved Stream route to the top of /conversations/:id/ routes (original one)
+// Restore authenticateUser and add a top-level log
+router.get('/conversations/:id/stream', authenticateUser, async (req, res) => {
+  console.log(`!!!!!! HIT /api/nexus/conversations/${req.params.id}/stream (AUTHENTICATED) !!!!!!`); // New log
+  
+  const userId = req.user?.id;
+  const conversationId = req.params.id;
+
+  if (!userId) {
+    // This case should ideally not be reached if authenticateUser works and is required
+    console.error('[Nexus SSE] Stream route: User not authenticated even after authenticateUser middleware. This is an issue.');
+    return res.status(401).json({ error: 'User not authenticated for stream' });
+  }
+
+  // Verify conversation belongs to user
+  try {
+    const conversation = await db.query.conversations.findFirst({
+      where: and(
+        eq(conversations.id, conversationId),
+        eq(conversations.userId, userId)
+      )
+    });
+
+    if (!conversation) {
+      console.log(`[Nexus SSE] Conversation ${conversationId} not found for user ${userId}. Sending 404.`);
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+  } catch (error) {
+    console.error('[Nexus SSE] Error verifying conversation:', error);
+    return res.status(500).json({ error: 'Failed to verify conversation' });
+  }
+
+  const origin = req.headers.origin || 'http://localhost:5175'; // Default for safety
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+
+  let agent = activeAgents.get(conversationId);
+  
+  // Use local FinancialAgent for all sessions
+  if (!agent || !agent.on) {
+    console.log(`[Nexus SSE] New FinancialAgent for ${conversationId}`);
+    agent = new FinancialAgent(conversationId, userId.toString()); 
+    activeAgents.set(conversationId, agent);
+  } else {
+    console.log(`[Nexus SSE] Reusing FinancialAgent for ${conversationId}`);
+  }
+
+  console.log(`[Nexus SSE] Client connected for conversation ${conversationId}`);
+
+  // Handle structured events from the local FinancialAgent
+  const onStructuredEvent = (event: any) => {
+    if (res.writableEnded) return;
+    
+    console.log(`[Nexus SSE] Forwarding ${event.type} event:`, event);
+    
+    switch (event.type) {
+      case 'assistant_chunk':
+        res.write(`data: ${JSON.stringify({ type: 'assistant_chunk', content: event.content, messageId: event.messageId })}\n\n`);
+        break;
+        
+      case 'tool_started':
+        res.write(`data: ${JSON.stringify({ type: 'tool_started', toolName: event.toolName, toolIndex: event.toolIndex, args: event.args, messageId: event.messageId })}\n\n`);
+        break;
+        
+      case 'tool_completed':
+        res.write(`data: ${JSON.stringify({ type: 'tool_completed', toolName: event.toolName, toolIndex: event.toolIndex, status: event.status, result: event.result, error: event.error, messageId: event.messageId })}\n\n`);
+        break;
+        
+      case 'status':
+        // Forward Nexus-style status events (for tool execution)
+        res.write(`data: ${JSON.stringify({ type: 'status', content: event.content, messageId: event.messageId })}\n\n`);
+        break;
+        
+      case 'message_complete':
+        res.write(`data: ${JSON.stringify({ type: 'message_complete', messageId: event.messageId, content: event.content })}\n\n`);
+        break;
+        
+      case 'error':
+        res.write(`data: ${JSON.stringify({ type: 'error', message: event.message })}\n\n`);
+        break;
+        
+      case 'ping':
+        // Pings are handled by the separate keepAlive interval
+        break;
+        
+      default:
+        console.warn(`[Nexus SSE] Unknown event type: ${event.type}`);
+    }
+  };
+
+  // Listen for the single structured_event instead of individual events
+  agent.on('structured_event', onStructuredEvent);
+
+  const cleanup = () => {
+    console.log(`[Nexus SSE] Client disconnected for ${conversationId}. Cleaning listeners.`);
+    agent?.removeListener('structured_event', onStructuredEvent);
+  };
+  req.on('close', cleanup);
+  req.on('end', cleanup);
+
+  // Common cleanup for both AgentPress and local agent
+  const commonCleanup = () => {
+    console.log(`[Nexus SSE] Common cleanup for ${conversationId}`);
+  };
+  req.on('close', commonCleanup);
+  req.on('end', commonCleanup);
+
+  const keepAlive = setInterval(() => {
+    if (res.writableEnded) {
+      clearInterval(keepAlive);
+      return;
+    }
+    res.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`);
+  }, 30000);
+  req.on('close', () => clearInterval(keepAlive));
+});
 
 // Get all conversations for a user
 router.get('/conversations', authenticateUser, async (req, res) => {
@@ -158,23 +288,27 @@ router.post('/conversations/:id/messages', authenticateUser, async (req, res) =>
       createdAt: new Date()
     });
 
-    // Get or create agent
+    // Use local FinancialAgent with real file creation
     let agent = activeAgents.get(conversationId);
     if (!agent) {
-      console.log(`Creating new agent for conversation ${conversationId}`);
+      console.log(`Creating new FinancialAgent for conversation ${conversationId}`);
       agent = new FinancialAgent(conversationId, userId.toString());
       activeAgents.set(conversationId, agent);
     } else {
-      console.log(`Using existing agent for conversation ${conversationId}`);
+      console.log(`Using existing FinancialAgent for conversation ${conversationId}`);
     }
 
     // Process the message (don't await - let it stream)
     console.log(`Starting message processing for: "${content}"`);
-    agent.processUserMessage(content).catch(error => {
-      console.error('Error in processUserMessage:', error);
+    agent.processMessage(content).catch(error => {
+      console.error('Error in processMessage:', error);
     });
 
-    res.json({ success: true, message: 'Message sent' });
+    res.json({ 
+      success: true, 
+      message: 'Message sent',
+      sandboxId: agent.getCurrentSandboxId() // This will be local-workspace-{conversationId}
+    });
   } catch (error) {
     console.error('Error sending message:', error);
     res.status(500).json({ error: 'Failed to send message' });
@@ -231,123 +365,6 @@ router.delete('/conversations/:id', authenticateUser, async (req, res) => {
     console.error('Error deleting conversation:', error);
     res.status(500).json({ error: 'Failed to delete conversation' });
   }
-});
-
-// Stream conversation updates (Server-Sent Events)
-router.get('/conversations/:id/stream', authenticateUser, async (req, res) => {
-  const userId = req.user?.id;
-  const conversationId = req.params.id;
-
-  if (!userId) {
-    return res.status(401).json({ error: 'User not authenticated' });
-  }
-
-  // Verify conversation belongs to user
-  try {
-    const conversation = await db.query.conversations.findFirst({
-      where: and(
-        eq(conversations.id, conversationId),
-        eq(conversations.userId, userId)
-      )
-    });
-
-    if (!conversation) {
-      return res.status(404).json({ error: 'Conversation not found' });
-    }
-  } catch (error) {
-    console.error('Error verifying conversation:', error);
-    return res.status(500).json({ error: 'Failed to verify conversation' });
-  }
-
-  // Set up SSE headers
-  const origin = req.headers.origin || 'http://localhost:5175';
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Headers': 'Cache-Control'
-  });
-
-  // Get or create agent
-  let agent = activeAgents.get(conversationId);
-  if (!agent) {
-    agent = new FinancialAgent(conversationId, userId.toString());
-    activeAgents.set(conversationId, agent);
-  }
-
-  // Send initial connection event
-  res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
-
-  // Set up event listeners for real-time streaming
-  const onStreamChunk = (chunk: string) => {
-    console.log(`[SSE] Forwarding streamChunk:`, chunk.substring(0, 50) + '...');
-    res.write(`data: ${JSON.stringify({ type: 'streamChunk', content: chunk })}\n\n`);
-  };
-
-  const onToolResult = (result: any) => {
-    console.log(`[SSE] Forwarding toolResult:`, result);
-    res.write(`data: ${JSON.stringify({ type: 'toolResult', result })}\n\n`);
-  };
-
-  const onMessage = async (message: any) => {
-    console.log(`[SSE] Forwarding message:`, message);
-    // Save assistant message to database
-    if (message.role === 'assistant') {
-      try {
-        await db.insert(conversationMessages).values({
-          id: randomUUID(),
-          conversationId,
-          role: 'assistant',
-          content: message.content,
-          createdAt: new Date()
-        });
-      } catch (error) {
-        console.error('Error saving assistant message:', error);
-      }
-    }
-    
-    res.write(`data: ${JSON.stringify({ type: 'message', message })}\n\n`);
-  };
-
-  const onStatusChange = (status: string) => {
-    console.log(`[SSE] Forwarding statusChange:`, status);
-    res.write(`data: ${JSON.stringify({ type: 'statusChange', status })}\n\n`);
-  };
-
-  const onError = (error: any) => {
-    console.log(`[SSE] Forwarding error:`, error);
-    res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
-  };
-
-  // Add event listeners
-  agent.on('streamChunk', onStreamChunk);
-  agent.on('toolResult', onToolResult);
-  agent.on('message', onMessage);
-  agent.on('statusChange', onStatusChange);
-  agent.on('error', onError);
-
-  // Clean up on client disconnect
-  const cleanup = () => {
-    agent?.removeListener('streamChunk', onStreamChunk);
-    agent?.removeListener('toolResult', onToolResult);
-    agent?.removeListener('message', onMessage);
-    agent?.removeListener('statusChange', onStatusChange);
-    agent?.removeListener('error', onError);
-  };
-
-  req.on('close', cleanup);
-  req.on('end', cleanup);
-
-  // Keep connection alive with heartbeat
-  const keepAlive = setInterval(() => {
-    res.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`);
-  }, 30000);
-
-  req.on('close', () => {
-    clearInterval(keepAlive);
-  });
 });
 
 // Test endpoint for LocalDockerTool
@@ -441,7 +458,7 @@ router.post('/test-financial-agent', authenticateUser, async (req, res) => {
     });
     
     // Start processing the message
-    agent.processUserMessage(message);
+    agent.processMessage(message);
     
     // Wait for completion
     await eventPromise;
@@ -462,6 +479,320 @@ router.post('/test-financial-agent', authenticateUser, async (req, res) => {
       error: error.message,
       timestamp: new Date().toISOString()
     });
+  }
+});
+
+// Get sandbox files for a conversation
+const sandboxFilesHandler = async (req, res) => {
+  try {
+    const sandboxId = req.params.sandboxId;
+    const path = req.query.path as string || '/workspace';
+    
+    console.log(`[Sandbox Files] Fetching files for sandbox ${sandboxId}, path: ${path}`);
+    
+    // Check if this is an AgentPress sandbox
+    if (sandboxId.startsWith('agentpress-')) {
+      const threadId = sandboxId.replace('agentpress-', '');
+      
+      try {
+        // Call AgentPress API to get sandbox files
+        const filesResponse = await fetch(`http://localhost:8000/api/sandbox/${threadId}/files?path=${encodeURIComponent(path)}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXUS_API_KEY || 'nexus-test-key'}`
+          }
+        });
+        
+        if (!filesResponse.ok) {
+          throw new Error(`AgentPress sandbox API error: ${filesResponse.status}`);
+        }
+        
+        const filesData = await filesResponse.json();
+        console.log(`[Sandbox Files] AgentPress returned ${filesData.files?.length || 0} files`);
+        return res.json(filesData);
+        
+      } catch (error) {
+        console.error(`[Sandbox Files] Error fetching from AgentPress:`, error);
+        return res.status(500).json({ error: 'Failed to fetch files from AgentPress sandbox' });
+      }
+    }
+    
+    // Check if this is a local workspace sandbox
+    if (sandboxId.startsWith('local-workspace-')) {
+      try {
+        const fs = await import('fs');
+        const nodePath = await import('path');
+        
+        const workspaceDir = nodePath.join(process.cwd(), 'workspace');
+        const targetPath = path === '/workspace' ? workspaceDir : nodePath.join(workspaceDir, path.replace('/workspace/', ''));
+        
+        console.log(`[Sandbox Files] Reading local workspace: ${targetPath}`);
+        
+        if (!fs.existsSync(targetPath)) {
+          console.log(`[Sandbox Files] Path does not exist: ${targetPath}`);
+          return res.json({ files: [] });
+        }
+        
+        const files = fs.readdirSync(targetPath, { withFileTypes: true }).map(dirent => {
+          const fullPath = nodePath.join(targetPath, dirent.name);
+          const stats = fs.statSync(fullPath);
+          
+          return {
+            name: dirent.name,
+            path: path === '/workspace' ? `/workspace/${dirent.name}` : `${path}/${dirent.name}`,
+            is_dir: dirent.isDirectory(),
+            size: dirent.isDirectory() ? 0 : stats.size,
+            mod_time: stats.mtime.toISOString(),
+            permissions: dirent.isDirectory() ? 'drwxr-xr-x' : '-rw-r--r--'
+          };
+        });
+        
+        console.log(`[Sandbox Files] Found ${files.length} files in local workspace`);
+        return res.json({ files });
+        
+      } catch (error) {
+        console.error(`[Sandbox Files] Error reading local workspace:`, error);
+        return res.status(500).json({ error: 'Failed to read local workspace' });
+      }
+    }
+    
+    // Fallback to local Docker container handling
+    const { spawn } = await import('child_process');
+    
+    // Check container status first
+    const checkContainer = spawn('docker', ['inspect', sandboxId, '--format', '{{.State.Running}}']);
+    
+    let isRunning = false;
+    checkContainer.stdout.on('data', (data) => {
+      const status = data.toString().trim();
+      isRunning = status === 'true';
+    });
+    
+    await new Promise((resolve) => {
+      checkContainer.on('close', (code) => {
+        resolve(code);
+      });
+    });
+    
+    if (!isRunning) {
+      console.log(`[Sandbox Files] Container ${sandboxId} is not running`);
+      return res.status(404).json({ error: 'Sandbox not available' });
+    }
+    
+    // List files in the container
+    return new Promise((resolve) => {
+      const listCommand = spawn('docker', ['exec', sandboxId, 'ls', '-la', path]);
+      
+      let output = '';
+      let errorOutput = '';
+      
+      listCommand.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+      
+      listCommand.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      listCommand.on('close', (code) => {
+        if (code === 0) {
+          // Parse ls -la output
+          const lines = output.trim().split('\n').slice(1); // Skip the total line
+          const files = lines
+            .filter(line => line.trim())
+            .map(line => {
+              const parts = line.trim().split(/\s+/);
+              if (parts.length < 9) return null;
+              
+              const permissions = parts[0];
+              const size = parseInt(parts[4]) || 0;
+              const name = parts.slice(8).join(' ');
+              const isDir = permissions.startsWith('d');
+              const fullPath = path === '/' ? `/${name}` : `${path}/${name}`;
+              
+              // Skip . and .. entries
+              if (name === '.' || name === '..') return null;
+              
+              return {
+                name,
+                path: fullPath,
+                is_dir: isDir,
+                size: isDir ? 0 : size,
+                mod_time: new Date().toISOString(), // TODO: parse actual date from ls output
+                permissions
+              };
+            })
+            .filter(Boolean);
+          
+          console.log(`[Sandbox Files] Found ${files.length} files in ${path}`);
+          res.json({ files });
+        } else {
+          console.error(`[Sandbox Files] Failed to list files: ${errorOutput}`);
+          res.status(500).json({ error: 'Failed to list files' });
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error fetching sandbox files:', error);
+    res.status(500).json({ error: 'Failed to fetch sandbox files' });
+  }
+};
+
+// In development, allow unauthenticated access for testing
+if (process.env.NODE_ENV === 'development') {
+  router.get('/sandboxes/:sandboxId/files', sandboxFilesHandler);
+} else {
+  router.get('/sandboxes/:sandboxId/files', authenticateUser, sandboxFilesHandler);
+}
+
+// Get file content from sandbox
+const sandboxFileContentHandler = async (req, res) => {
+  try {
+    const sandboxId = req.params.sandboxId;
+    const filePath = req.query.path as string;
+    
+    if (!filePath) {
+      return res.status(400).json({ error: 'File path is required' });
+    }
+    
+    console.log(`[Sandbox Files] Reading file content for sandbox ${sandboxId}, path: ${filePath}`);
+    
+    // Check if this is an AgentPress sandbox
+    if (sandboxId.startsWith('agentpress-')) {
+      const threadId = sandboxId.replace('agentpress-', '');
+      
+      try {
+        // Call AgentPress API to get file content
+        const contentResponse = await fetch(`http://localhost:8000/api/sandbox/${threadId}/files/content?path=${encodeURIComponent(filePath)}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXUS_API_KEY || 'nexus-test-key'}`
+          }
+        });
+        
+        if (!contentResponse.ok) {
+          if (contentResponse.status === 404) {
+            return res.status(404).json({ error: 'File not found' });
+          }
+          throw new Error(`AgentPress sandbox API error: ${contentResponse.status}`);
+        }
+        
+        const content = await contentResponse.text();
+        res.setHeader('Content-Type', 'text/plain');
+        return res.send(content);
+        
+      } catch (error) {
+        console.error(`[Sandbox Files] Error reading file from AgentPress:`, error);
+        return res.status(500).json({ error: 'Failed to read file from AgentPress sandbox' });
+      }
+    }
+    
+    // Check if this is a local workspace sandbox
+    if (sandboxId.startsWith('local-workspace-')) {
+      try {
+        const fs = await import('fs');
+        const nodePath = await import('path');
+        
+        const workspaceDir = nodePath.join(process.cwd(), 'workspace');
+        const targetFile = filePath.startsWith('/workspace/') 
+          ? nodePath.join(workspaceDir, filePath.replace('/workspace/', ''))
+          : nodePath.join(workspaceDir, filePath);
+        
+        console.log(`[Sandbox Files] Reading local file: ${targetFile}`);
+        
+        if (!fs.existsSync(targetFile)) {
+          console.log(`[Sandbox Files] File does not exist: ${targetFile}`);
+          return res.status(404).json({ error: 'File not found' });
+        }
+        
+        const content = fs.readFileSync(targetFile, 'utf8');
+        res.setHeader('Content-Type', 'text/plain');
+        return res.send(content);
+        
+      } catch (error) {
+        console.error(`[Sandbox Files] Error reading local file:`, error);
+        return res.status(500).json({ error: 'Failed to read local file' });
+      }
+    }
+    
+    // Fallback to local Docker container handling
+    const { spawn } = await import('child_process');
+    
+    // First check if container is running
+    const checkContainer = spawn('docker', ['inspect', sandboxId, '--format', '{{.State.Running}}']);
+    
+    let isRunning = false;
+    checkContainer.stdout.on('data', (data) => {
+      const status = data.toString().trim();
+      isRunning = status === 'true';
+    });
+    
+    await new Promise((resolve) => {
+      checkContainer.on('close', (code) => {
+        resolve(code);
+      });
+    });
+    
+    if (!isRunning) {
+      console.log(`[Sandbox Files] Container ${sandboxId} is not running`);
+      return res.status(404).json({ error: 'Sandbox not available' });
+    }
+    
+    return new Promise((resolve) => {
+      const docker = spawn('docker', ['exec', sandboxId, 'cat', filePath]);
+      
+      let output = '';
+      let errorOutput = '';
+      
+      docker.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+      
+      docker.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      docker.on('close', (code) => {
+        if (code === 0) {
+          res.setHeader('Content-Type', 'text/plain');
+          res.send(output);
+        } else {
+          console.error(`[Sandbox Files] Failed to read file: ${errorOutput}`);
+          res.status(404).json({ error: 'File not found or cannot be read' });
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error reading sandbox file:', error);
+    res.status(500).json({ error: 'Failed to read file' });
+  }
+};
+
+// In development, allow unauthenticated access for testing
+if (process.env.NODE_ENV === 'development') {
+  router.get('/sandboxes/:sandboxId/files/content', sandboxFileContentHandler);
+} else {
+  router.get('/sandboxes/:sandboxId/files/content', authenticateUser, sandboxFileContentHandler);
+}
+
+// Get sandbox ID for a conversation
+router.get('/conversations/:id/sandbox', authenticateUser, async (req, res) => {
+  try {
+    const conversationId = req.params.id;
+    const agent = activeAgents.get(conversationId);
+    
+    if (!agent) {
+      return res.status(404).json({ error: 'No active agent found for this conversation' });
+    }
+    
+    const sandboxId = agent.getCurrentSandboxId();
+    
+    if (!sandboxId) {
+      return res.status(404).json({ error: 'No sandbox available' });
+    }
+    
+    res.json({ sandboxId });
+  } catch (error) {
+    console.error('Error getting sandbox ID:', error);
+    res.status(500).json({ error: 'Failed to get sandbox ID' });
   }
 });
 

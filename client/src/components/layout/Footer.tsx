@@ -17,17 +17,17 @@ export function Footer() {
   return (
     <>
       <footer className="border-t border-border/10 backdrop-blur-md bg-background/70 mt-auto">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-6">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-3">
+            <div className="flex items-center gap-4">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       onClick={() => openModalWithTab("terms")}
-                      className="text-sm text-muted-foreground hover:text-primary flex items-center gap-2 group"
+                      className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 group"
                     >
-                      <FileText className="h-4 w-4" />
+                      <FileText className="h-3 w-3" />
                       Terms of Service
                       <span className="text-xs text-muted-foreground/60 group-hover:text-primary/60">v1.0</span>
                     </button>
@@ -43,9 +43,9 @@ export function Footer() {
                   <TooltipTrigger asChild>
                     <button
                       onClick={() => openModalWithTab("privacy")}
-                      className="text-sm text-muted-foreground hover:text-primary flex items-center gap-2 group"
+                      className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 group"
                     >
-                      <Shield className="h-4 w-4" />
+                      <Shield className="h-3 w-3" />
                       Privacy Policy
                       <span className="text-xs text-muted-foreground/60 group-hover:text-primary/60">v1.0</span>
                     </button>
@@ -60,17 +60,17 @@ export function Footer() {
                 href="https://plaid.com/legal" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-sm text-muted-foreground hover:text-primary flex items-center gap-2"
+                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5"
               >
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-3 w-3" />
                 Plaid Legal
               </a>
             </div>
-            <div className="flex items-center gap-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-muted-foreground">
                 {APP_CONFIG.COPYRIGHT_TEXT}
               </p>
-              <div className="border-l border-border/10 pl-4">
+              <div className="border-l border-border/10 pl-3">
                 <AIDisclaimer variant="minimal" className="text-xs text-muted-foreground" />
               </div>
             </div>

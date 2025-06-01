@@ -22,7 +22,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-export function Navigation() {
+interface NavigationProps {
+  isComputerSidebarOpen?: boolean;
+}
+
+export function Navigation({ isComputerSidebarOpen = false }: NavigationProps = {}) {
   const [location] = useLocation();
   const { user, logout } = useUser();
   const [isOpen, setIsOpen] = useState(false);
@@ -71,7 +75,10 @@ export function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className={cn(
+            "hidden md:flex items-center gap-2 transition-all duration-300 ease-in-out",
+            isComputerSidebarOpen ? "mr-[28rem]" : "mr-0"
+          )}>
             {navItems.map(({ href, label, icon: Icon }) => (
               <Button
                 key={href}

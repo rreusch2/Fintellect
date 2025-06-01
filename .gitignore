@@ -62,4 +62,5 @@ tasks.json
 tasks/ 
 
 # Reference directories (AI use only)
-nexus/ 
+
+/nexus/

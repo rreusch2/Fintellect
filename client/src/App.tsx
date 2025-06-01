@@ -4,6 +4,8 @@ import { Switch, Route, useLocation, Redirect } from "wouter";
 import { Loader2 } from "lucide-react";
 import { useUser } from "./hooks/use-user";
 import LandingPage from "./pages/LandingPage";
+import FeaturesPage from "./pages/FeaturesPage";
+import ContactPage from "./pages/ContactPage";
 import AuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/DashboardPage";
 import OnboardingPage from "./pages/OnboardingPage";
@@ -55,6 +57,8 @@ function App() {
   const publicRoutes = (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/features" component={FeaturesPage} />
+      <Route path="/contact" component={ContactPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/">
         {location === '/' && <LandingPage />}

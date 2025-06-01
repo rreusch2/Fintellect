@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
+passlib[bcrypt]
+redis
+python-dotenv
+psycopg2-binary
+# Add other dependencies from agentpress, services, utils, sandbox if they are not local modules
+# For example, if agentpress is a pip package:
+# agentpress
+# langfuse 

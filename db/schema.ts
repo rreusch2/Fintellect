@@ -245,6 +245,7 @@ export const conversations = pgTable("conversations", {
   id: text("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
   title: text("title").notNull(),
+  sandboxId: text("sandbox_id"), // Store Daytona sandbox ID for persistent file access
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

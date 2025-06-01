@@ -1,0 +1,1 @@
+export { useNexusAuth } from '../contexts/NexusAuthContext.js'; // Using .js for consistency 

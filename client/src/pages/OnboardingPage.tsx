@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,7 +9,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Loader2, Shield, FileText, Bot } from "lucide-react";
+import { Loader2, Shield, FileText, Bot, ArrowLeft, CheckCircle, Sparkles, Lock, Globe } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import PlaidLink from "@/components/Plaid/PlaidLink";
 import { useToast } from "@/hooks/use-toast";
@@ -247,159 +248,417 @@ export default function OnboardingPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center space-y-4"
+        >
+          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-white" />
+          </div>
+          <p className="text-gray-400">Loading your account...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden flex items-center justify-center p-4">
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] animate-float-slow"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[100px] animate-float-medium"></div>
-      </div>
+    <div className="min-h-screen flex flex-col">
+      {/* Enhanced Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-black/20 border-b border-cyan-500/20">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3">
+              <span className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent tracking-tight bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400">
+                Fintellect
+              </span>
+              <div className="hidden sm:flex items-center px-2 py-1 rounded-full border bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/20 backdrop-blur-sm">
+                <span className="text-[11px] font-semibold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">
+                  BETA
+                </span>
+              </div>
+            </Link>
 
-      <Card className="w-full max-w-lg bg-gray-900/50 backdrop-blur-sm border-gray-800 relative z-10">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400">
-            Setup Your Account
-          </CardTitle>
-          <CardDescription className="text-gray-400">
-            Step {step} of 2: {stepDescription(step)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {step === 1 && (
-            <div className="space-y-6">
-              <div className="bg-blue-500/5 p-4 rounded-lg border border-blue-500/10">
-                <div className="flex items-center gap-2 mb-4">
-                  <Shield className="h-5 w-5 text-blue-400" />
-                  <h3 className="font-medium text-white">Legal Agreement</h3>
+            {/* Progress Indicator */}
+            <div className="hidden md:flex items-center space-x-2">
+              <div className="flex items-center space-x-2">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                  step >= 1 ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'bg-gray-700 text-gray-400'
+                }`}>
+                  {step > 1 ? <CheckCircle className="w-4 h-4" /> : '1'}
                 </div>
-                <p className="text-sm text-gray-400 mb-6">
-                  Before you start using our services, please review and accept our Terms of Service and Privacy Policy.
-                </p>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-2">
-                    <Checkbox
-                      id="terms"
-                      checked={termsAccepted}
-                      onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-                    />
-                    <div className="grid gap-1.5 leading-none">
-                      <label
-                        htmlFor="terms"
-                        className="text-sm font-medium text-white leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Accept Terms of Service
-                      </label>
-                      <p className="text-sm text-gray-400">
-                        <button
-                          type="button"
-                          onClick={() => openModalWithTab("terms")}
-                          className="text-blue-400 hover:underline"
-                        >
-                          Read Terms of Service
-                        </button>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <Checkbox
-                      id="privacy"
-                      checked={privacyAccepted}
-                      onCheckedChange={(checked) => setPrivacyAccepted(checked as boolean)}
-                    />
-                    <div className="grid gap-1.5 leading-none">
-                      <label
-                        htmlFor="privacy"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Accept Privacy Policy
-                      </label>
-                      <p className="text-sm text-muted-foreground">
-                        <button
-                          type="button"
-                          onClick={() => openModalWithTab("privacy")}
-                          className="text-primary hover:underline"
-                        >
-                          Read Privacy Policy
-                        </button>
-                      </p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => openModalWithTab("terms")}
-                    className="w-full border-blue-500/20 hover:bg-blue-500/10"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Review Terms & Privacy
-                  </Button>
+                <div className={`w-12 h-0.5 transition-all duration-300 ${
+                  step >= 2 ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-gray-700'
+                }`} />
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                  step >= 2 ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'bg-gray-700 text-gray-400'
+                }`}>
+                  2
                 </div>
               </div>
-              <Button 
-                onClick={handleTermsAccept}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={acceptTerms.isPending || !termsAccepted || !privacyAccepted}
-              >
-                {acceptTerms.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Continue
+            </div>
+
+            {/* Back Button */}
+            <Link href="/auth">
+              <Button variant="ghost" className="text-gray-300 hover:text-cyan-400 transition-colors duration-300">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
               </Button>
-            </div>
-          )}
+            </Link>
+          </div>
+        </div>
+      </nav>
 
-          {step === 2 && (
-            <div className="space-y-6">
-              <div className="bg-blue-500/5 p-4 rounded-lg border border-blue-500/10">
-                <div className="flex items-center gap-2 mb-4">
-                  <Bot className="h-5 w-5 text-blue-400" />
-                  <h3 className="font-medium text-white">Connect Your Bank</h3>
-                </div>
-                <p className="text-sm text-gray-400 mb-6">
-                  Connect your bank account to enable automatic transaction tracking and personalized insights.
-                </p>
-                <div className="flex flex-col gap-4">
-                  <PlaidLink 
-                    onSuccess={handlePlaidSuccess}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    Connect Bank Account
-                  </PlaidLink>
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-gray-700" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-gray-900 px-2 text-gray-400">Or</span>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleDemoMode}
-                    disabled={isDemoLoading}
-                    className="w-full bg-gray-800/50 hover:bg-gray-800/70 border-gray-700"
-                  >
-                    {isDemoLoading ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Setting up demo...
-                      </span>
-                    ) : (
-                      "Try Demo Mode"
-                    )}
-                  </Button>
-                </div>
-              </div>
+      {/* Main Content */}
+      <div className="flex-1 relative overflow-hidden flex items-center justify-center pt-20">
+        {/* Enhanced Background */}
+        <div className="absolute inset-0">
+          {/* Gradient Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900"></div>
+          
+          {/* Floating shapes */}
+          <div className="absolute inset-0 overflow-hidden">
+            <motion.div 
+              className="absolute top-1/4 left-1/5 w-64 h-64 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl"
+              animate={{ 
+                y: [0, -20, 0],
+                x: [0, 15, 0],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ 
+                duration: 8, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+            />
+            <motion.div 
+              className="absolute bottom-1/4 right-1/5 w-48 h-48 bg-gradient-to-br from-blue-500/15 to-cyan-500/15 rounded-full blur-2xl"
+              animate={{ 
+                y: [0, 25, 0],
+                x: [0, -20, 0],
+                scale: [1, 0.9, 1]
+              }}
+              transition={{ 
+                duration: 10, 
+                repeat: Infinity, 
+                ease: "easeInOut",
+                delay: 1
+              }}
+            />
+          </div>
+          
+          {/* Subtle grid overlay */}
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.02]"></div>
+        </div>
+
+        {/* Floating Step Icons */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div
+            className="absolute top-1/4 left-1/12"
+            animate={{ 
+              y: [0, -15, 0],
+              rotate: [0, 3, 0]
+            }}
+            transition={{ 
+              duration: 4, 
+              repeat: Infinity, 
+              ease: "easeInOut"
+            }}
+          >
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 backdrop-blur-sm border border-cyan-400/30 flex items-center justify-center">
+              <FileText className="w-6 h-6 text-cyan-400" />
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </motion.div>
+          
+          <motion.div
+            className="absolute top-1/3 right-1/12"
+            animate={{ 
+              y: [0, 12, 0],
+              rotate: [0, -3, 0]
+            }}
+            transition={{ 
+              duration: 5, 
+              repeat: Infinity, 
+              ease: "easeInOut",
+              delay: 1
+            }}
+          >
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-sm border border-blue-400/30 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-blue-400" />
+            </div>
+          </motion.div>
+          
+          <motion.div
+            className="absolute bottom-1/3 left-1/8"
+            animate={{ 
+              y: [0, -10, 0],
+              x: [0, 8, 0]
+            }}
+            transition={{ 
+              duration: 6, 
+              repeat: Infinity, 
+              ease: "easeInOut",
+              delay: 2
+            }}
+          >
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400/25 to-blue-400/25 backdrop-blur-sm border border-cyan-300/40 flex items-center justify-center">
+              <Bot className="w-4 h-4 text-cyan-300" />
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Onboarding Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="relative z-10 w-full max-w-lg mx-4"
+        >
+          <Card className="backdrop-blur-md bg-gray-900/40 border border-cyan-500/20 shadow-2xl shadow-cyan-500/10 relative overflow-hidden">
+            {/* Card glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5 rounded-lg"></div>
+            
+            <CardHeader className="relative z-10 text-center space-y-4">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 flex items-center justify-center backdrop-blur-sm"
+              >
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+              </motion.div>
+              
+              <div>
+                <CardTitle className="text-2xl font-bold text-white mb-2">
+                  Setup Your{" "}
+                  <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                    Account
+                  </span>
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Step {step} of 2: {stepDescription(step)}
+                </CardDescription>
+              </div>
+            </CardHeader>
+
+            <CardContent className="relative z-10">
+              <AnimatePresence mode="wait">
+                {step === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-6"
+                  >
+                    <div className="relative overflow-hidden rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 via-blue-500/5 to-transparent backdrop-blur-sm">
+                      {/* Subtle animated background */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-blue-500/5"></div>
+                      
+                      <div className="relative p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center backdrop-blur-sm">
+                            <Shield className="h-5 w-5 text-cyan-400" />
+                          </div>
+                          <h3 className="font-semibold text-white text-lg">Legal Agreement</h3>
+                        </div>
+                        
+                        <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+                          Before you start using our services, please review and accept our Terms of Service and Privacy Policy to ensure a secure and compliant experience.
+                        </p>
+                        
+                        <div className="space-y-4">
+                          <motion.div 
+                            className="flex items-start space-x-3 p-3 rounded-lg bg-gray-800/30 border border-gray-700/50 hover:border-cyan-500/30 transition-colors duration-300"
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            <Checkbox
+                              id="terms"
+                              checked={termsAccepted}
+                              onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                              className="mt-0.5 border-gray-600 data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-cyan-500 data-[state=checked]:to-blue-600"
+                            />
+                            <div className="grid gap-1.5 leading-none flex-1">
+                              <label
+                                htmlFor="terms"
+                                className="text-sm font-medium text-white leading-none cursor-pointer"
+                              >
+                                Accept Terms of Service
+                              </label>
+                              <p className="text-sm text-gray-400">
+                                <button
+                                  type="button"
+                                  onClick={() => openModalWithTab("terms")}
+                                  className="text-cyan-400 hover:text-cyan-300 hover:underline transition-colors"
+                                >
+                                  Read Terms of Service →
+                                </button>
+                              </p>
+                            </div>
+                          </motion.div>
+                          
+                          <motion.div 
+                            className="flex items-start space-x-3 p-3 rounded-lg bg-gray-800/30 border border-gray-700/50 hover:border-cyan-500/30 transition-colors duration-300"
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            <Checkbox
+                              id="privacy"
+                              checked={privacyAccepted}
+                              onCheckedChange={(checked) => setPrivacyAccepted(checked as boolean)}
+                              className="mt-0.5 border-gray-600 data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-cyan-500 data-[state=checked]:to-blue-600"
+                            />
+                            <div className="grid gap-1.5 leading-none flex-1">
+                              <label
+                                htmlFor="privacy"
+                                className="text-sm font-medium leading-none cursor-pointer text-white"
+                              >
+                                Accept Privacy Policy
+                              </label>
+                              <p className="text-sm text-gray-400">
+                                <button
+                                  type="button"
+                                  onClick={() => openModalWithTab("privacy")}
+                                  className="text-cyan-400 hover:text-cyan-300 hover:underline transition-colors"
+                                >
+                                  Read Privacy Policy →
+                                </button>
+                              </p>
+                            </div>
+                          </motion.div>
+                          
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Button 
+                              variant="outline" 
+                              onClick={() => openModalWithTab("terms")}
+                              className="w-full border-cyan-500/30 hover:bg-cyan-500/10 hover:border-cyan-400/50 text-gray-300 hover:text-white transition-all duration-300"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Review Full Terms & Privacy
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button 
+                        onClick={handleTermsAccept}
+                        className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold py-3 shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 border-0"
+                        disabled={acceptTerms.isPending || !termsAccepted || !privacyAccepted}
+                      >
+                        {acceptTerms.isPending ? (
+                          <div className="flex items-center justify-center space-x-2">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <span>Processing...</span>
+                          </div>
+                        ) : (
+                          <span className="flex items-center justify-center space-x-2">
+                            <span>Continue to Bank Connection</span>
+                            <motion.div
+                              animate={{ x: [0, 3, 0] }}
+                              transition={{ duration: 1.5, repeat: Infinity }}
+                            >
+                              →
+                            </motion.div>
+                          </span>
+                        )}
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                )}
+
+                {step === 2 && (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-6"
+                  >
+                    <div className="relative overflow-hidden rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 via-blue-500/5 to-transparent backdrop-blur-sm">
+                      <div className="relative p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center backdrop-blur-sm">
+                            <Bot className="h-5 w-5 text-cyan-400" />
+                          </div>
+                          <h3 className="font-semibold text-white text-lg">Connect Your Bank</h3>
+                        </div>
+                        
+                        <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+                          Securely connect your bank account with Plaid integration to enable automatic transaction tracking, spending analysis, and personalized financial insights.
+                        </p>
+                        
+                        <div className="space-y-4">
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <PlaidLink 
+                              onSuccess={handlePlaidSuccess}
+                              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 font-semibold flex items-center justify-center space-x-2"
+                            >
+                              <Lock className="w-4 h-4" />
+                              <span>Connect Bank Account Securely</span>
+                            </PlaidLink>
+                          </motion.div>
+                          
+                          <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                              <span className="w-full border-t border-gray-700" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                              <span className="bg-gray-900 px-3 text-gray-400 font-medium">Or</span>
+                            </div>
+                          </div>
+                          
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Button
+                              variant="outline"
+                              onClick={handleDemoMode}
+                              disabled={isDemoLoading}
+                              className="w-full bg-gray-800/30 hover:bg-gray-800/50 border-gray-600/50 hover:border-gray-500 text-gray-300 hover:text-white transition-all duration-300"
+                            >
+                              {isDemoLoading ? (
+                                <span className="flex items-center gap-2">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Setting up demo...
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-2">
+                                  <Globe className="w-4 h-4" />
+                                  Try Demo Mode
+                                </span>
+                              )}
+                            </Button>
+                          </motion.div>
+                        </div>
+                        
+                        {/* Security badges */}
+                        <div className="mt-6 flex flex-wrap justify-center gap-2">
+                          {['Bank-level Security', '256-bit Encryption', 'Read-only Access'].map((badge, index) => (
+                            <motion.div
+                              key={badge}
+                              className="px-2 py-1 bg-gray-800/50 border border-gray-700/50 rounded-full text-xs text-gray-400 backdrop-blur-sm"
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.5 + index * 0.1 }}
+                            >
+                              {badge}
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
 
       <TermsModal 
         open={showTerms} 
